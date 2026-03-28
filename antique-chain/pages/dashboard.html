@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verifier Dashboard — AntiqChain</title>
+  <link rel="stylesheet" href="../css/global.css">
+  <link rel="stylesheet" href="../css/dashboard.css">
+</head>
+<body>
+
+  <!-- ── NAVIGATION ── -->
+  <nav>
+    <a class="nav-logo" href="../index.html">AntiqChain <span>— Verified Heritage</span></a>
+    <div class="nav-links">
+      <a href="../index.html">Home</a>
+      <a href="about.html">About</a>
+      <a href="submit.html">Submit Item</a>
+      <a href="dashboard.html" class="active">Dashboard</a>
+      <a href="login.html" class="nav-cta">Sign In</a>
+    </div>
+  </nav>
+
+  <!-- ── DASHBOARD LAYOUT ── -->
+  <div class="dashboard-layout">
+
+    <!-- SIDEBAR -->
+    <div class="dashboard-sidebar">
+      <div class="sidebar-profile">
+        <div class="sidebar-name">Dr. A. Chen</div>
+        <div class="sidebar-role">Expert Verifier · ID: VRF-009</div>
+      </div>
+
+      <div class="sidebar-section-label">Review Queue</div>
+      <div class="sidebar-section">
+        <a class="sidebar-item active" href="#">
+          <span>📋</span> Pending Review
+          <span class="sidebar-count">7</span>
+        </a>
+        <a class="sidebar-item" href="#">
+          <span>✅</span> Approved
+          <span class="sidebar-count green">142</span>
+        </a>
+        <a class="sidebar-item" href="#">
+          <span>❌</span> Rejected
+          <span class="sidebar-count rust">23</span>
+        </a>
+      </div>
+
+      <div class="sidebar-section-label">Management</div>
+      <div class="sidebar-section">
+        <a class="sidebar-item" href="#">
+          <span>👥</span> All Users
+        </a>
+        <a class="sidebar-item" href="#">
+          <span>📊</span> Analytics
+        </a>
+        <a class="sidebar-item" href="#">
+          <span>🔗</span> Blockchain Log
+        </a>
+        <a class="sidebar-item" href="#">
+          <span>⚙️</span> Settings
+        </a>
+      </div>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div class="dashboard-main">
+      <div class="dash-topbar">
+        <div>
+          <h2>Pending Review Queue</h2>
+          <p>7 items awaiting your expert assessment</p>
+        </div>
+        <button class="btn-primary" style="font-size:13px;padding:10px 20px;" onclick="showToast('Report exported successfully')">
+          Export Report
+        </button>
+      </div>
+
+      <div class="dash-stats">
+        <div class="dash-stat">
+          <div class="dash-stat-num gold">7</div>
+          <div class="dash-stat-label">Pending</div>
+        </div>
+        <div class="dash-stat">
+          <div class="dash-stat-num green">142</div>
+          <div class="dash-stat-label">Approved Total</div>
+        </div>
+        <div class="dash-stat">
+          <div class="dash-stat-num rust">23</div>
+          <div class="dash-stat-label">Rejected Total</div>
+        </div>
+        <div class="dash-stat">
+          <div class="dash-stat-num">86%</div>
+          <div class="dash-stat-label">Approval Rate</div>
+        </div>
+      </div>
+
+      <div class="dash-content">
+        <table class="review-table">
+          <thead>
+            <tr>
+              <th></th>
+              <th>Item</th>
+              <th>Status</th>
+              <th>Submitted</th>
+              <th>By</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="item-row-thumb">🗡️</td>
+              <td>
+                <div class="item-row-title">Edo Period Katana</div>
+                <div class="item-row-sub">Est. 1603–1868 · Kyoto, Japan</div>
+              </td>
+              <td><span class="badge badge-pending">Pending</span></td>
+              <td style="font-size:13px;color:var(--ink-light);">3 days ago</td>
+              <td style="font-size:13px;">T. Nakamura</td>
+              <td>
+                <div class="table-actions">
+                  <button class="btn-sm btn-review" onclick="openReview('Edo Period Katana')">Review</button>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td class="item-row-thumb">🏛️</td>
+              <td>
+                <div class="item-row-title">Greek Terracotta Amphora</div>
+                <div class="item-row-sub">Est. 500 BC · Athens, Greece</div>
+              </td>
+              <td><span class="badge badge-pending">Pending</span></td>
+              <td style="font-size:13px;color:var(--ink-light);">5 days ago</td>
+              <td style="font-size:13px;">M. Papadopoulos</td>
+              <td>
+                <div class="table-actions">
+                  <button class="btn-sm btn-review" onclick="openReview('Greek Terracotta Amphora')">Review</button>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td class="item-row-thumb">💍</td>
+              <td>
+                <div class="item-row-title">Victorian Mourning Ring</div>
+                <div class="item-row-sub">Est. 1860 · London, England</div>
+              </td>
+              <td><span class="badge badge-pending">Pending</span></td>
+              <td style="font-size:13px;color:var(--ink-light);">1 week ago</td>
+              <td style="font-size:13px;">S. Thompson</td>
+              <td>
+                <div class="table-actions">
+                  <button class="btn-sm btn-review" onclick="openReview('Victorian Mourning Ring')">Review</button>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td class="item-row-thumb">🪆</td>
+              <td>
+                <div class="item-row-title">Imperial Fabergé Egg (claimed)</div>
+                <div class="item-row-sub">Claimed 1900 · Russia</div>
+              </td>
+              <td><span class="badge badge-pending">Pending</span></td>
+              <td style="font-size:13px;color:var(--ink-light);">1 week ago</td>
+              <td style="font-size:13px;">V. Volkov</td>
+              <td>
+                <div class="table-actions">
+                  <button class="btn-sm btn-review" onclick="openReview('Imperial Fabergé Egg')">Review</button>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td class="item-row-thumb">📜</td>
+              <td>
+                <div class="item-row-title">Ottoman Illuminated Manuscript</div>
+                <div class="item-row-sub">Est. 16th Century · Istanbul</div>
+              </td>
+              <td><span class="badge badge-pending">Pending</span></td>
+              <td style="font-size:13px;color:var(--ink-light);">9 days ago</td>
+              <td style="font-size:13px;">A. Yilmaz</td>
+              <td>
+                <div class="table-actions">
+                  <button class="btn-sm btn-review" onclick="openReview('Ottoman Illuminated Manuscript')">Review</button>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td class="item-row-thumb">🎭</td>
+              <td>
+                <div class="item-row-title">Noh Theatre Mask</div>
+                <div class="item-row-sub">Est. Muromachi period · Japan</div>
+              </td>
+              <td><span class="badge badge-pending">Pending</span></td>
+              <td style="font-size:13px;color:var(--ink-light);">11 days ago</td>
+              <td style="font-size:13px;">H. Watanabe</td>
+              <td>
+                <div class="table-actions">
+                  <button class="btn-sm btn-review" onclick="openReview('Noh Theatre Mask')">Review</button>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td class="item-row-thumb">🕯️</td>
+              <td>
+                <div class="item-row-title">Baroque Silver Candelabra</div>
+                <div class="item-row-sub">Est. 1680 · Augsburg, Germany</div>
+              </td>
+              <td><span class="badge badge-pending">Pending</span></td>
+              <td style="font-size:13px;color:var(--ink-light);">12 days ago</td>
+              <td style="font-size:13px;">K. Müller</td>
+              <td>
+                <div class="table-actions">
+                  <button class="btn-sm btn-review" onclick="openReview('Baroque Silver Candelabra')">Review</button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── REVIEW MODAL ── -->
+  <div class="modal-overlay" id="review-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-title" id="modal-item-name">Review Item</div>
+        <button class="modal-close" onclick="closeReview()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group" style="margin-bottom:18px;">
+          <label class="form-label">Decision *</label>
+          <select class="form-select" id="modal-decision">
+            <option value="">Select your decision…</option>
+            <option value="approved">Approve — Item is authentic</option>
+            <option value="rejected">Reject — Item is not authentic</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin-bottom:18px;">
+          <label class="form-label">Authenticity Score (0–100)</label>
+          <div class="score-display">
+            <input type="range" min="0" max="100" value="75"
+              oninput="document.getElementById('score-num').textContent = this.value">
+            <div class="score-num" id="score-num">75</div>
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom:4px;">
+          <label class="form-label">Expert Notes *</label>
+          <textarea class="form-textarea" id="modal-notes"
+            placeholder="Provide your detailed assessment — physical examination findings, dating analysis, comparisons with known authentic examples, and any indicators of authenticity or forgery…"></textarea>
+        </div>
+        <div class="modal-actions">
+          <button class="btn-sm btn-approve" onclick="submitReview('approved')">✓ Approve & Seal to Blockchain</button>
+          <button class="btn-sm btn-reject"  onclick="submitReview('rejected')">✕ Reject</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+  <script src="../js/utils.js"></script>
+  <script>
+    // Sidebar active state
+    document.querySelectorAll('.sidebar-item').forEach(item => {
+      item.addEventListener('click', function (e) {
+        e.preventDefault();
+        document.querySelectorAll('.sidebar-item').forEach(x => x.classList.remove('active'));
+        this.classList.add('active');
+      });
+    });
+
+    // Modal
+    function openReview(itemName) {
+      document.getElementById('modal-item-name').textContent = 'Review: ' + itemName;
+      document.getElementById('modal-decision').value = '';
+      document.getElementById('modal-notes').value = '';
+      document.getElementById('score-num').textContent = '75';
+      document.getElementById('review-modal').classList.add('open');
+    }
+    function closeReview() {
+      document.getElementById('review-modal').classList.remove('open');
+    }
+    function submitReview(decision) {
+      const notes = document.getElementById('modal-notes').value.trim();
+      if (!notes) {
+        showToast('Please provide expert notes before submitting.', true);
+        return;
+      }
+      closeReview();
+      if (decision === 'approved') {
+        showToast('Item approved — generating blockchain hash and sealing record…');
+      } else {
+        showToast('Item rejected — collector has been notified.');
+      }
+    }
+    // Close modal on backdrop click
+    document.getElementById('review-modal').addEventListener('click', function (e) {
+      if (e.target === this) closeReview();
+    });
+  </script>
+</body>
+</html>

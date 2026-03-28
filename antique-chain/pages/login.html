@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign In — AntiqChain</title>
+  <link rel="stylesheet" href="../css/global.css">
+  <link rel="stylesheet" href="../css/auth.css">
+</head>
+<body>
+
+  <!-- ── NAVIGATION ── -->
+  <nav>
+    <a class="nav-logo" href="../index.html">AntiqChain <span>— Verified Heritage</span></a>
+    <div class="nav-links">
+      <a href="../index.html">Home</a>
+      <a href="about.html">About</a>
+      <a href="submit.html">Submit Item</a>
+      <a href="dashboard.html">Dashboard</a>
+      <a href="login.html" class="nav-cta active">Sign In</a>
+    </div>
+  </nav>
+
+  <!-- ── AUTH LAYOUT ── -->
+  <div class="auth-wrap">
+
+    <!-- LEFT PANEL -->
+    <div class="auth-left">
+      <div class="auth-left-content">
+        <a class="auth-logo" href="../index.html">AntiqChain</a>
+        <div class="auth-quote">"Every antique carries a story. We make sure that story can never be forged."</div>
+        <div class="auth-quote-attr">— AntiqChain Founding Principle</div>
+        <div class="auth-stats">
+          <div>
+            <div class="auth-stat-num">4,821</div>
+            <div class="auth-stat-label">Items Verified</div>
+          </div>
+          <div class="auth-stat-divider"></div>
+          <div>
+            <div class="auth-stat-num">38</div>
+            <div class="auth-stat-label">Expert Verifiers</div>
+          </div>
+          <div class="auth-stat-divider"></div>
+          <div>
+            <div class="auth-stat-num">96.4%</div>
+            <div class="auth-stat-label">Accuracy Rate</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT PANEL -->
+    <div class="auth-right">
+
+      <!-- LOGIN PANEL -->
+      <div class="auth-panel active" id="panel-login">
+        <div class="auth-title">Welcome back</div>
+        <div class="auth-subtitle">Sign in to your AntiqChain account</div>
+        <div class="auth-form">
+          <div class="form-group">
+            <label class="form-label">Email Address</label>
+            <input class="form-input" type="email" placeholder="collector@example.com">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Password</label>
+            <input class="form-input" type="password" placeholder="••••••••••">
+          </div>
+          <button class="btn-full" onclick="handleLogin()">Sign In</button>
+          <div class="auth-divider">or sign in as</div>
+          <div class="role-selector">
+            <button class="role-btn" onclick="loginAs('verifier', this)">Verifier</button>
+            <button class="role-btn" onclick="loginAs('admin', this)">Admin</button>
+            <button class="role-btn" onclick="loginAs('collector', this)">Collector</button>
+          </div>
+        </div>
+        <div class="auth-switch">
+          Don't have an account?
+          <a onclick="switchPanel('register')">Create one</a>
+        </div>
+      </div>
+
+      <!-- REGISTER PANEL -->
+      <div class="auth-panel" id="panel-register">
+        <div class="auth-title">Create Account</div>
+        <div class="auth-subtitle">Join AntiqChain — it's free to get started</div>
+        <div class="auth-form">
+          <div class="auth-form-row">
+            <div class="form-group">
+              <label class="form-label">First Name</label>
+              <input class="form-input" type="text" placeholder="John">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Last Name</label>
+              <input class="form-input" type="text" placeholder="Smith">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email Address</label>
+            <input class="form-input" type="email" placeholder="john@example.com">
+          </div>
+          <div class="form-group">
+            <label class="form-label">I am registering as</label>
+            <select class="form-select">
+              <option>Collector — I own antiques to verify</option>
+              <option>Buyer — I want to browse verified items</option>
+              <option>Expert Verifier — I am a certified specialist</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Password</label>
+            <input class="form-input" type="password" placeholder="Min. 8 characters">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Confirm Password</label>
+            <input class="form-input" type="password" placeholder="Repeat password">
+          </div>
+          <button class="btn-full" onclick="handleRegister()">Create Account</button>
+        </div>
+        <div class="auth-switch">
+          Already have an account?
+          <a onclick="switchPanel('login')">Sign in</a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+  <script src="../js/utils.js"></script>
+  <script>
+    function switchPanel(name) {
+      document.querySelectorAll('.auth-panel').forEach(p => p.classList.remove('active'));
+      document.getElementById('panel-' + name).classList.add('active');
+    }
+    function handleLogin() {
+      showToast('Signed in successfully — welcome back!');
+      setTimeout(() => window.location.href = '../index.html', 900);
+    }
+    function handleRegister() {
+      showToast('Account created — please check your email to verify.');
+      setTimeout(() => switchPanel('login'), 900);
+    }
+    function loginAs(role, btn) {
+      document.querySelectorAll('.role-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      showToast('Signed in as ' + role.charAt(0).toUpperCase() + role.slice(1));
+      setTimeout(() => {
+        window.location.href = (role === 'verifier' || role === 'admin')
+          ? 'dashboard.html' : '../index.html';
+      }, 700);
+    }
+  </script>
+</body>
+</html>
