@@ -301,19 +301,19 @@
         }
       },
       collector: {
-        title: 'My Collection',
-        subtitle: 'Track your submissions, reviews, and issued certificates',
-        actionLabel: 'Submit New Item',
-        actionHref: 'submit.html',
+        title: 'Collection Hub',
+        subtitle: 'Manage your items, browse verified antiques, and track certificates in one place',
+        actionLabel: 'Open Registry',
+        actionHref: '../index.html',
         stats: [
-          { value: '12', label: 'Submitted', className: 'gold' },
-          { value: '4', label: 'In Review', className: 'rust' },
-          { value: '8', label: 'Approved', className: 'green' },
+          { value: '12', label: 'My Submissions', className: 'gold' },
+          { value: '42', label: 'Verified Items Viewed', className: 'green' },
+          { value: '4', label: 'Items In Review', className: 'rust' },
           { value: '8', label: 'Certificates', className: '' }
         ],
         sidebar: {
           name: 'Maya Chen',
-          role: 'Collector · ID: COL-214',
+          role: 'Collector / Buyer · ID: COL-214',
           sections: [
             {
               label: 'Collection',
@@ -324,10 +324,10 @@
               ]
             },
             {
-              label: 'Support',
+              label: 'Discovery',
               items: [
-                { icon: '➕', label: 'Submit New Item' },
-                { icon: '🔎', label: 'Certificate Lookup' },
+                { icon: '🔎', label: 'Verified Inventory', count: '42' },
+                { icon: '⭐', label: 'Watchlist', count: '18', countClass: 'green' },
                 { icon: '💬', label: 'Support Inbox' }
               ]
             }
@@ -339,17 +339,17 @@
               <section class="dashboard-panel">
                 <div class="panel-head">
                   <div>
-                    <h3>Recent Submissions</h3>
-                    <p>Keep track of items you have sent for verification and the next action required.</p>
+                    <h3>Recent Activity</h3>
+                    <p>Submit new antiques, track review progress, and open verified certificates from one dashboard.</p>
                   </div>
-                  <a class="btn-sm btn-review" href="submit.html">Submit Another</a>
+                  <a class="btn-sm btn-review" href="submit.html">Submit New Item</a>
                 </div>
                 <div class="panel-body">
                   <table class="review-table">
                     <thead>
                       <tr>
                         <th>Item</th>
-                        <th>Collection</th>
+                        <th>Source</th>
                         <th>Status</th>
                         <th>Last Update</th>
                         <th>Action</th>
@@ -371,6 +371,13 @@
                         <td><button class="btn-sm btn-review" onclick="showToast('You will receive an update once review is complete')">Track</button></td>
                       </tr>
                       <tr>
+                        <td><div class="item-row-title">Ming Dynasty Porcelain Vase</div><div class="item-row-sub">Saved for later comparison</div></td>
+                        <td>Verified Inventory</td>
+                        <td><span class="badge badge-verified">Verified</span></td>
+                        <td style="font-size:13px;color:var(--ink-light);">Yesterday</td>
+                        <td><button class="btn-sm btn-review" onclick="showToast('Certificate opened')">Certificate</button></td>
+                      </tr>
+                      <tr>
                         <td><div class="item-row-title">Art Nouveau Lamp</div><div class="item-row-sub">Awaiting image upload</div></td>
                         <td>Home Archive</td>
                         <td><span class="badge badge-pending">Draft</span></td>
@@ -384,8 +391,8 @@
               <aside class="dashboard-panel">
                 <div class="panel-head">
                   <div>
-                    <h3>Collector Tools</h3>
-                    <p>Move quickly from submission to certificate and keep your archive organized.</p>
+                    <h3>Workspace Tools</h3>
+                    <p>Use the same account for submission and browsing without switching roles.</p>
                   </div>
                 </div>
                 <div class="panel-body panel-stack">
@@ -395,109 +402,12 @@
                     <div class="dashboard-actions"><a class="btn-sm btn-approve" href="submit.html">Resume Draft</a></div>
                   </div>
                   <div class="mini-card">
-                    <div class="mini-card-title">Latest Certificate</div>
-                    <div class="mini-card-desc">Mughal Jade Dagger is already sealed on the chain. The certificate is ready for resale or insurance.</div>
-                  </div>
-                  <div class="mini-card">
-                    <div class="mini-card-title">Quick Notes</div>
-                    <div class="mini-card-desc">You can open a fresh submission anytime, or check the status of older items from this workspace.</div>
-                  </div>
-                </div>
-              </aside>
-            </div>
-          `;
-        }
-      },
-      buyer: {
-        title: 'Verified Inventory',
-        subtitle: 'Browse authenticated antiques and keep track of what you are watching',
-        actionLabel: 'Browse Registry',
-        actionHref: '../index.html',
-        stats: [
-          { value: '18', label: 'Watchlist', className: 'gold' },
-          { value: '42', label: 'Verified Matches', className: 'green' },
-          { value: '5', label: 'Alerts', className: 'rust' },
-          { value: '11', label: 'Certificates', className: '' }
-        ],
-        sidebar: {
-          name: 'Luca Bennett',
-          role: 'Buyer · ID: BUY-072',
-          sections: [
-            {
-              label: 'Discovery',
-              items: [
-                { icon: '🔎', label: 'Verified Inventory', count: '42', active: true },
-                { icon: '⭐', label: 'Watchlist', count: '18', countClass: 'green' },
-                { icon: '🔔', label: 'Alerts', count: '5', countClass: 'rust' }
-              ]
-            },
-            {
-              label: 'Certificates',
-              items: [
-                { icon: '📜', label: 'Lookup Certificate' },
-                { icon: '🧾', label: 'Saved Receipts' },
-                { icon: '💬', label: 'Support' }
-              ]
-            }
-          ]
-        },
-        main: function () {
-          return `
-            <div class="dash-content dashboard-grid">
-              <section class="dashboard-panel">
-                <div class="panel-head">
-                  <div>
-                    <h3>Featured Verified Items</h3>
-                    <p>Check the registry for authenticated pieces, then add the ones you are watching.</p>
-                  </div>
-                  <a class="btn-sm btn-review" href="../index.html">Open Registry</a>
-                </div>
-                <div class="panel-body dashboard-card-grid">
-                  <article class="dashboard-card">
-                    <div class="item-row-thumb" style="width:auto;">🏺</div>
-                    <h4>Ming Dynasty Porcelain Vase</h4>
-                    <p>Score 94/100 · Certificate available</p>
-                    <div class="dashboard-actions"><button class="btn-sm btn-approve" onclick="showToast('Item added to watchlist')">Watch</button><button class="btn-sm btn-review" onclick="showToast('Certificate opened')">Certificate</button></div>
-                  </article>
-                  <article class="dashboard-card">
-                    <div class="item-row-thumb" style="width:auto;">🕰️</div>
-                    <h4>Louis XVI Mantel Clock</h4>
-                    <p>Score 89/100 · Verified provenance attached</p>
-                    <div class="dashboard-actions"><button class="btn-sm btn-approve" onclick="showToast('Item added to watchlist')">Watch</button><button class="btn-sm btn-review" onclick="showToast('Certificate opened')">Certificate</button></div>
-                  </article>
-                  <article class="dashboard-card">
-                    <div class="item-row-thumb" style="width:auto;">🪞</div>
-                    <h4>Georgian Console Mirror</h4>
-                    <p>Score 91/100 · Ready for resale checks</p>
-                    <div class="dashboard-actions"><button class="btn-sm btn-approve" onclick="showToast('Item added to watchlist')">Watch</button><button class="btn-sm btn-review" onclick="showToast('Certificate opened')">Certificate</button></div>
-                  </article>
-                  <article class="dashboard-card">
-                    <div class="item-row-thumb" style="width:auto;">💎</div>
-                    <h4>Mughal Emerald Necklace</h4>
-                    <p>Score 97/100 · Insurance ready</p>
-                    <div class="dashboard-actions"><button class="btn-sm btn-approve" onclick="showToast('Item added to watchlist')">Watch</button><button class="btn-sm btn-review" onclick="showToast('Certificate opened')">Certificate</button></div>
-                  </article>
-                </div>
-              </section>
-              <aside class="dashboard-panel">
-                <div class="panel-head">
-                  <div>
-                    <h3>Buyer Workspace</h3>
-                    <p>Use the registry to compare verified pieces and keep a short list of targets.</p>
-                  </div>
-                </div>
-                <div class="panel-body panel-stack">
-                  <div class="mini-card">
                     <div class="mini-card-title">Watchlist Alert</div>
                     <div class="mini-card-desc">Two of your saved items were updated with new provenance documents this week.</div>
                   </div>
                   <div class="mini-card">
-                    <div class="mini-card-title">Search Tip</div>
-                    <div class="mini-card-desc">Filter by origin, era, or score to narrow the registry before you buy.</div>
-                  </div>
-                  <div class="mini-card">
-                    <div class="mini-card-title">Certificate Status</div>
-                    <div class="mini-card-desc">Eleven certificates are already linked to your account and can be opened at any time.</div>
+                    <div class="mini-card-title">Quick Notes</div>
+                    <div class="mini-card-desc">Open new submissions, compare verified pieces, or pull certificates from the same workspace.</div>
                   </div>
                 </div>
               </aside>

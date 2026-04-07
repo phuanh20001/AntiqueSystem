@@ -15,16 +15,14 @@ const ROLE_PROFILES = {
   },
   collector: {
     role: 'collector',
-    label: 'Collector',
+    label: 'Collector / Buyer',
     displayName: 'Maya Chen',
     id: 'COL-214'
-  },
-  buyer: {
-    role: 'buyer',
-    label: 'Buyer',
-    displayName: 'Luca Bennett',
-    id: 'BUY-072'
   }
+};
+
+const ROLE_ALIASES = {
+  buyer: 'collector'
 };
 
 // ── TOAST ──
@@ -42,15 +40,24 @@ function getAuthSession() {
     const raw = localStorage.getItem(AUTH_STORAGE_KEY);
     if (!raw) return null;
     const session = JSON.parse(raw);
-    if (!session || !ROLE_PROFILES[session.role]) return null;
-    return session;
+    if (!session) return null;
+
+    const normalizedRole = ROLE_ALIASES[session.role] || session.role;
+    if (!ROLE_PROFILES[normalizedRole]) return null;
+
+    return {
+      ...session,
+      role: normalizedRole,
+      roleLabel: ROLE_PROFILES[normalizedRole].label
+    };
   } catch (error) {
     return null;
   }
 }
 
 function setAuthSession(role, overrides = {}) {
-  const profile = ROLE_PROFILES[role] || ROLE_PROFILES.verifier;
+  const normalizedRole = ROLE_ALIASES[role] || role;
+  const profile = ROLE_PROFILES[normalizedRole] || ROLE_PROFILES.verifier;
   const session = {
     role: profile.role,
     roleLabel: profile.label,
