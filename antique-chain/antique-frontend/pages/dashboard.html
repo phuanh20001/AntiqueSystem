@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Verifier Dashboard — AntiqChain</title>
+  <title>Dashboard — AntiqChain</title>
   <link rel="stylesheet" href="../css/global.css">
   <link rel="stylesheet" href="../css/dashboard.css">
 </head>
@@ -22,202 +22,7 @@
   </nav>
 
   <!-- ── DASHBOARD LAYOUT ── -->
-  <div class="dashboard-layout">
-
-    <!-- SIDEBAR -->
-    <div class="dashboard-sidebar">
-      <div class="sidebar-profile">
-        <div class="sidebar-name">Dr. A. Chen</div>
-        <div class="sidebar-role">Expert Verifier · ID: VRF-009</div>
-      </div>
-
-      <div class="sidebar-section-label">Review Queue</div>
-      <div class="sidebar-section">
-        <a class="sidebar-item active" href="#">
-          <span>📋</span> Pending Review
-          <span class="sidebar-count">7</span>
-        </a>
-        <a class="sidebar-item" href="#">
-          <span>✅</span> Approved
-          <span class="sidebar-count green">142</span>
-        </a>
-        <a class="sidebar-item" href="#">
-          <span>❌</span> Rejected
-          <span class="sidebar-count rust">23</span>
-        </a>
-      </div>
-
-      <div class="sidebar-section-label">Management</div>
-      <div class="sidebar-section">
-        <a class="sidebar-item" href="#">
-          <span>👥</span> All Users
-        </a>
-        <a class="sidebar-item" href="#">
-          <span>📊</span> Analytics
-        </a>
-        <a class="sidebar-item" href="#">
-          <span>🔗</span> Blockchain Log
-        </a>
-        <a class="sidebar-item" href="#">
-          <span>⚙️</span> Settings
-        </a>
-      </div>
-    </div>
-
-    <!-- MAIN CONTENT -->
-    <div class="dashboard-main">
-      <div class="dash-topbar">
-        <div>
-          <h2>Pending Review Queue</h2>
-          <p>7 items awaiting your expert assessment</p>
-        </div>
-        <button class="btn-primary" style="font-size:13px;padding:10px 20px;" onclick="showToast('Report exported successfully')">
-          Export Report
-        </button>
-      </div>
-
-      <div class="dash-stats">
-        <div class="dash-stat">
-          <div class="dash-stat-num gold">7</div>
-          <div class="dash-stat-label">Pending</div>
-        </div>
-        <div class="dash-stat">
-          <div class="dash-stat-num green">142</div>
-          <div class="dash-stat-label">Approved Total</div>
-        </div>
-        <div class="dash-stat">
-          <div class="dash-stat-num rust">23</div>
-          <div class="dash-stat-label">Rejected Total</div>
-        </div>
-        <div class="dash-stat">
-          <div class="dash-stat-num">86%</div>
-          <div class="dash-stat-label">Approval Rate</div>
-        </div>
-      </div>
-
-      <div class="dash-content">
-        <table class="review-table">
-          <thead>
-            <tr>
-              <th></th>
-              <th>Item</th>
-              <th>Status</th>
-              <th>Submitted</th>
-              <th>By</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td class="item-row-thumb">🗡️</td>
-              <td>
-                <div class="item-row-title">Edo Period Katana</div>
-                <div class="item-row-sub">Est. 1603–1868 · Kyoto, Japan</div>
-              </td>
-              <td><span class="badge badge-pending">Pending</span></td>
-              <td style="font-size:13px;color:var(--ink-light);">3 days ago</td>
-              <td style="font-size:13px;">T. Nakamura</td>
-              <td>
-                <div class="table-actions">
-                  <button class="btn-sm btn-review" onclick="openReview('Edo Period Katana')">Review</button>
-                </div>
-              </td>
-            </tr>
-            <tr>
-              <td class="item-row-thumb">🏛️</td>
-              <td>
-                <div class="item-row-title">Greek Terracotta Amphora</div>
-                <div class="item-row-sub">Est. 500 BC · Athens, Greece</div>
-              </td>
-              <td><span class="badge badge-pending">Pending</span></td>
-              <td style="font-size:13px;color:var(--ink-light);">5 days ago</td>
-              <td style="font-size:13px;">M. Papadopoulos</td>
-              <td>
-                <div class="table-actions">
-                  <button class="btn-sm btn-review" onclick="openReview('Greek Terracotta Amphora')">Review</button>
-                </div>
-              </td>
-            </tr>
-            <tr>
-              <td class="item-row-thumb">💍</td>
-              <td>
-                <div class="item-row-title">Victorian Mourning Ring</div>
-                <div class="item-row-sub">Est. 1860 · London, England</div>
-              </td>
-              <td><span class="badge badge-pending">Pending</span></td>
-              <td style="font-size:13px;color:var(--ink-light);">1 week ago</td>
-              <td style="font-size:13px;">S. Thompson</td>
-              <td>
-                <div class="table-actions">
-                  <button class="btn-sm btn-review" onclick="openReview('Victorian Mourning Ring')">Review</button>
-                </div>
-              </td>
-            </tr>
-            <tr>
-              <td class="item-row-thumb">🪆</td>
-              <td>
-                <div class="item-row-title">Imperial Fabergé Egg (claimed)</div>
-                <div class="item-row-sub">Claimed 1900 · Russia</div>
-              </td>
-              <td><span class="badge badge-pending">Pending</span></td>
-              <td style="font-size:13px;color:var(--ink-light);">1 week ago</td>
-              <td style="font-size:13px;">V. Volkov</td>
-              <td>
-                <div class="table-actions">
-                  <button class="btn-sm btn-review" onclick="openReview('Imperial Fabergé Egg')">Review</button>
-                </div>
-              </td>
-            </tr>
-            <tr>
-              <td class="item-row-thumb">📜</td>
-              <td>
-                <div class="item-row-title">Ottoman Illuminated Manuscript</div>
-                <div class="item-row-sub">Est. 16th Century · Istanbul</div>
-              </td>
-              <td><span class="badge badge-pending">Pending</span></td>
-              <td style="font-size:13px;color:var(--ink-light);">9 days ago</td>
-              <td style="font-size:13px;">A. Yilmaz</td>
-              <td>
-                <div class="table-actions">
-                  <button class="btn-sm btn-review" onclick="openReview('Ottoman Illuminated Manuscript')">Review</button>
-                </div>
-              </td>
-            </tr>
-            <tr>
-              <td class="item-row-thumb">🎭</td>
-              <td>
-                <div class="item-row-title">Noh Theatre Mask</div>
-                <div class="item-row-sub">Est. Muromachi period · Japan</div>
-              </td>
-              <td><span class="badge badge-pending">Pending</span></td>
-              <td style="font-size:13px;color:var(--ink-light);">11 days ago</td>
-              <td style="font-size:13px;">H. Watanabe</td>
-              <td>
-                <div class="table-actions">
-                  <button class="btn-sm btn-review" onclick="openReview('Noh Theatre Mask')">Review</button>
-                </div>
-              </td>
-            </tr>
-            <tr>
-              <td class="item-row-thumb">🕯️</td>
-              <td>
-                <div class="item-row-title">Baroque Silver Candelabra</div>
-                <div class="item-row-sub">Est. 1680 · Augsburg, Germany</div>
-              </td>
-              <td><span class="badge badge-pending">Pending</span></td>
-              <td style="font-size:13px;color:var(--ink-light);">12 days ago</td>
-              <td style="font-size:13px;">K. Müller</td>
-              <td>
-                <div class="table-actions">
-                  <button class="btn-sm btn-review" onclick="openReview('Baroque Silver Candelabra')">Review</button>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
+  <div class="dashboard-layout" id="dashboard-root"></div>
 
   <!-- ── REVIEW MODAL ── -->
   <div class="modal-overlay" id="review-modal">
@@ -259,16 +64,524 @@
   <div class="toast" id="toast"></div>
   <script src="../js/utils.js"></script>
   <script>
-    // Sidebar active state
-    document.querySelectorAll('.sidebar-item').forEach(item => {
-      item.addEventListener('click', function (e) {
-        e.preventDefault();
-        document.querySelectorAll('.sidebar-item').forEach(x => x.classList.remove('active'));
-        this.classList.add('active');
-      });
-    });
+    const DASHBOARD_CONFIG = {
+      verifier: {
+        title: 'Pending Review Queue',
+        subtitle: '7 items awaiting your expert assessment',
+        actionLabel: 'Export Report',
+        actionToast: 'Report exported successfully',
+        stats: [
+          { value: '7', label: 'Pending', className: 'gold' },
+          { value: '142', label: 'Approved Total', className: 'green' },
+          { value: '23', label: 'Rejected Total', className: 'rust' },
+          { value: '86%', label: 'Approval Rate', className: '' }
+        ],
+        sidebar: {
+          name: 'Suman Bastola',
+          role: 'Expert Verifier · ID: VRF-009',
+          sections: [
+            {
+              label: 'Review Queue',
+              items: [
+                { icon: '📋', label: 'Pending Review', count: '7', active: true },
+                { icon: '✅', label: 'Approved', count: '142', countClass: 'green' },
+                { icon: '❌', label: 'Rejected', count: '23', countClass: 'rust' }
+              ]
+            },
+            {
+              label: 'Management',
+              items: [
+                { icon: '👥', label: 'All Users' },
+                { icon: '📊', label: 'Analytics' },
+                { icon: '🔗', label: 'Blockchain Log' },
+                { icon: '⚙️', label: 'Settings' }
+              ]
+            }
+          ]
+        },
+        main: function () {
+          return `
+            <div class="dash-content dashboard-grid dashboard-grid-single">
+              <section class="dashboard-panel dashboard-panel-wide">
+                <div class="panel-head">
+                  <div>
+                    <h3>Pending Reviews</h3>
+                    <p>Scan each antique, review the provenance, and decide whether it is ready for the chain.</p>
+                  </div>
+                  <button class="btn-sm btn-review" onclick="showToast('Report exported successfully')">Export Report</button>
+                </div>
+                <div class="panel-body">
+                  <table class="review-table">
+                    <thead>
+                      <tr>
+                        <th></th>
+                        <th>Item</th>
+                        <th>Status</th>
+                        <th>Submitted</th>
+                        <th>By</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td class="item-row-thumb">🗡️</td>
+                        <td><div class="item-row-title">Edo Period Katana</div><div class="item-row-sub">Est. 1603–1868 · Kyoto, Japan</div></td>
+                        <td><span class="badge badge-pending">Pending</span></td>
+                        <td style="font-size:13px;color:var(--ink-light);">3 days ago</td>
+                        <td style="font-size:13px;">T. Nakamura</td>
+                        <td><div class="table-actions"><button class="btn-sm btn-review" onclick="openReview('Edo Period Katana')">Review</button></div></td>
+                      </tr>
+                      <tr>
+                        <td class="item-row-thumb">🏛️</td>
+                        <td><div class="item-row-title">Greek Terracotta Amphora</div><div class="item-row-sub">Est. 500 BC · Athens, Greece</div></td>
+                        <td><span class="badge badge-pending">Pending</span></td>
+                        <td style="font-size:13px;color:var(--ink-light);">5 days ago</td>
+                        <td style="font-size:13px;">M. Papadopoulos</td>
+                        <td><div class="table-actions"><button class="btn-sm btn-review" onclick="openReview('Greek Terracotta Amphora')">Review</button></div></td>
+                      </tr>
+                      <tr>
+                        <td class="item-row-thumb">💍</td>
+                        <td><div class="item-row-title">Victorian Mourning Ring</div><div class="item-row-sub">Est. 1860 · London, England</div></td>
+                        <td><span class="badge badge-pending">Pending</span></td>
+                        <td style="font-size:13px;color:var(--ink-light);">1 week ago</td>
+                        <td style="font-size:13px;">S. Thompson</td>
+                        <td><div class="table-actions"><button class="btn-sm btn-review" onclick="openReview('Victorian Mourning Ring')">Review</button></div></td>
+                      </tr>
+                      <tr>
+                        <td class="item-row-thumb">🪆</td>
+                        <td><div class="item-row-title">Imperial Fabergé Egg (claimed)</div><div class="item-row-sub">Claimed 1900 · Russia</div></td>
+                        <td><span class="badge badge-pending">Pending</span></td>
+                        <td style="font-size:13px;color:var(--ink-light);">1 week ago</td>
+                        <td style="font-size:13px;">V. Volkov</td>
+                        <td><div class="table-actions"><button class="btn-sm btn-review" onclick="openReview('Imperial Fabergé Egg')">Review</button></div></td>
+                      </tr>
+                      <tr>
+                        <td class="item-row-thumb">📜</td>
+                        <td><div class="item-row-title">Ottoman Illuminated Manuscript</div><div class="item-row-sub">Est. 16th Century · Istanbul</div></td>
+                        <td><span class="badge badge-pending">Pending</span></td>
+                        <td style="font-size:13px;color:var(--ink-light);">9 days ago</td>
+                        <td style="font-size:13px;">A. Yilmaz</td>
+                        <td><div class="table-actions"><button class="btn-sm btn-review" onclick="openReview('Ottoman Illuminated Manuscript')">Review</button></div></td>
+                      </tr>
+                      <tr>
+                        <td class="item-row-thumb">🎭</td>
+                        <td><div class="item-row-title">Noh Theatre Mask</div><div class="item-row-sub">Est. Muromachi period · Japan</div></td>
+                        <td><span class="badge badge-pending">Pending</span></td>
+                        <td style="font-size:13px;color:var(--ink-light);">11 days ago</td>
+                        <td style="font-size:13px;">H. Watanabe</td>
+                        <td><div class="table-actions"><button class="btn-sm btn-review" onclick="openReview('Noh Theatre Mask')">Review</button></div></td>
+                      </tr>
+                      <tr>
+                        <td class="item-row-thumb">🕯️</td>
+                        <td><div class="item-row-title">Baroque Silver Candelabra</div><div class="item-row-sub">Est. 1680 · Augsburg, Germany</div></td>
+                        <td><span class="badge badge-pending">Pending</span></td>
+                        <td style="font-size:13px;color:var(--ink-light);">12 days ago</td>
+                        <td style="font-size:13px;">K. Müller</td>
+                        <td><div class="table-actions"><button class="btn-sm btn-review" onclick="openReview('Baroque Silver Candelabra')">Review</button></div></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            </div>
+          `;
+        }
+      },
+      admin: {
+        title: 'Platform Control Center',
+        subtitle: 'User access, system health, and audit oversight',
+        actionLabel: 'Export Audit Pack',
+        actionToast: 'Audit pack exported successfully',
+        stats: [
+          { value: '128', label: 'Active Users', className: 'green' },
+          { value: '7', label: 'Pending Reviews', className: 'gold' },
+          { value: '3', label: 'System Alerts', className: 'rust' },
+          { value: '99.98%', label: 'Uptime', className: '' }
+        ],
+        sidebar: {
+          name: 'Ariadne Cole',
+          role: 'Platform Admin · ID: ADM-001',
+          sections: [
+            {
+              label: 'Operations',
+              items: [
+                { icon: '🛂', label: 'Access Requests', count: '4', active: true },
+                { icon: '🔑', label: 'Role Approvals' },
+                { icon: '🚨', label: 'System Alerts', count: '3', countClass: 'rust' },
+                { icon: '🗂️', label: 'Audit Trail' }
+              ]
+            },
+            {
+              label: 'Governance',
+              items: [
+                { icon: '👥', label: 'Users' },
+                { icon: '📈', label: 'Platform Metrics' },
+                { icon: '🔐', label: 'Key Rotation' },
+                { icon: '⚙️', label: 'Configuration' }
+              ]
+            }
+          ]
+        },
+        main: function () {
+          return `
+            <div class="dash-content dashboard-grid">
+              <section class="dashboard-panel">
+                <div class="panel-head">
+                  <div>
+                    <h3>Access Requests</h3>
+                    <p>Review new accounts, assign roles, and keep the registry aligned with policy.</p>
+                  </div>
+                  <button class="btn-sm btn-review" onclick="showToast('New access requests refreshed')">Refresh</button>
+                </div>
+                <div class="panel-body">
+                  <table class="review-table">
+                    <thead>
+                      <tr>
+                        <th>User</th>
+                        <th>Requested Role</th>
+                        <th>Verification</th>
+                        <th>Submitted</th>
+                        <th>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td><div class="item-row-title">Nadia Hussain</div><div class="item-row-sub">nadia@example.com</div></td>
+                        <td>Verifier</td>
+                        <td><span class="badge badge-pending">Pending</span></td>
+                        <td style="font-size:13px;color:var(--ink-light);">Today</td>
+                        <td><div class="table-actions"><button class="btn-sm btn-approve" onclick="showToast('Role approved and onboarding triggered')">Approve</button></div></td>
+                      </tr>
+                      <tr>
+                        <td><div class="item-row-title">Omar Ali</div><div class="item-row-sub">omar@example.com</div></td>
+                        <td>Collector</td>
+                        <td><span class="badge badge-pending">Pending</span></td>
+                        <td style="font-size:13px;color:var(--ink-light);">Yesterday</td>
+                        <td><div class="table-actions"><button class="btn-sm btn-review" onclick="showToast('Request sent for manual review')">Review</button></div></td>
+                      </tr>
+                      <tr>
+                        <td><div class="item-row-title">Lina Ortega</div><div class="item-row-sub">lina@example.com</div></td>
+                        <td>Buyer</td>
+                        <td><span class="badge badge-verified">Verified</span></td>
+                        <td style="font-size:13px;color:var(--ink-light);">2 days ago</td>
+                        <td><div class="table-actions"><button class="btn-sm btn-review" onclick="showToast('Access updated')">Update</button></div></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+              <aside class="dashboard-panel">
+                <div class="panel-head">
+                  <div>
+                    <h3>System Health</h3>
+                    <p>Fast checks for ledger integrity, queue pressure, and platform warnings.</p>
+                  </div>
+                </div>
+                <div class="panel-body panel-stack">
+                  <div class="mini-card">
+                    <div class="mini-card-title">Ledger Integrity</div>
+                    <div class="mini-card-desc">All verification hashes are aligned across the active nodes.</div>
+                    <div class="dashboard-actions"><button class="btn-sm btn-review" onclick="showToast('Ledger scan completed successfully')">Run Check</button></div>
+                  </div>
+                  <div class="mini-card">
+                    <div class="mini-card-title">Moderation Queue</div>
+                    <div class="mini-card-desc">7 items need verifier attention, and 3 accounts are awaiting a final policy review.</div>
+                  </div>
+                  <div class="mini-card">
+                    <div class="mini-card-title">Quick Actions</div>
+                    <div class="dashboard-actions">
+                      <button class="btn-sm btn-approve" onclick="showToast('New verifier invitation prepared')">Invite Verifier</button>
+                      <button class="btn-sm btn-review" onclick="showToast('Security keys scheduled for rotation')">Rotate Keys</button>
+                    </div>
+                  </div>
+                </div>
+              </aside>
+            </div>
+          `;
+        }
+      },
+      collector: {
+        title: 'My Collection',
+        subtitle: 'Track your submissions, reviews, and issued certificates',
+        actionLabel: 'Submit New Item',
+        actionHref: 'submit.html',
+        stats: [
+          { value: '12', label: 'Submitted', className: 'gold' },
+          { value: '4', label: 'In Review', className: 'rust' },
+          { value: '8', label: 'Approved', className: 'green' },
+          { value: '8', label: 'Certificates', className: '' }
+        ],
+        sidebar: {
+          name: 'Maya Chen',
+          role: 'Collector · ID: COL-214',
+          sections: [
+            {
+              label: 'Collection',
+              items: [
+                { icon: '📦', label: 'My Submissions', count: '12', active: true },
+                { icon: '🟡', label: 'In Review', count: '4', countClass: 'rust' },
+                { icon: '📜', label: 'Certificates', count: '8', countClass: 'green' }
+              ]
+            },
+            {
+              label: 'Support',
+              items: [
+                { icon: '➕', label: 'Submit New Item' },
+                { icon: '🔎', label: 'Certificate Lookup' },
+                { icon: '💬', label: 'Support Inbox' }
+              ]
+            }
+          ]
+        },
+        main: function () {
+          return `
+            <div class="dash-content dashboard-grid">
+              <section class="dashboard-panel">
+                <div class="panel-head">
+                  <div>
+                    <h3>Recent Submissions</h3>
+                    <p>Keep track of items you have sent for verification and the next action required.</p>
+                  </div>
+                  <a class="btn-sm btn-review" href="submit.html">Submit Another</a>
+                </div>
+                <div class="panel-body">
+                  <table class="review-table">
+                    <thead>
+                      <tr>
+                        <th>Item</th>
+                        <th>Collection</th>
+                        <th>Status</th>
+                        <th>Last Update</th>
+                        <th>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td><div class="item-row-title">Mughal Jade Dagger</div><div class="item-row-sub">Registered with provenance documents</div></td>
+                        <td>Private Collection</td>
+                        <td><span class="badge badge-verified">Approved</span></td>
+                        <td style="font-size:13px;color:var(--ink-light);">2 days ago</td>
+                        <td><button class="btn-sm btn-review" onclick="showToast('Certificate opened in the registry')">View</button></td>
+                      </tr>
+                      <tr>
+                        <td><div class="item-row-title">Austrian Pocket Watch</div><div class="item-row-sub">Verification notes pending</div></td>
+                        <td>Family Archive</td>
+                        <td><span class="badge badge-pending">In Review</span></td>
+                        <td style="font-size:13px;color:var(--ink-light);">Today</td>
+                        <td><button class="btn-sm btn-review" onclick="showToast('You will receive an update once review is complete')">Track</button></td>
+                      </tr>
+                      <tr>
+                        <td><div class="item-row-title">Art Nouveau Lamp</div><div class="item-row-sub">Awaiting image upload</div></td>
+                        <td>Home Archive</td>
+                        <td><span class="badge badge-pending">Draft</span></td>
+                        <td style="font-size:13px;color:var(--ink-light);">Yesterday</td>
+                        <td><button class="btn-sm btn-review" onclick="showToast('Continue the submission workflow')">Continue</button></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+              <aside class="dashboard-panel">
+                <div class="panel-head">
+                  <div>
+                    <h3>Collector Tools</h3>
+                    <p>Move quickly from submission to certificate and keep your archive organized.</p>
+                  </div>
+                </div>
+                <div class="panel-body panel-stack">
+                  <div class="mini-card">
+                    <div class="mini-card-title">Next Step</div>
+                    <div class="mini-card-desc">Finish the remaining photo set and provenance notes for the Art Nouveau Lamp.</div>
+                    <div class="dashboard-actions"><a class="btn-sm btn-approve" href="submit.html">Resume Draft</a></div>
+                  </div>
+                  <div class="mini-card">
+                    <div class="mini-card-title">Latest Certificate</div>
+                    <div class="mini-card-desc">Mughal Jade Dagger is already sealed on the chain. The certificate is ready for resale or insurance.</div>
+                  </div>
+                  <div class="mini-card">
+                    <div class="mini-card-title">Quick Notes</div>
+                    <div class="mini-card-desc">You can open a fresh submission anytime, or check the status of older items from this workspace.</div>
+                  </div>
+                </div>
+              </aside>
+            </div>
+          `;
+        }
+      },
+      buyer: {
+        title: 'Verified Inventory',
+        subtitle: 'Browse authenticated antiques and keep track of what you are watching',
+        actionLabel: 'Browse Registry',
+        actionHref: '../index.html',
+        stats: [
+          { value: '18', label: 'Watchlist', className: 'gold' },
+          { value: '42', label: 'Verified Matches', className: 'green' },
+          { value: '5', label: 'Alerts', className: 'rust' },
+          { value: '11', label: 'Certificates', className: '' }
+        ],
+        sidebar: {
+          name: 'Luca Bennett',
+          role: 'Buyer · ID: BUY-072',
+          sections: [
+            {
+              label: 'Discovery',
+              items: [
+                { icon: '🔎', label: 'Verified Inventory', count: '42', active: true },
+                { icon: '⭐', label: 'Watchlist', count: '18', countClass: 'green' },
+                { icon: '🔔', label: 'Alerts', count: '5', countClass: 'rust' }
+              ]
+            },
+            {
+              label: 'Certificates',
+              items: [
+                { icon: '📜', label: 'Lookup Certificate' },
+                { icon: '🧾', label: 'Saved Receipts' },
+                { icon: '💬', label: 'Support' }
+              ]
+            }
+          ]
+        },
+        main: function () {
+          return `
+            <div class="dash-content dashboard-grid">
+              <section class="dashboard-panel">
+                <div class="panel-head">
+                  <div>
+                    <h3>Featured Verified Items</h3>
+                    <p>Check the registry for authenticated pieces, then add the ones you are watching.</p>
+                  </div>
+                  <a class="btn-sm btn-review" href="../index.html">Open Registry</a>
+                </div>
+                <div class="panel-body dashboard-card-grid">
+                  <article class="dashboard-card">
+                    <div class="item-row-thumb" style="width:auto;">🏺</div>
+                    <h4>Ming Dynasty Porcelain Vase</h4>
+                    <p>Score 94/100 · Certificate available</p>
+                    <div class="dashboard-actions"><button class="btn-sm btn-approve" onclick="showToast('Item added to watchlist')">Watch</button><button class="btn-sm btn-review" onclick="showToast('Certificate opened')">Certificate</button></div>
+                  </article>
+                  <article class="dashboard-card">
+                    <div class="item-row-thumb" style="width:auto;">🕰️</div>
+                    <h4>Louis XVI Mantel Clock</h4>
+                    <p>Score 89/100 · Verified provenance attached</p>
+                    <div class="dashboard-actions"><button class="btn-sm btn-approve" onclick="showToast('Item added to watchlist')">Watch</button><button class="btn-sm btn-review" onclick="showToast('Certificate opened')">Certificate</button></div>
+                  </article>
+                  <article class="dashboard-card">
+                    <div class="item-row-thumb" style="width:auto;">🪞</div>
+                    <h4>Georgian Console Mirror</h4>
+                    <p>Score 91/100 · Ready for resale checks</p>
+                    <div class="dashboard-actions"><button class="btn-sm btn-approve" onclick="showToast('Item added to watchlist')">Watch</button><button class="btn-sm btn-review" onclick="showToast('Certificate opened')">Certificate</button></div>
+                  </article>
+                  <article class="dashboard-card">
+                    <div class="item-row-thumb" style="width:auto;">💎</div>
+                    <h4>Mughal Emerald Necklace</h4>
+                    <p>Score 97/100 · Insurance ready</p>
+                    <div class="dashboard-actions"><button class="btn-sm btn-approve" onclick="showToast('Item added to watchlist')">Watch</button><button class="btn-sm btn-review" onclick="showToast('Certificate opened')">Certificate</button></div>
+                  </article>
+                </div>
+              </section>
+              <aside class="dashboard-panel">
+                <div class="panel-head">
+                  <div>
+                    <h3>Buyer Workspace</h3>
+                    <p>Use the registry to compare verified pieces and keep a short list of targets.</p>
+                  </div>
+                </div>
+                <div class="panel-body panel-stack">
+                  <div class="mini-card">
+                    <div class="mini-card-title">Watchlist Alert</div>
+                    <div class="mini-card-desc">Two of your saved items were updated with new provenance documents this week.</div>
+                  </div>
+                  <div class="mini-card">
+                    <div class="mini-card-title">Search Tip</div>
+                    <div class="mini-card-desc">Filter by origin, era, or score to narrow the registry before you buy.</div>
+                  </div>
+                  <div class="mini-card">
+                    <div class="mini-card-title">Certificate Status</div>
+                    <div class="mini-card-desc">Eleven certificates are already linked to your account and can be opened at any time.</div>
+                  </div>
+                </div>
+              </aside>
+            </div>
+          `;
+        }
+      }
+    };
 
-    // Modal
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+    }
+
+    function renderSidebar(config) {
+      return `
+        <div class="dashboard-sidebar">
+          <div class="sidebar-profile">
+            <div class="sidebar-name">${escapeHtml(config.sidebar.name)}</div>
+            <div class="sidebar-role">${escapeHtml(config.sidebar.role)}</div>
+          </div>
+          ${config.sidebar.sections.map(section => `
+            <div class="sidebar-section-label">${escapeHtml(section.label)}</div>
+            <div class="sidebar-section">
+              ${section.items.map(item => `
+                <a class="sidebar-item${item.active ? ' active' : ''}" href="#">
+                  <span>${item.icon}</span> ${escapeHtml(item.label)}
+                  ${item.count ? `<span class="sidebar-count${item.countClass ? ' ' + item.countClass : ''}">${escapeHtml(item.count)}</span>` : ''}
+                </a>
+              `).join('')}
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }
+
+    function renderStats(stats) {
+      return `
+        <div class="dash-stats">
+          ${stats.map(stat => `
+            <div class="dash-stat">
+              <div class="dash-stat-num${stat.className ? ' ' + stat.className : ''}">${escapeHtml(stat.value)}</div>
+              <div class="dash-stat-label">${escapeHtml(stat.label)}</div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }
+
+    function renderDashboard(session) {
+      const config = DASHBOARD_CONFIG[session.role] || DASHBOARD_CONFIG.verifier;
+      document.title = config.title + ' — AntiqChain';
+
+      const root = document.getElementById('dashboard-root');
+      root.innerHTML = `
+        ${renderSidebar(config)}
+        <div class="dashboard-main">
+          <div class="dash-topbar">
+            <div>
+              <h2>${escapeHtml(config.title)}</h2>
+              <p>${escapeHtml(config.subtitle)}</p>
+            </div>
+            ${config.actionHref
+              ? `<a class="btn-primary" style="font-size:13px;padding:10px 20px;" href="${config.actionHref}">${escapeHtml(config.actionLabel)}</a>`
+              : `<button class="btn-primary" style="font-size:13px;padding:10px 20px;" onclick="showToast('${config.actionToast}')">${escapeHtml(config.actionLabel)}</button>`}
+          </div>
+          ${renderStats(config.stats)}
+          ${config.main()}
+        </div>
+      `;
+
+      document.querySelectorAll('.sidebar-item').forEach(item => {
+        item.addEventListener('click', function (e) {
+          e.preventDefault();
+          document.querySelectorAll('.sidebar-item').forEach(x => x.classList.remove('active'));
+          this.classList.add('active');
+        });
+      });
+    }
+
     function openReview(itemName) {
       document.getElementById('modal-item-name').textContent = 'Review: ' + itemName;
       document.getElementById('modal-decision').value = '';
@@ -276,9 +589,11 @@
       document.getElementById('score-num').textContent = '75';
       document.getElementById('review-modal').classList.add('open');
     }
+
     function closeReview() {
       document.getElementById('review-modal').classList.remove('open');
     }
+
     function submitReview(decision) {
       const notes = document.getElementById('modal-notes').value.trim();
       if (!notes) {
@@ -292,10 +607,15 @@
         showToast('Item rejected — collector has been notified.');
       }
     }
-    // Close modal on backdrop click
+
     document.getElementById('review-modal').addEventListener('click', function (e) {
       if (e.target === this) closeReview();
     });
+
+    const session = requireDashboardSession();
+    if (session) {
+      renderDashboard(session);
+    }
   </script>
 </body>
 </html>

@@ -71,6 +71,7 @@
             <button class="role-btn" onclick="loginAs('verifier', this)">Verifier</button>
             <button class="role-btn" onclick="loginAs('admin', this)">Admin</button>
             <button class="role-btn" onclick="loginAs('collector', this)">Collector</button>
+            <button class="role-btn" onclick="loginAs('buyer', this)">Buyer</button>
           </div>
         </div>
         <div class="auth-switch">
@@ -101,9 +102,9 @@
           <div class="form-group">
             <label class="form-label">I am registering as</label>
             <select class="form-select">
-              <option>Collector — I own antiques to verify</option>
-              <option>Buyer — I want to browse verified items</option>
-              <option>Expert Verifier — I am a certified specialist</option>
+              <option value="collector">Collector — I own antiques to verify</option>
+              <option value="buyer">Buyer — I want to browse verified items</option>
+              <option value="verifier">Expert Verifier — I am a certified specialist</option>
             </select>
           </div>
           <div class="form-group">
@@ -128,27 +129,39 @@
   <div class="toast" id="toast"></div>
   <script src="../js/utils.js"></script>
   <script>
+    let selectedRole = 'verifier';
+
     function switchPanel(name) {
       document.querySelectorAll('.auth-panel').forEach(p => p.classList.remove('active'));
       document.getElementById('panel-' + name).classList.add('active');
     }
     function handleLogin() {
-      showToast('Signed in successfully — welcome back!');
-      setTimeout(() => window.location.href = '../index.html', 900);
+      const session = setAuthSession(selectedRole);
+      showToast('Signed in as ' + session.roleLabel + ' — opening dashboard...');
+      setTimeout(() => window.location.href = getPostLoginPath(), 900);
     }
     function handleRegister() {
-      showToast('Account created — please check your email to verify.');
-      setTimeout(() => switchPanel('login'), 900);
+      const role = document.querySelector('#panel-register .form-select').value || 'collector';
+      const session = setAuthSession(role);
+      showToast('Account created — taking you to the dashboard...');
+      setTimeout(() => window.location.href = getPostLoginPath(), 900);
     }
     function loginAs(role, btn) {
+      selectedRole = role;
       document.querySelectorAll('.role-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-      showToast('Signed in as ' + role.charAt(0).toUpperCase() + role.slice(1));
+      const session = setAuthSession(role);
+      showToast('Signed in as ' + session.roleLabel + ' — opening dashboard...');
       setTimeout(() => {
-        window.location.href = (role === 'verifier' || role === 'admin')
-          ? 'dashboard.html' : '../index.html';
+        window.location.href = getPostLoginPath();
       }, 700);
     }
+
+    document.querySelectorAll('.role-btn').forEach((button, index) => {
+      if (index === 0) {
+        button.classList.add('active');
+      }
+    });
   </script>
 </body>
 </html>
