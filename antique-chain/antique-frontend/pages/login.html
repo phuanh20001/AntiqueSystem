@@ -22,143 +22,242 @@
   </nav>
 
   <!-- ── AUTH LAYOUT ── -->
-  <div class="auth-wrap">
+  <div class="auth-container">
+    <div class="login-card">
+      <div class="card-header">
+        <h1 class="auth-title">Welcome back</h1>
+        <p class="auth-subtitle">Sign in to your AntiqChain account</p>
+      </div>
 
-    <!-- LEFT PANEL -->
-    <div class="auth-left">
-      <div class="auth-left-content">
-        <a class="auth-logo" href="../index.html">AntiqChain</a>
-        <div class="auth-quote">"Every antique carries a story. We make sure that story can never be forged."</div>
-        <div class="auth-quote-attr">— AntiqChain Founding Principle</div>
-        <div class="auth-stats">
-          <div>
-            <div class="auth-stat-num">4,821</div>
-            <div class="auth-stat-label">Items Verified</div>
-          </div>
-          <div class="auth-stat-divider"></div>
-          <div>
-            <div class="auth-stat-num">38</div>
-            <div class="auth-stat-label">Expert Verifiers</div>
-          </div>
-          <div class="auth-stat-divider"></div>
-          <div>
-            <div class="auth-stat-num">96.4%</div>
-            <div class="auth-stat-label">Accuracy Rate</div>
-          </div>
+      <form class="auth-form" id="loginForm">
+        <div class="form-group">
+          <label class="form-label" for="email">Email Address</label>
+          <input class="form-input" type="email" id="email" placeholder="collector@example.com" required>
+          <div class="error-message" id="emailError"></div>
         </div>
+
+        <div class="form-group">
+          <label class="form-label" for="password">Password</label>
+          <input class="form-input" type="password" id="password" placeholder="••••••••••" required>
+          <div class="error-message" id="passwordError"></div>
+        </div>
+
+        <button class="btn-login" type="submit">Sign In</button>
+
+        <div class="auth-divider">
+          <span>or sign in as</span>
+        </div>
+
+        <div class="role-selector">
+          <button class="role-btn" type="button" onclick="loginAs('verifier', this)">Verifier</button>
+          <button class="role-btn" type="button" onclick="loginAs('admin', this)">Admin</button>
+          <button class="role-btn" type="button" onclick="loginAs('collector', this)">Collector / Buyer</button>
+        </div>
+      </form>
+
+      <div class="auth-switch">
+        Don't have an account?
+        <a onclick="switchPanel('register')">Create one</a>
       </div>
     </div>
 
-    <!-- RIGHT PANEL -->
-    <div class="auth-right">
-
-      <!-- LOGIN PANEL -->
-      <div class="auth-panel active" id="panel-login">
-        <div class="auth-title">Welcome back</div>
-        <div class="auth-subtitle">Sign in to your AntiqChain account</div>
-        <div class="auth-form">
-          <div class="form-group">
-            <label class="form-label">Email Address</label>
-            <input class="form-input" type="email" placeholder="collector@example.com">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Password</label>
-            <input class="form-input" type="password" placeholder="••••••••••">
-          </div>
-          <button class="btn-full" onclick="handleLogin()">Sign In</button>
-          <div class="auth-divider">or sign in as</div>
-          <div class="role-selector">
-            <button class="role-btn" onclick="loginAs('verifier', this)">Verifier</button>
-            <button class="role-btn" onclick="loginAs('admin', this)">Admin</button>
-            <button class="role-btn" onclick="loginAs('collector', this)">Collector / Buyer</button>
-          </div>
-        </div>
-        <div class="auth-switch">
-          Don't have an account?
-          <a onclick="switchPanel('register')">Create one</a>
-        </div>
+    <!-- REGISTER PANEL (Hidden by default) -->
+    <div class="login-card register-card" id="panel-register" style="display: none;">
+      <div class="card-header">
+        <h1 class="auth-title">Create Account</h1>
+        <p class="auth-subtitle">Join AntiqChain — it's free to get started</p>
       </div>
 
-      <!-- REGISTER PANEL -->
-      <div class="auth-panel" id="panel-register">
-        <div class="auth-title">Create Account</div>
-        <div class="auth-subtitle">Join AntiqChain — it's free to get started</div>
-        <div class="auth-form">
-          <div class="auth-form-row">
-            <div class="form-group">
-              <label class="form-label">First Name</label>
-              <input class="form-input" type="text" placeholder="John">
-            </div>
-            <div class="form-group">
-              <label class="form-label">Last Name</label>
-              <input class="form-input" type="text" placeholder="Smith">
-            </div>
+      <form class="auth-form">
+        <div class="auth-form-row">
+          <div class="form-group">
+            <label class="form-label" for="firstName">First Name</label>
+            <input class="form-input" type="text" id="firstName" placeholder="John" required>
           </div>
           <div class="form-group">
-            <label class="form-label">Email Address</label>
-            <input class="form-input" type="email" placeholder="john@example.com">
+            <label class="form-label" for="lastName">Last Name</label>
+            <input class="form-input" type="text" id="lastName" placeholder="Smith" required>
           </div>
-          <div class="form-group">
-            <label class="form-label">I am registering as</label>
-            <select class="form-select">
-              <option value="collector">Collector / Buyer — I submit antiques or browse verified items</option>
-              <option value="verifier">Expert Verifier — I am a certified specialist</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Password</label>
-            <input class="form-input" type="password" placeholder="Min. 8 characters">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Confirm Password</label>
-            <input class="form-input" type="password" placeholder="Repeat password">
-          </div>
-          <button class="btn-full" onclick="handleRegister()">Create Account</button>
         </div>
-        <div class="auth-switch">
-          Already have an account?
-          <a onclick="switchPanel('login')">Sign in</a>
-        </div>
-      </div>
 
+        <div class="form-group">
+          <label class="form-label" for="regEmail">Email Address</label>
+          <input class="form-input" type="email" id="regEmail" placeholder="john@example.com" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="regRole">I am registering as</label>
+          <select class="form-select" id="regRole">
+            <option value="collector">Collector / Buyer — I submit antiques or browse verified items</option>
+            <option value="verifier">Expert Verifier — I am a certified specialist</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="regPassword">Password</label>
+          <input class="form-input" type="password" id="regPassword" placeholder="Min. 8 characters" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="confirmPassword">Confirm Password</label>
+          <input class="form-input" type="password" id="confirmPassword" placeholder="Repeat password" required>
+        </div>
+
+        <button class="btn-login" type="button" onclick="handleRegister()">Create Account</button>
+      </form>
+
+      <div class="auth-switch">
+        Already have an account?
+        <a onclick="switchPanel('login')">Sign in</a>
+      </div>
     </div>
   </div>
 
-  <div class="toast" id="toast"></div>
   <script src="../js/utils.js"></script>
   <script>
     let selectedRole = 'verifier';
 
     function switchPanel(name) {
-      document.querySelectorAll('.auth-panel').forEach(p => p.classList.remove('active'));
-      document.getElementById('panel-' + name).classList.add('active');
+      const loginCard = document.querySelector('.login-card:not(.register-card)');
+      const registerCard = document.getElementById('panel-register');
+
+      if (name === 'login') {
+        loginCard.style.display = 'block';
+        registerCard.style.display = 'none';
+      } else if (name === 'register') {
+        loginCard.style.display = 'none';
+        registerCard.style.display = 'block';
+      }
     }
-    function handleLogin() {
-      const session = setAuthSession(selectedRole);
-      showToast('Signed in as ' + session.roleLabel + ' — opening dashboard...');
-      setTimeout(() => window.location.href = getPostLoginPath(), 900);
+
+    function validateForm() {
+      let isValid = true;
+
+      // Get form elements
+      const emailInput = document.getElementById('email');
+      const passwordInput = document.getElementById('password');
+      const emailError = document.getElementById('emailError');
+      const passwordError = document.getElementById('passwordError');
+
+      // Reset previous errors
+      hideError(emailInput, emailError);
+      hideError(passwordInput, passwordError);
+
+      // Validate email
+      if (!emailInput.value.trim()) {
+        showError(emailInput, emailError, 'Email address is required');
+        isValid = false;
+      } else if (!isValidEmail(emailInput.value.trim())) {
+        showError(emailInput, emailError, 'Please enter a valid email address');
+        isValid = false;
+      }
+
+      // Validate password
+      if (!passwordInput.value.trim()) {
+        showError(passwordInput, passwordError, 'Password is required');
+        isValid = false;
+      } else if (passwordInput.value.length < 6) {
+        showError(passwordInput, passwordError, 'Password must be at least 6 characters');
+        isValid = false;
+      }
+
+      return isValid;
     }
+
+    function showError(inputElement, errorElement, message) {
+      inputElement.classList.add('error');
+      errorElement.textContent = message;
+      errorElement.classList.add('show');
+    }
+
+    function hideError(inputElement, errorElement) {
+      inputElement.classList.remove('error');
+      errorElement.textContent = '';
+      errorElement.classList.remove('show');
+    }
+
+    function isValidEmail(email) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      return emailRegex.test(email);
+    }
+
+    function handleLogin(event) {
+      if (event) {
+        event.preventDefault();
+      }
+
+      if (validateForm()) {
+        const loginBtn = document.querySelector('.btn-login');
+        loginBtn.disabled = true;
+        loginBtn.classList.add('loading');
+        loginBtn.textContent = 'Signing In...';
+
+        const session = setAuthSession(selectedRole);
+        showToast('Signed in as ' + session.roleLabel + ' — opening dashboard...');
+        setTimeout(() => window.location.href = getPostLoginPath(), 900);
+      }
+    }
+
     function handleRegister() {
-      const role = document.querySelector('#panel-register .form-select').value || 'collector';
+      const role = document.getElementById('regRole').value || 'collector';
       const session = setAuthSession(role);
       showToast('Account created — taking you to the dashboard...');
       setTimeout(() => window.location.href = getPostLoginPath(), 900);
     }
+
     function loginAs(role, btn) {
       selectedRole = role;
       document.querySelectorAll('.role-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-      const session = setAuthSession(role);
-      showToast('Signed in as ' + session.roleLabel + ' — opening dashboard...');
-      setTimeout(() => {
-        window.location.href = getPostLoginPath();
-      }, 700);
     }
 
-    document.querySelectorAll('.role-btn').forEach((button, index) => {
-      if (index === 0) {
-        button.classList.add('active');
+    // Initialize the first role button as active and add form validation
+    document.addEventListener('DOMContentLoaded', function() {
+      const firstRoleBtn = document.querySelector('.role-btn');
+      if (firstRoleBtn) {
+        firstRoleBtn.classList.add('active');
       }
+
+      // Add form submit event listener
+      const loginForm = document.getElementById('loginForm');
+      if (loginForm) {
+        loginForm.addEventListener('submit', handleLogin);
+      }
+
+      // Add real-time validation on input blur
+      const emailInput = document.getElementById('email');
+      const passwordInput = document.getElementById('password');
+
+      emailInput.addEventListener('blur', function() {
+        const emailError = document.getElementById('emailError');
+        hideError(emailInput, emailError);
+
+        if (!emailInput.value.trim()) {
+          showError(emailInput, emailError, 'Email address is required');
+        } else if (!isValidEmail(emailInput.value.trim())) {
+          showError(emailInput, emailError, 'Please enter a valid email address');
+        }
+      });
+
+      passwordInput.addEventListener('blur', function() {
+        const passwordError = document.getElementById('passwordError');
+        hideError(passwordInput, passwordError);
+
+        if (!passwordInput.value.trim()) {
+          showError(passwordInput, passwordError, 'Password is required');
+        } else if (passwordInput.value.length < 6) {
+          showError(passwordInput, passwordError, 'Password must be at least 6 characters');
+        }
+      });
+
+      // Clear errors on input focus
+      emailInput.addEventListener('focus', function() {
+        hideError(emailInput, document.getElementById('emailError'));
+      });
+
+      passwordInput.addEventListener('focus', function() {
+        hideError(passwordInput, document.getElementById('passwordError'));
+      });
     });
   </script>
 </body>
