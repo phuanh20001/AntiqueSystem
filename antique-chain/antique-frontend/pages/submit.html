@@ -42,57 +42,63 @@
         </div>
 
         <!-- Form Fields -->
-        <div class="form-grid">
-          <div class="form-group full">
-            <label class="form-label">Item Title *</label>
-            <input class="form-input" type="text" placeholder="e.g. Ming Dynasty Blue & White Porcelain Vase">
+        <form id="antiqueForm" autocomplete="off">
+          <div class="form-grid">
+            <div class="form-group full">
+              <label class="form-label">Item Title *</label>
+              <input class="form-input" type="text" name="title" placeholder="e.g. Ming Dynasty Blue & White Porcelain Vase">
+              <div class="error-message"></div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Category *</label>
+              <select class="form-select" name="category">
+                <option value="">Select a category…</option>
+                <option>Ceramics & Pottery</option>
+                <option>Paintings & Fine Art</option>
+                <option>Furniture</option>
+                <option>Jewellery & Watches</option>
+                <option>Arms & Armour</option>
+                <option>Textiles & Clothing</option>
+                <option>Books & Manuscripts</option>
+                <option>Coins & Currency</option>
+                <option>Sculptures & Statues</option>
+                <option>Other</option>
+              </select>
+              <div class="error-message"></div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Estimated Year / Period *</label>
+              <input class="form-input" type="text" name="year" placeholder="e.g. 1368–1644 or circa 1750">
+              <div class="error-message"></div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Country of Origin *</label>
+              <input class="form-input" type="text" name="country" placeholder="e.g. China, France, England">
+              <div class="error-message"></div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Dimensions</label>
+              <input class="form-input" type="text" name="dimensions" placeholder="e.g. 32cm H × 18cm W">
+            </div>
+            <div class="form-group full">
+              <label class="form-label">Item Description *</label>
+              <textarea class="form-textarea" name="description" placeholder="Describe the item in detail — materials, markings, style, condition, and any distinguishing features…"></textarea>
+              <div class="error-message"></div>
+            </div>
+            <div class="form-group full">
+              <label class="form-label">Provenance & History</label>
+              <textarea class="form-textarea" name="provenance" style="min-height:90px;" placeholder="Describe known ownership history, acquisition, or any documentation you hold…"></textarea>
+            </div>
+            <div class="form-group full">
+              <label class="form-label">Condition Notes</label>
+              <input class="form-input" type="text" name="condition" placeholder="e.g. Minor crazing to glaze, hairline crack to base, otherwise excellent">
+            </div>
           </div>
-          <div class="form-group">
-            <label class="form-label">Category *</label>
-            <select class="form-select">
-              <option value="">Select a category…</option>
-              <option>Ceramics & Pottery</option>
-              <option>Paintings & Fine Art</option>
-              <option>Furniture</option>
-              <option>Jewellery & Watches</option>
-              <option>Arms & Armour</option>
-              <option>Textiles & Clothing</option>
-              <option>Books & Manuscripts</option>
-              <option>Coins & Currency</option>
-              <option>Sculptures & Statues</option>
-              <option>Other</option>
-            </select>
+          <div class="submit-actions">
+            <button class="btn-primary" type="submit">Submit for Verification</button>
+            <button class="btn-outline" type="button" onclick="showToast('Draft saved successfully')">Save Draft</button>
           </div>
-          <div class="form-group">
-            <label class="form-label">Estimated Year / Period *</label>
-            <input class="form-input" type="text" placeholder="e.g. 1368–1644 or circa 1750">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Country of Origin *</label>
-            <input class="form-input" type="text" placeholder="e.g. China, France, England">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Dimensions</label>
-            <input class="form-input" type="text" placeholder="e.g. 32cm H × 18cm W">
-          </div>
-          <div class="form-group full">
-            <label class="form-label">Item Description *</label>
-            <textarea class="form-textarea" placeholder="Describe the item in detail — materials, markings, style, condition, and any distinguishing features…"></textarea>
-          </div>
-          <div class="form-group full">
-            <label class="form-label">Provenance & History</label>
-            <textarea class="form-textarea" style="min-height:90px;" placeholder="Describe known ownership history, acquisition, or any documentation you hold…"></textarea>
-          </div>
-          <div class="form-group full">
-            <label class="form-label">Condition Notes</label>
-            <input class="form-input" type="text" placeholder="e.g. Minor crazing to glaze, hairline crack to base, otherwise excellent">
-          </div>
-        </div>
-
-        <div class="submit-actions">
-          <button class="btn-primary" onclick="handleSubmit()">Submit for Verification</button>
-          <button class="btn-outline" onclick="showToast('Draft saved successfully')">Save Draft</button>
-        </div>
+        </form>
       </div>
 
       <!-- SIDEBAR -->
@@ -158,6 +164,45 @@
       showToast('Item submitted for verification — you will receive an email update within 5 business days.');
       setTimeout(() => window.location.href = '../index.html', 1400);
     }
+
+    // Validation for antique submission form
+    document.addEventListener('DOMContentLoaded', function() {
+      const form = document.getElementById('antiqueForm');
+      if (!form) return;
+      form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        let valid = true;
+        const requiredFields = [
+          { name: 'title', type: 'input' },
+          { name: 'category', type: 'select' },
+          { name: 'year', type: 'input' },
+          { name: 'country', type: 'input' },
+          { name: 'description', type: 'textarea' }
+        ];
+        requiredFields.forEach(field => {
+          const el = form.querySelector(`[name="${field.name}"]`);
+          const error = el.parentElement.querySelector('.error-message');
+          if (el.value.trim() === '' || (field.type === 'select' && el.value === '')) {
+            error.textContent = 'This field is required.';
+            error.classList.add('show');
+            el.classList.add('error');
+            valid = false;
+          } else {
+            error.textContent = '';
+            error.classList.remove('show');
+            el.classList.remove('error');
+          }
+        });
+        if (!valid) {
+          // Scroll to first error
+          const firstError = form.querySelector('.form-input.error, .form-select.error, .form-textarea.error');
+          if (firstError) firstError.scrollIntoView({behavior: 'smooth', block: 'center'});
+          return;
+        }
+        showToast('Item submitted for verification — you will receive an email update within 5 business days.', 'success');
+        setTimeout(() => window.location.href = '../index.html', 1400);
+      });
+    });
   </script>
 </body>
 </html>

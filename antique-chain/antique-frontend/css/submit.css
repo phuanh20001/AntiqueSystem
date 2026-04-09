@@ -99,3 +99,24 @@
   font-weight: 300;
   line-height: 1.5;
 }
+
+/* Error message styling for form validation */
+.error-message {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  color: #b94a48;
+  margin-top: 4px;
+  min-height: 16px;
+  opacity: 0;
+  transform: translateY(-5px);
+  transition: all 0.2s ease;
+  display: block;
+}
+.error-message.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+.form-input.error, .form-select.error, .form-textarea.error {
+  border-color: #b94a48;
+  box-shadow: 0 0 0 2px rgba(185,74,72,0.08);
+}
