@@ -19,96 +19,122 @@
       <a href="dashboard.html">Dashboard</a>
       <a href="login.html" class="nav-cta active">Sign In</a>
     </div>
+    <a href="#" id="logoutBtn" class="nav-cta" style="display:none;">Logout</a>
   </nav>
 
   <!-- ── AUTH LAYOUT ── -->
-  <div class="auth-container">
-    <div class="login-card">
-      <div class="card-header">
-        <h1 class="auth-title">Welcome back</h1>
-        <p class="auth-subtitle">Sign in to your AntiqChain account</p>
+  <div class="auth-layout">
+    <div class="left">
+      <div class="top-title">AntiqChain — Verified Heritage</div>
+      <div class="brand">AntiqChain</div>
+      <div class="quote">
+        "Every antique carries a story. We make sure that story can never be forged."
       </div>
-
-      <form class="auth-form" id="loginForm">
-        <div class="form-group">
-          <label class="form-label" for="email">Email Address</label>
-          <input class="form-input" type="email" id="email" placeholder="collector@example.com" required>
-          <div class="error-message" id="emailError"></div>
+      <div class="subtext">— AntiqChain Founding Principle</div>
+      <div class="stats">
+        <div>
+          <h3>4,821</h3>
+          <p>Items Verified</p>
         </div>
-
-        <div class="form-group">
-          <label class="form-label" for="password">Password</label>
-          <input class="form-input" type="password" id="password" placeholder="••••••••••" required>
-          <div class="error-message" id="passwordError"></div>
+        <div>
+          <h3>38</h3>
+          <p>Expert Verifiers</p>
         </div>
-
-        <button class="btn-login" type="submit">Sign In</button>
-
-        <div class="auth-divider">
-          <span>or sign in as</span>
+        <div>
+          <h3>96.4%</h3>
+          <p>Accuracy Rate</p>
         </div>
-
-        <div class="role-selector">
-          <button class="role-btn" type="button" onclick="loginAs('verifier', this)">Verifier</button>
-          <button class="role-btn" type="button" onclick="loginAs('admin', this)">Admin</button>
-          <button class="role-btn" type="button" onclick="loginAs('collector', this)">Collector / Buyer</button>
-        </div>
-      </form>
-
-      <div class="auth-switch">
-        Don't have an account?
-        <a onclick="switchPanel('register')">Create one</a>
       </div>
     </div>
 
-    <!-- REGISTER PANEL (Hidden by default) -->
-    <div class="login-card register-card" id="panel-register" style="display: none;">
-      <div class="card-header">
-        <h1 class="auth-title">Create Account</h1>
-        <p class="auth-subtitle">Join AntiqChain — it's free to get started</p>
+    <div class="auth-right">
+      <div class="login-card">
+        <div class="card-header">
+          <h1 class="auth-title">Welcome back</h1>
+          <p class="auth-subtitle">Sign in to your AntiqChain account</p>
+        </div>
+
+        <form class="auth-form" id="loginForm">
+          <div class="form-group">
+            <label class="form-label" for="email">Email Address</label>
+            <input class="form-input" type="email" id="email" placeholder="collector@example.com" required>
+            <div class="error-message" id="emailError"></div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="password">Password</label>
+            <input class="form-input" type="password" id="password" placeholder="••••••••••" required>
+            <div class="error-message" id="passwordError"></div>
+          </div>
+
+          <button class="btn-login" type="submit">Sign In</button>
+
+          <div class="auth-divider">
+            <span>or sign in as</span>
+          </div>
+
+          <div class="role-selector">
+            <button class="role-btn" type="button" onclick="loginAs('verifier', this)">Verifier</button>
+            <button class="role-btn" type="button" onclick="loginAs('admin', this)">Admin</button>
+            <button class="role-btn" type="button" onclick="loginAs('collector', this)">Collector / Buyer</button>
+          </div>
+        </form>
+
+        <div class="auth-switch">
+          Don't have an account?
+          <a onclick="switchPanel('register')">Create one</a>
+        </div>
       </div>
 
-      <form class="auth-form">
-        <div class="auth-form-row">
-          <div class="form-group">
-            <label class="form-label" for="firstName">First Name</label>
-            <input class="form-input" type="text" id="firstName" placeholder="John" required>
+      <!-- REGISTER PANEL (Hidden by default) -->
+      <div class="login-card register-card" id="panel-register" style="display: none;">
+        <div class="card-header">
+          <h1 class="auth-title">Create Account</h1>
+          <p class="auth-subtitle">Join AntiqChain — it's free to get started</p>
+        </div>
+
+        <form class="auth-form">
+          <div class="auth-form-row">
+            <div class="form-group">
+              <label class="form-label" for="firstName">First Name</label>
+              <input class="form-input" type="text" id="firstName" placeholder="John" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="lastName">Last Name</label>
+              <input class="form-input" type="text" id="lastName" placeholder="Smith" required>
+            </div>
           </div>
+
           <div class="form-group">
-            <label class="form-label" for="lastName">Last Name</label>
-            <input class="form-input" type="text" id="lastName" placeholder="Smith" required>
+            <label class="form-label" for="regEmail">Email Address</label>
+            <input class="form-input" type="email" id="regEmail" placeholder="john@example.com" required>
           </div>
+
+          <div class="form-group">
+            <label class="form-label" for="regRole">I am registering as</label>
+            <select class="form-select" id="regRole">
+              <option value="collector">Collector / Buyer — I submit antiques or browse verified items</option>
+              <option value="verifier">Expert Verifier — I am a certified specialist</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="regPassword">Password</label>
+            <input class="form-input" type="password" id="regPassword" placeholder="Min. 8 characters" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="confirmPassword">Confirm Password</label>
+            <input class="form-input" type="password" id="confirmPassword" placeholder="Repeat password" required>
+          </div>
+
+          <button class="btn-login" type="button" onclick="handleRegister()">Create Account</button>
+        </form>
+
+        <div class="auth-switch">
+          Already have an account?
+          <a onclick="switchPanel('login')">Sign in</a>
         </div>
-
-        <div class="form-group">
-          <label class="form-label" for="regEmail">Email Address</label>
-          <input class="form-input" type="email" id="regEmail" placeholder="john@example.com" required>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="regRole">I am registering as</label>
-          <select class="form-select" id="regRole">
-            <option value="collector">Collector / Buyer — I submit antiques or browse verified items</option>
-            <option value="verifier">Expert Verifier — I am a certified specialist</option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="regPassword">Password</label>
-          <input class="form-input" type="password" id="regPassword" placeholder="Min. 8 characters" required>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="confirmPassword">Confirm Password</label>
-          <input class="form-input" type="password" id="confirmPassword" placeholder="Repeat password" required>
-        </div>
-
-        <button class="btn-login" type="button" onclick="handleRegister()">Create Account</button>
-      </form>
-
-      <div class="auth-switch">
-        Already have an account?
-        <a onclick="switchPanel('login')">Sign in</a>
       </div>
     </div>
   </div>
@@ -186,16 +212,25 @@
         event.preventDefault();
       }
 
-      if (validateForm()) {
-        const loginBtn = document.querySelector('.btn-login');
+      if (!validateForm()) {
+        const firstErrorField = document.querySelector('.form-input.error');
+        if (firstErrorField) {
+          firstErrorField.focus();
+        }
+        return;
+      }
+
+      const loginForm = document.getElementById('loginForm');
+      const loginBtn = loginForm ? loginForm.querySelector('.btn-login') : document.querySelector('.btn-login');
+      if (loginBtn) {
         loginBtn.disabled = true;
         loginBtn.classList.add('loading');
         loginBtn.textContent = 'Signing In...';
-
-        const session = setAuthSession(selectedRole);
-        showToast('Signed in as ' + session.roleLabel + ' — opening dashboard...');
-        setTimeout(() => window.location.href = getPostLoginPath(), 900);
       }
+
+      const session = setAuthSession(selectedRole);
+      showToast('Signed in as ' + session.roleLabel + ' — opening dashboard...');
+      setTimeout(() => window.location.href = getPostLoginPath(), 900);
     }
 
     function handleRegister() {
@@ -259,6 +294,35 @@
         hideError(passwordInput, document.getElementById('passwordError'));
       });
     });
+
+    // Logout functionality
+    function handleLogout() {
+      localStorage.clear();
+      window.location.href = 'login.html';
+    }
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) {
+      logoutBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        handleLogout();
+      });
+    }
+    // Show/hide logout button based on session
+    function checkSession() {
+      const session = localStorage.getItem('session');
+      if (session) {
+        if (logoutBtn) logoutBtn.style.display = '';
+      } else {
+        if (logoutBtn) logoutBtn.style.display = 'none';
+        // If not on login page, redirect to login
+        if (!window.location.pathname.endsWith('login.html')) {
+          window.location.href = 'login.html';
+        }
+      }
+    }
+    checkSession();
+    // Optionally, run checkSession on page load and navigation
+    window.addEventListener('storage', checkSession);
   </script>
 </body>
 </html>
