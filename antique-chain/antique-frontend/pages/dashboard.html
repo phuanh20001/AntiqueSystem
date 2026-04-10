@@ -21,6 +21,10 @@
     </div>
   </nav>
 
+  <div class="welcome-banner" id="welcome-banner" style="display:none;">
+    <div class="welcome-banner-title" id="welcome-banner-title"></div>
+  </div>
+
   <!-- ── DASHBOARD LAYOUT ── -->
   <div class="dashboard-layout" id="dashboard-root"></div>
 
@@ -492,6 +496,28 @@
       });
     }
 
+    function showWelcomeBanner(session) {
+      const banner = document.getElementById('welcome-banner');
+      const title = document.getElementById('welcome-banner-title');
+      const identity = session.email || session.displayName || 'user';
+
+      title.textContent = 'Welcome, ' + identity;
+      banner.style.display = 'block';
+
+      // Trigger entrance transition after initial paint.
+      requestAnimationFrame(function () {
+        banner.classList.add('show');
+      });
+
+      // Auto-hide after a short delay while preserving the exit animation.
+      setTimeout(function () {
+        banner.classList.remove('show');
+        setTimeout(function () {
+          banner.style.display = 'none';
+        }, 350);
+      }, 4200);
+    }
+
     function openReview(itemName) {
       document.getElementById('modal-item-name').textContent = 'Review: ' + itemName;
       document.getElementById('modal-decision').value = '';
@@ -525,6 +551,7 @@
     const session = requireDashboardSession();
     if (session) {
       renderDashboard(session);
+      showWelcomeBanner(session);
     }
   </script>
 </body>

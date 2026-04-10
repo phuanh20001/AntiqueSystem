@@ -196,7 +196,7 @@
 
       if (!valid) return;
 
-      const session = setAuthSession(selectedRole, {}, rememberMe);
+      const session = setAuthSession(selectedRole, { email: email }, rememberMe);
       showToast('Signed in as ' + session.roleLabel + ' — opening dashboard...');
       setTimeout(() => {
         window.location.href = getPostLoginPath();
