@@ -5,7 +5,6 @@ AntiqChain is a web-based platform developed to address the growing issue of cou
 
 This project focuses on front-end development as part of ICT308 Capstone Project 2. It demonstrates the practical implementation of user interface design, client-side validation, session management, and access control using modern web technologies.
 
----
 
 ##  Project Objectives
 - Develop a clean and user-friendly interface  
@@ -14,7 +13,6 @@ This project focuses on front-end development as part of ICT308 Capstone Project
 - Provide a responsive design for multiple devices  
 - Enhance overall user experience through interactive features  
 
----
 
 ##  Technologies Used
 - HTML5 – Structure of web pages  
@@ -24,29 +22,42 @@ This project focuses on front-end development as part of ICT308 Capstone Project
 - GitHub – Version control and collaboration  
 - Live Server – Real-time testing  
 
----
 
 ##  Project Structure
-AntiqChain/
-│── index.html
-│── login.html
-│── register.html
-│── dashboard.html
-│── submit-item.html
+
+AntiqueSystem/
 │
-│── css/
-│   ├── global.css
-│   ├── login.css
-│   ├── dashboard.css
-│
-│── js/
-│   ├── auth.js
-│   ├── validation.js
-│   ├── session.js
-│
-│── assets/
-│   └── images/
----
+├── antique-chain/
+├── antique-backend/
+├── antique-frontend/
+│   │
+│   ├── index.html
+│   ├── README.md
+│   ├── .gitignore
+│   │
+│   ├── css/
+│   │   ├── about.css
+│   │   ├── auth.css
+│   │   ├── dashboard.css
+│   │   ├── detail.css
+│   │   ├── global.css
+│   │   ├── home.css
+│   │   └── submit.css
+│   │
+│   ├── js/
+│   │   ├── utils.js
+│   │   ├── assets/
+│   │   │   └── images/
+│   │   │       ├── login-ui.png
+│   │   │       └── dashboard-ui.png
+│   │
+│   ├── pages/
+│   │   ├── about.html
+│   │   ├── dashboard.html
+│   │   ├── detail.html
+│   │   ├── login.html
+│   │   ├── submit.html
+
 
 ##  Key Features Implemented
 
@@ -72,7 +83,6 @@ AntiqChain/
 - Smooth navigation between pages  
 - Interactive UI elements (hover effects)  
 
----
 
 ##  UI/UX Design and Style Guide
 The system follows a consistent and user-centred design approach:
@@ -82,7 +92,6 @@ The system follows a consistent and user-centred design approach:
 - **Layout:** Card-based dashboard design for better content organisation  
 - **Responsiveness:** Fully responsive across mobile, tablet, and desktop  
 
----
 
 ##  Development Process
 The development followed an iterative approach:
@@ -98,7 +107,6 @@ The development followed an iterative approach:
 
 GitHub was used for version control, allowing tracking of progress through commits.
 
----
 
 ##  Testing
 The system was tested under multiple scenarios:
@@ -109,24 +117,20 @@ The system was tested under multiple scenarios:
 - Logout functionality validation  
 - UI responsiveness across different screen sizes  
 
----
+
 
 ##  Screenshots
 
 ###  Login Page 
-antique-chain/antique-frontend/js/assets/login-ui.png.png
+![login-ui](login-ui.png)
 
 ### Dashboard
-antique-chain/antique-frontend/js/dashboard-ui.png.png
-
----
+![dashboard-ui](dashboard-ui.png)
 
 ##  Limitations
 - Authentication is implemented using localStorage, which is not fully secure  
 - No backend integration for data storage and validation  
 - No encryption or advanced security mechanisms  
-
----
 
 ## Future Improvements
 - Backend integration using Node.js and MongoDB  
@@ -134,7 +138,6 @@ antique-chain/antique-frontend/js/dashboard-ui.png.png
 - Blockchain integration for antique verification  
 - Role-based access control  
 
----
 
 ##  Contribution Table :
  Author - Arshdeep Kaur
@@ -146,9 +149,7 @@ antique-chain/antique-frontend/js/dashboard-ui.png.png
 - Enhanced dashboard UI with interactive elements  
 - Added validation to antique submission form  
 - Implemented dynamic welcome message 
-- Add the Screenshots 
-
----
+- Added  Screenshots 
 
 ## 🔗 GitHub Repository
 https://github.com/phuanh20001/AntiqueSystem.git
