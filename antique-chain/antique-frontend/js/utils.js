@@ -108,19 +108,32 @@ function getPostLoginPath() {
   return search.get('returnTo') || getDashboardPath();
 }
 
+function getCurrentPageName() {
+  return window.location.pathname.split('/').pop() || '';
+}
+
 function signOutAndRedirect() {
   clearAuthSession();
   window.location.href = getHomePath();
 }
 
 function requireDashboardSession() {
-  const session = getAuthSession();
-  if (!session) {
-    window.location.replace(getLoginPath() + '?returnTo=' + encodeURIComponent('dashboard.html'));
-    return null;
-  }
+  return requirePageSession('dashboard.html');
+}
 
-  return session;
+function requirePageSession(returnToPage) {
+  const session = getAuthSession();
+  if (session) return session;
+
+  const fallback = getCurrentPageName() || 'dashboard.html';
+  const returnTo = returnToPage || fallback;
+  const params = new URLSearchParams({
+    returnTo: returnTo,
+    unauthorized: '1'
+  });
+
+  window.location.replace(getLoginPath() + '?' + params.toString());
+  return null;
 }
 
 function updateAuthUI() {

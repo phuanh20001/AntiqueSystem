@@ -21,6 +21,8 @@
     </div>
   </nav>
 
+  <div class="auth-alert" id="authAlert" style="display:none;"></div>
+
   <!-- ── AUTH LAYOUT ── -->
   <div class="auth-wrap">
     <div class="auth-left">
@@ -197,9 +199,15 @@
 
     function handleRegister() {
       const role = document.getElementById('regRole').value || 'collector';
-      setAuthSession(role);
       showToast('Account created — please sign in to continue.');
       setTimeout(() => {
+        selectedRole = role;
+        document.querySelectorAll('.role-btn').forEach(item => {
+          const roleText = item.textContent.toLowerCase();
+          const shouldSelect = (role === 'collector' && roleText.includes('collector')) ||
+            (role === 'verifier' && roleText.includes('verifier'));
+          item.classList.toggle('active', shouldSelect);
+        });
         switchPanel('login');
       }, 900);
     }
@@ -214,6 +222,14 @@
     }
 
     document.addEventListener('DOMContentLoaded', function () {
+      const search = new URLSearchParams(window.location.search);
+      const unauthorized = search.get('unauthorized') === '1';
+      if (unauthorized) {
+        const authAlert = document.getElementById('authAlert');
+        authAlert.textContent = 'Unauthorized: please sign in first to access that page.';
+        authAlert.style.display = 'block';
+      }
+
       const loginForm = document.getElementById('loginForm');
       if (loginForm) {
         loginForm.addEventListener('submit', handleLogin);

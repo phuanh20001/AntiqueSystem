@@ -160,6 +160,8 @@
   <div class="toast" id="toast"></div>
   <script src="../js/utils.js"></script>
   <script>
+    requirePageSession('submit.html');
+
     function handleSubmit() {
       showToast('Item submitted for verification — you will receive an email update within 5 business days.');
       setTimeout(() => window.location.href = '../index.html', 1400);

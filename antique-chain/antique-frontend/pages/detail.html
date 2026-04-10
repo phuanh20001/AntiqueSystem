@@ -181,6 +181,8 @@
   <div class="toast" id="toast"></div>
   <script src="../js/utils.js"></script>
   <script>
+    requirePageSession('detail.html');
+
     document.querySelectorAll('.detail-thumb').forEach(t => {
       t.addEventListener('click', function () {
         document.querySelectorAll('.detail-thumb').forEach(x => x.classList.remove('active'));
