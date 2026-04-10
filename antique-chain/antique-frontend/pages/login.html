@@ -76,6 +76,11 @@
               <span class="field-error" id="passwordError"></span>
             </div>
 
+            <label class="auth-remember" for="rememberMe">
+              <input type="checkbox" id="rememberMe">
+              <span>Remember me</span>
+            </label>
+
             <button class="btn-full" type="submit">Sign In</button>
 
             <div class="auth-divider"><span>or continue as</span></div>
@@ -167,6 +172,7 @@
       const passwordError = document.getElementById('passwordError');
       const emailInput = document.getElementById('email');
       const passwordInput = document.getElementById('password');
+      const rememberMe = document.getElementById('rememberMe').checked;
 
       // clear previous errors
       emailError.textContent = '';
@@ -190,7 +196,7 @@
 
       if (!valid) return;
 
-      const session = setAuthSession(selectedRole);
+      const session = setAuthSession(selectedRole, {}, rememberMe);
       showToast('Signed in as ' + session.roleLabel + ' — opening dashboard...');
       setTimeout(() => {
         window.location.href = getPostLoginPath();

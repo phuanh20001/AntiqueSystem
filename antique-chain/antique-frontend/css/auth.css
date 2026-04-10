@@ -222,6 +222,20 @@
   color: var(--ink);
 }
 
+.auth-remember {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-ui);
+  font-size: 13px;
+  color: var(--ink-light);
+  margin-top: -2px;
+}
+
+.auth-remember input {
+  accent-color: var(--sepia);
+}
+
 .auth-divider {
   display: flex;
   align-items: center;

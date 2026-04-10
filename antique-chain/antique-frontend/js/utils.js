@@ -1,4 +1,5 @@
 const AUTH_STORAGE_KEY = 'antiqchain-auth';
+const AUTH_SESSION_STORAGE_KEY = 'antiqchain-auth-session';
 
 const ROLE_PROFILES = {
   verifier: {
@@ -35,27 +36,34 @@ function showToast(msg, isError) {
   setTimeout(() => t.classList.remove('show'), 3500);
 }
 
-function getAuthSession() {
+function readAuthFromStorage(storage, key) {
   try {
-    const raw = localStorage.getItem(AUTH_STORAGE_KEY);
+    const raw = storage.getItem(key);
     if (!raw) return null;
-    const session = JSON.parse(raw);
-    if (!session) return null;
-
-    const normalizedRole = ROLE_ALIASES[session.role] || session.role;
-    if (!ROLE_PROFILES[normalizedRole]) return null;
-
-    return {
-      ...session,
-      role: normalizedRole,
-      roleLabel: ROLE_PROFILES[normalizedRole].label
-    };
+    return JSON.parse(raw);
   } catch (error) {
     return null;
   }
 }
 
-function setAuthSession(role, overrides = {}) {
+function getAuthSession() {
+  const session =
+    readAuthFromStorage(sessionStorage, AUTH_SESSION_STORAGE_KEY) ||
+    readAuthFromStorage(localStorage, AUTH_STORAGE_KEY);
+
+  if (!session) return null;
+
+  const normalizedRole = ROLE_ALIASES[session.role] || session.role;
+  if (!ROLE_PROFILES[normalizedRole]) return null;
+
+  return {
+    ...session,
+    role: normalizedRole,
+    roleLabel: ROLE_PROFILES[normalizedRole].label
+  };
+}
+
+function setAuthSession(role, overrides = {}, rememberPreference = null) {
   const normalizedRole = ROLE_ALIASES[role] || role;
   const profile = ROLE_PROFILES[normalizedRole] || ROLE_PROFILES.verifier;
   const session = {
@@ -68,7 +76,15 @@ function setAuthSession(role, overrides = {}) {
   };
 
   try {
-    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(session));
+    // Keep only one active auth source at a time.
+    localStorage.removeItem(AUTH_STORAGE_KEY);
+    sessionStorage.removeItem(AUTH_SESSION_STORAGE_KEY);
+
+    if (rememberPreference === false) {
+      sessionStorage.setItem(AUTH_SESSION_STORAGE_KEY, JSON.stringify(session));
+    } else {
+      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(session));
+    }
   } catch (error) {
     // Storage is best-effort for this static demo.
   }
@@ -80,6 +96,7 @@ function setAuthSession(role, overrides = {}) {
 function clearAuthSession() {
   try {
     localStorage.removeItem(AUTH_STORAGE_KEY);
+    sessionStorage.removeItem(AUTH_SESSION_STORAGE_KEY);
   } catch (error) {
     // Ignore storage failures.
   }
