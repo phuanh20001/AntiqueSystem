@@ -151,6 +151,24 @@ The system was tested under multiple scenarios:
 - Implemented dynamic welcome message 
 - Added  Screenshots 
 
+Author - Suman Bastola
+Volunteered to go beyond job scope, formulated and submitted five blackbelt business process improvements—two implemented later across five hospital facilities. 
+
+
+A Shift in Strategy. 
+
+To ensure the database can handle the flexible data requirements of different categories of antiques, I led the migration of the system’s data layer from a relational SQL model to MongoDB. 
+
+Schema Architecture: I designed document schemas for six core entities: Users, Antiques, Authenticity Requests, Verification Reports, Certificates, Antique Images. 
+
+To further improve the system’s performance and reduce the number of complex "joins", we embedded the Verification Reports directly into the Authenticity Requests and the Antique Images within the Antique documents. 
+
+Additionally, I ensured the database structure supported the authentication lifecycle from owner submission through expert review and finally to certificate rendering. 
+
+I also wrote the updated database section of the report, rewriting the entity-relational-database (ERD) concepts to represent a document-based relationship model, as well as replacing the SQL CREATE TABLE statements with MongoDB’s JSON schemas. 
+
+
+
 ## 🔗 GitHub Repository
 https://github.com/phuanh20001/AntiqueSystem.git
 
