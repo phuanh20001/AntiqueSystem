@@ -166,7 +166,23 @@ To further improve the system’s performance and reduce the number of complex "
 
 Additionally, I ensured the database structure supported the authentication lifecycle from owner submission through expert review and finally to certificate rendering. 
 
-I also wrote the updated database section of the report, rewriting the entity-relational-database (ERD) concepts to represent a document-based relationship model, as well as replacing the SQL CREATE TABLE statements with MongoDB’s JSON schemas. 
+I also wrote the updated database section of the report, rewriting the entity-relational-database (ERD) concepts to represent a document-based relationship model, as well as replacing the SQL CREATE TABLE statements with MongoDB’s JSON schemas. uth
+
+Author - Arjun jham
+User Authentication and Registration: Only registered users are allowed to use the system (both the dashboard and submit antiques).
+
+The public/unregistered user is allowed to view (or nothing at all).
+
+Make sure that the same email cannot be used to register twice and that users are protected by strong security measures, like encrypted passwords, and can interact only with their own account.
+
+Data Integrity and Ownership The data set for the 276 Antiques Road Show must be complete and have key identifying information for each antique, such as its name, type, origin, age and description.
+
+Each record should be tied to the user who submitted it, and only that user (or an admin) should be able to edit or delete records.
+
+Prevention of Misuse and Fraud: The system should penalize misuse, fraudulent activity or the submission of false data.
+You should only enter valid records.
+
+System must have protective mechanisms built in to screen for bogus or multiple records.
 
 
 
