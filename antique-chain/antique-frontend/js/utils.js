@@ -1,104 +1,97 @@
-const AUTH_STORAGE_KEY = 'antiqchain-auth';
-const AUTH_SESSION_STORAGE_KEY = 'antiqchain-auth-session';
-
-const ROLE_PROFILES = {
-  verifier: {
-    role: 'verifier',
-    label: 'Expert Verifier',
-    displayName: 'Suman Bastola',
-    id: 'VRF-009'
-  },
-  admin: {
-    role: 'admin',
-    label: 'Platform Admin',
-    displayName: 'Ariadne Cole',
-    id: 'ADM-001'
-  },
-  collector: {
-    role: 'collector',
-    label: 'Collector / Buyer',
-    displayName: 'Maya Chen',
-    id: 'COL-214'
-  }
-};
-
-const ROLE_ALIASES = {
-  buyer: 'collector'
-};
+const TOKEN_STORAGE_KEY = 'antiqchain-token';
+const USER_STORAGE_KEY = 'antiqchain-user';
+const TOKEN_SESSION_KEY = 'antiqchain-token-session';
+const USER_SESSION_KEY = 'antiqchain-user-session';
 
 // ── TOAST ──
-function showToast(msg, isError) {
+function showToast(msg, isError = false) {
   const t = document.getElementById('toast');
   if (!t) return;
+
   t.textContent = msg;
   t.style.borderLeftColor = isError ? 'var(--rust-light)' : 'var(--sage-light)';
   t.classList.add('show');
+
   setTimeout(() => t.classList.remove('show'), 3500);
 }
 
-function readAuthFromStorage(storage, key) {
+function safeParseJSON(value) {
   try {
-    const raw = storage.getItem(key);
-    if (!raw) return null;
-    return JSON.parse(raw);
+    return JSON.parse(value);
   } catch (error) {
     return null;
   }
 }
 
+function getStoredToken() {
+  return (
+    sessionStorage.getItem(TOKEN_SESSION_KEY) ||
+    localStorage.getItem(TOKEN_STORAGE_KEY)
+  );
+}
+
+function getStoredUser() {
+  const rawUser =
+    sessionStorage.getItem(USER_SESSION_KEY) ||
+    localStorage.getItem(USER_STORAGE_KEY);
+
+  if (!rawUser) return null;
+  return safeParseJSON(rawUser);
+}
+
 function getAuthSession() {
-  const session =
-    readAuthFromStorage(sessionStorage, AUTH_SESSION_STORAGE_KEY) ||
-    readAuthFromStorage(localStorage, AUTH_STORAGE_KEY);
+  const token = getStoredToken();
+  const user = getStoredUser();
 
-  if (!session) return null;
-
-  const normalizedRole = ROLE_ALIASES[session.role] || session.role;
-  if (!ROLE_PROFILES[normalizedRole]) return null;
+  if (!token || !user) return null;
 
   return {
-    ...session,
-    role: normalizedRole,
-    roleLabel: ROLE_PROFILES[normalizedRole].label
+    token,
+    ...user
   };
 }
 
-function setAuthSession(role, overrides = {}, rememberPreference = null) {
-  const normalizedRole = ROLE_ALIASES[role] || role;
-  const profile = ROLE_PROFILES[normalizedRole] || ROLE_PROFILES.verifier;
-  const session = {
-    role: profile.role,
-    roleLabel: profile.label,
-    displayName: profile.displayName,
-    id: profile.id,
-    signedInAt: new Date().toISOString(),
-    ...overrides
+function setAuthSession(user, token, rememberPreference = true) {
+  if (!user || !token) return null;
+
+  const sessionData = {
+    ...user,
+    signedInAt: new Date().toISOString()
   };
 
   try {
-    // Keep only one active auth source at a time.
-    localStorage.removeItem(AUTH_STORAGE_KEY);
-    sessionStorage.removeItem(AUTH_SESSION_STORAGE_KEY);
+    // Clear old auth data first
+    localStorage.removeItem(TOKEN_STORAGE_KEY);
+    localStorage.removeItem(USER_STORAGE_KEY);
+    sessionStorage.removeItem(TOKEN_SESSION_KEY);
+    sessionStorage.removeItem(USER_SESSION_KEY);
 
     if (rememberPreference === false) {
-      sessionStorage.setItem(AUTH_SESSION_STORAGE_KEY, JSON.stringify(session));
+      sessionStorage.setItem(TOKEN_SESSION_KEY, token);
+      sessionStorage.setItem(USER_SESSION_KEY, JSON.stringify(sessionData));
     } else {
-      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(session));
+      localStorage.setItem(TOKEN_STORAGE_KEY, token);
+      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(sessionData));
     }
   } catch (error) {
-    // Storage is best-effort for this static demo.
+    // Storage is best-effort
   }
 
   updateAuthUI();
-  return session;
+  return {
+    token,
+    ...sessionData
+  };
 }
 
 function clearAuthSession() {
   try {
-    localStorage.removeItem(AUTH_STORAGE_KEY);
-    sessionStorage.removeItem(AUTH_SESSION_STORAGE_KEY);
+    localStorage.removeItem(TOKEN_STORAGE_KEY);
+    localStorage.removeItem(USER_STORAGE_KEY);
+    sessionStorage.removeItem(TOKEN_SESSION_KEY);
+    sessionStorage.removeItem(USER_SESSION_KEY);
   } catch (error) {
-    // Ignore storage failures.
+    // Ignore storage failures
   }
 
   updateAuthUI();
@@ -144,6 +137,7 @@ function requirePageSession(returnToPage) {
 
   const fallback = getCurrentPageName() || 'dashboard.html';
   const returnTo = returnToPage || fallback;
+
   const params = new URLSearchParams({
     returnTo: returnTo,
     unauthorized: '1'
@@ -166,7 +160,9 @@ function updateAuthUI() {
     const isLoginLink = pathOnly.endsWith('login.html');
 
     if (isDashboardLink) {
-      link.href = session ? getDashboardPath() : getLoginPath() + '?returnTo=' + encodeURIComponent('dashboard.html');
+      link.href = session
+        ? getDashboardPath()
+        : getLoginPath() + '?returnTo=' + encodeURIComponent('dashboard.html');
     }
 
     if (isLoginLink) {
@@ -193,6 +189,7 @@ function updateAuthUI() {
 // ── ACTIVE NAV LINK ──
 (function () {
   const path = window.location.pathname;
+
   document.querySelectorAll('.nav-links a').forEach(a => {
     const href = a.getAttribute('href');
     if (!href) return;
