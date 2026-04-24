@@ -9,7 +9,6 @@
 </head>
 <body>
 
-  <!-- ── NAVIGATION ── -->
   <nav>
     <a class="nav-logo" href="../index.html">AntiqChain <span>— Verified Heritage</span></a>
     <div class="nav-links">
@@ -25,404 +24,20 @@
     <div class="welcome-banner-title" id="welcome-banner-title"></div>
   </div>
 
-  <!-- ── DASHBOARD LAYOUT ── -->
-  <div class="dashboard-layout" id="dashboard-root"></div>
-
-  <!-- ── REVIEW MODAL ── -->
-  <div class="modal-overlay" id="review-modal">
-    <div class="modal">
-      <div class="modal-header">
-        <div class="modal-title" id="modal-item-name">Review Item</div>
-        <button class="modal-close" onclick="closeReview()">✕</button>
-      </div>
-      <div class="modal-body">
-        <div class="form-group" style="margin-bottom:18px;">
-          <label class="form-label">Decision *</label>
-          <select class="form-select" id="modal-decision">
-            <option value="">Select your decision…</option>
-            <option value="approved">Approve — Item is authentic</option>
-            <option value="rejected">Reject — Item is not authentic</option>
-          </select>
-        </div>
-        <div class="form-group" style="margin-bottom:18px;">
-          <label class="form-label">Authenticity Score (0–100)</label>
-          <div class="score-display">
-            <input type="range" min="0" max="100" value="75"
-              oninput="document.getElementById('score-num').textContent = this.value">
-            <div class="score-num" id="score-num">75</div>
-          </div>
-        </div>
-        <div class="form-group" style="margin-bottom:4px;">
-          <label class="form-label">Expert Notes *</label>
-          <textarea class="form-textarea" id="modal-notes"
-            placeholder="Provide your detailed assessment — physical examination findings, dating analysis, comparisons with known authentic examples, and any indicators of authenticity or forgery…"></textarea>
-        </div>
-        <div class="modal-actions">
-          <button class="btn-sm btn-approve" onclick="submitReview('approved')">✓ Approve & Seal to Blockchain</button>
-          <button class="btn-sm btn-reject"  onclick="submitReview('rejected')">✕ Reject</button>
-        </div>
-      </div>
-    </div>
+  <div class="dashboard-layout" id="dashboard-root">
+    <div style="padding: 40px;">Loading dashboard data...</div>
   </div>
 
   <div class="toast" id="toast"></div>
+
+  <script src="../js/api.js"></script>
   <script src="../js/utils.js"></script>
+
   <script>
-    const DASHBOARD_CONFIG = {
-      verifier: {
-        title: 'Pending Review Queue',
-        subtitle: '7 items awaiting your expert assessment',
-        actionLabel: 'Export Report',
-        actionToast: 'Report exported successfully',
-        stats: [
-          { value: '7', label: 'Pending', className: 'gold' },
-          { value: '142', label: 'Approved Total', className: 'green' },
-          { value: '23', label: 'Rejected Total', className: 'rust' },
-          { value: '86%', label: 'Approval Rate', className: '' }
-        ],
-        sidebar: {
-          name: 'Suman Bastola',
-          role: 'Expert Verifier · ID: VRF-009',
-          sections: [
-            {
-              label: 'Review Queue',
-              items: [
-                { icon: '📋', label: 'Pending Review', count: '7', active: true },
-                { icon: '✅', label: 'Approved', count: '142', countClass: 'green' },
-                { icon: '❌', label: 'Rejected', count: '23', countClass: 'rust' }
-              ]
-            },
-            {
-              label: 'Management',
-              items: [
-                { icon: '👥', label: 'All Users' },
-                { icon: '📊', label: 'Analytics' },
-                { icon: '🔗', label: 'Blockchain Log' },
-                { icon: '⚙️', label: 'Settings' }
-              ]
-            }
-          ]
-        },
-        main: function () {
-          return `
-            <div class="dash-content dashboard-grid dashboard-grid-single">
-              <section class="dashboard-panel dashboard-panel-wide">
-                <div class="panel-head">
-                  <div>
-                    <h3>Pending Reviews</h3>
-                    <p>Scan each antique, review the provenance, and decide whether it is ready for the chain.</p>
-                  </div>
-                  <button class="btn-sm btn-review" onclick="showToast('Report exported successfully')">Export Report</button>
-                </div>
-                <div class="panel-body">
-                  <table class="review-table">
-                    <thead>
-                      <tr>
-                        <th></th>
-                        <th>Item</th>
-                        <th>Status</th>
-                        <th>Submitted</th>
-                        <th>By</th>
-                        <th>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr>
-                        <td class="item-row-thumb">🗡️</td>
-                        <td><div class="item-row-title">Edo Period Katana</div><div class="item-row-sub">Est. 1603–1868 · Kyoto, Japan</div></td>
-                        <td><span class="badge badge-pending">Pending</span></td>
-                        <td style="font-size:13px;color:var(--ink-light);">3 days ago</td>
-                        <td style="font-size:13px;">T. Nakamura</td>
-                        <td><div class="table-actions"><button class="btn-sm btn-review" onclick="openReview('Edo Period Katana')">Review</button></div></td>
-                      </tr>
-                      <tr>
-                        <td class="item-row-thumb">🏛️</td>
-                        <td><div class="item-row-title">Greek Terracotta Amphora</div><div class="item-row-sub">Est. 500 BC · Athens, Greece</div></td>
-                        <td><span class="badge badge-pending">Pending</span></td>
-                        <td style="font-size:13px;color:var(--ink-light);">5 days ago</td>
-                        <td style="font-size:13px;">M. Papadopoulos</td>
-                        <td><div class="table-actions"><button class="btn-sm btn-review" onclick="openReview('Greek Terracotta Amphora')">Review</button></div></td>
-                      </tr>
-                      <tr>
-                        <td class="item-row-thumb">💍</td>
-                        <td><div class="item-row-title">Victorian Mourning Ring</div><div class="item-row-sub">Est. 1860 · London, England</div></td>
-                        <td><span class="badge badge-pending">Pending</span></td>
-                        <td style="font-size:13px;color:var(--ink-light);">1 week ago</td>
-                        <td style="font-size:13px;">S. Thompson</td>
-                        <td><div class="table-actions"><button class="btn-sm btn-review" onclick="openReview('Victorian Mourning Ring')">Review</button></div></td>
-                      </tr>
-                      <tr>
-                        <td class="item-row-thumb">🪆</td>
-                        <td><div class="item-row-title">Imperial Fabergé Egg (claimed)</div><div class="item-row-sub">Claimed 1900 · Russia</div></td>
-                        <td><span class="badge badge-pending">Pending</span></td>
-                        <td style="font-size:13px;color:var(--ink-light);">1 week ago</td>
-                        <td style="font-size:13px;">V. Volkov</td>
-                        <td><div class="table-actions"><button class="btn-sm btn-review" onclick="openReview('Imperial Fabergé Egg')">Review</button></div></td>
-                      </tr>
-                      <tr>
-                        <td class="item-row-thumb">📜</td>
-                        <td><div class="item-row-title">Ottoman Illuminated Manuscript</div><div class="item-row-sub">Est. 16th Century · Istanbul</div></td>
-                        <td><span class="badge badge-pending">Pending</span></td>
-                        <td style="font-size:13px;color:var(--ink-light);">9 days ago</td>
-                        <td style="font-size:13px;">A. Yilmaz</td>
-                        <td><div class="table-actions"><button class="btn-sm btn-review" onclick="openReview('Ottoman Illuminated Manuscript')">Review</button></div></td>
-                      </tr>
-                      <tr>
-                        <td class="item-row-thumb">🎭</td>
-                        <td><div class="item-row-title">Noh Theatre Mask</div><div class="item-row-sub">Est. Muromachi period · Japan</div></td>
-                        <td><span class="badge badge-pending">Pending</span></td>
-                        <td style="font-size:13px;color:var(--ink-light);">11 days ago</td>
-                        <td style="font-size:13px;">H. Watanabe</td>
-                        <td><div class="table-actions"><button class="btn-sm btn-review" onclick="openReview('Noh Theatre Mask')">Review</button></div></td>
-                      </tr>
-                      <tr>
-                        <td class="item-row-thumb">🕯️</td>
-                        <td><div class="item-row-title">Baroque Silver Candelabra</div><div class="item-row-sub">Est. 1680 · Augsburg, Germany</div></td>
-                        <td><span class="badge badge-pending">Pending</span></td>
-                        <td style="font-size:13px;color:var(--ink-light);">12 days ago</td>
-                        <td style="font-size:13px;">K. Müller</td>
-                        <td><div class="table-actions"><button class="btn-sm btn-review" onclick="openReview('Baroque Silver Candelabra')">Review</button></div></td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </section>
-            </div>
-          `;
-        }
-      },
-      admin: {
-        title: 'Platform Control Center',
-        subtitle: 'User access, system health, and audit oversight',
-        actionLabel: 'Export Audit Pack',
-        actionToast: 'Audit pack exported successfully',
-        stats: [
-          { value: '128', label: 'Active Users', className: 'green' },
-          { value: '7', label: 'Pending Reviews', className: 'gold' },
-          { value: '3', label: 'System Alerts', className: 'rust' },
-          { value: '99.98%', label: 'Uptime', className: '' }
-        ],
-        sidebar: {
-          name: 'Ariadne Cole',
-          role: 'Platform Admin · ID: ADM-001',
-          sections: [
-            {
-              label: 'Operations',
-              items: [
-                { icon: '🛂', label: 'Access Requests', count: '4', active: true },
-                { icon: '🔑', label: 'Role Approvals' },
-                { icon: '🚨', label: 'System Alerts', count: '3', countClass: 'rust' },
-                { icon: '🗂️', label: 'Audit Trail' }
-              ]
-            },
-            {
-              label: 'Governance',
-              items: [
-                { icon: '👥', label: 'Users' },
-                { icon: '📈', label: 'Platform Metrics' },
-                { icon: '🔐', label: 'Key Rotation' },
-                { icon: '⚙️', label: 'Configuration' }
-              ]
-            }
-          ]
-        },
-        main: function () {
-          return `
-            <div class="dash-content dashboard-grid">
-              <section class="dashboard-panel">
-                <div class="panel-head">
-                  <div>
-                    <h3>Access Requests</h3>
-                    <p>Review new accounts, assign roles, and keep the registry aligned with policy.</p>
-                  </div>
-                  <button class="btn-sm btn-review" onclick="showToast('New access requests refreshed')">Refresh</button>
-                </div>
-                <div class="panel-body">
-                  <table class="review-table">
-                    <thead>
-                      <tr>
-                        <th>User</th>
-                        <th>Requested Role</th>
-                        <th>Verification</th>
-                        <th>Submitted</th>
-                        <th>Action</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr>
-                        <td><div class="item-row-title">Nadia Hussain</div><div class="item-row-sub">nadia@example.com</div></td>
-                        <td>Verifier</td>
-                        <td><span class="badge badge-pending">Pending</span></td>
-                        <td style="font-size:13px;color:var(--ink-light);">Today</td>
-                        <td><div class="table-actions"><button class="btn-sm btn-approve" onclick="showToast('Role approved and onboarding triggered')">Approve</button></div></td>
-                      </tr>
-                      <tr>
-                        <td><div class="item-row-title">Omar Ali</div><div class="item-row-sub">omar@example.com</div></td>
-                        <td>Collector</td>
-                        <td><span class="badge badge-pending">Pending</span></td>
-                        <td style="font-size:13px;color:var(--ink-light);">Yesterday</td>
-                        <td><div class="table-actions"><button class="btn-sm btn-review" onclick="showToast('Request sent for manual review')">Review</button></div></td>
-                      </tr>
-                      <tr>
-                        <td><div class="item-row-title">Lina Ortega</div><div class="item-row-sub">lina@example.com</div></td>
-                        <td>Buyer</td>
-                        <td><span class="badge badge-verified">Verified</span></td>
-                        <td style="font-size:13px;color:var(--ink-light);">2 days ago</td>
-                        <td><div class="table-actions"><button class="btn-sm btn-review" onclick="showToast('Access updated')">Update</button></div></td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </section>
-              <aside class="dashboard-panel">
-                <div class="panel-head">
-                  <div>
-                    <h3>System Health</h3>
-                    <p>Fast checks for ledger integrity, queue pressure, and platform warnings.</p>
-                  </div>
-                </div>
-                <div class="panel-body panel-stack">
-                  <div class="mini-card">
-                    <div class="mini-card-title">Ledger Integrity</div>
-                    <div class="mini-card-desc">All verification hashes are aligned across the active nodes.</div>
-                    <div class="dashboard-actions"><button class="btn-sm btn-review" onclick="showToast('Ledger scan completed successfully')">Run Check</button></div>
-                  </div>
-                  <div class="mini-card">
-                    <div class="mini-card-title">Moderation Queue</div>
-                    <div class="mini-card-desc">7 items need verifier attention, and 3 accounts are awaiting a final policy review.</div>
-                  </div>
-                  <div class="mini-card">
-                    <div class="mini-card-title">Quick Actions</div>
-                    <div class="dashboard-actions">
-                      <button class="btn-sm btn-approve" onclick="showToast('New verifier invitation prepared')">Invite Verifier</button>
-                      <button class="btn-sm btn-review" onclick="showToast('Security keys scheduled for rotation')">Rotate Keys</button>
-                    </div>
-                  </div>
-                </div>
-              </aside>
-            </div>
-          `;
-        }
-      },
-      collector: {
-        title: 'Collection Hub',
-        subtitle: 'Manage your items, browse verified antiques, and track certificates in one place',
-        actionLabel: 'Open Registry',
-        actionHref: '../index.html',
-        stats: [
-          { value: '12', label: 'My Submissions', className: 'gold' },
-          { value: '42', label: 'Verified Items Viewed', className: 'green' },
-          { value: '4', label: 'Items In Review', className: 'rust' },
-          { value: '8', label: 'Certificates', className: '' }
-        ],
-        sidebar: {
-          name: 'Maya Chen',
-          role: 'Collector / Buyer · ID: COL-214',
-          sections: [
-            {
-              label: 'Collection',
-              items: [
-                { icon: '📦', label: 'My Submissions', count: '12', active: true },
-                { icon: '🟡', label: 'In Review', count: '4', countClass: 'rust' },
-                { icon: '📜', label: 'Certificates', count: '8', countClass: 'green' }
-              ]
-            },
-            {
-              label: 'Discovery',
-              items: [
-                { icon: '🔎', label: 'Verified Inventory', count: '42' },
-                { icon: '⭐', label: 'Watchlist', count: '18', countClass: 'green' },
-                { icon: '💬', label: 'Support Inbox' }
-              ]
-            }
-          ]
-        },
-        main: function () {
-          return `
-            <div class="dash-content dashboard-grid">
-              <section class="dashboard-panel">
-                <div class="panel-head">
-                  <div>
-                    <h3>Recent Activity</h3>
-                    <p>Submit new antiques, track review progress, and open verified certificates from one dashboard.</p>
-                  </div>
-                  <a class="btn-sm btn-review" href="submit.html">Submit New Item</a>
-                </div>
-                <div class="panel-body">
-                  <table class="review-table">
-                    <thead>
-                      <tr>
-                        <th>Item</th>
-                        <th>Source</th>
-                        <th>Status</th>
-                        <th>Last Update</th>
-                        <th>Action</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr>
-                        <td><div class="item-row-title">Mughal Jade Dagger</div><div class="item-row-sub">Registered with provenance documents</div></td>
-                        <td>Private Collection</td>
-                        <td><span class="badge badge-verified">Approved</span></td>
-                        <td style="font-size:13px;color:var(--ink-light);">2 days ago</td>
-                        <td><button class="btn-sm btn-review" onclick="showToast('Certificate opened in the registry')">View</button></td>
-                      </tr>
-                      <tr>
-                        <td><div class="item-row-title">Austrian Pocket Watch</div><div class="item-row-sub">Verification notes pending</div></td>
-                        <td>Family Archive</td>
-                        <td><span class="badge badge-pending">In Review</span></td>
-                        <td style="font-size:13px;color:var(--ink-light);">Today</td>
-                        <td><button class="btn-sm btn-review" onclick="showToast('You will receive an update once review is complete')">Track</button></td>
-                      </tr>
-                      <tr>
-                        <td><div class="item-row-title">Ming Dynasty Porcelain Vase</div><div class="item-row-sub">Saved for later comparison</div></td>
-                        <td>Verified Inventory</td>
-                        <td><span class="badge badge-verified">Verified</span></td>
-                        <td style="font-size:13px;color:var(--ink-light);">Yesterday</td>
-                        <td><button class="btn-sm btn-review" onclick="showToast('Certificate opened')">Certificate</button></td>
-                      </tr>
-                      <tr>
-                        <td><div class="item-row-title">Art Nouveau Lamp</div><div class="item-row-sub">Awaiting image upload</div></td>
-                        <td>Home Archive</td>
-                        <td><span class="badge badge-pending">Draft</span></td>
-                        <td style="font-size:13px;color:var(--ink-light);">Yesterday</td>
-                        <td><button class="btn-sm btn-review" onclick="showToast('Continue the submission workflow')">Continue</button></td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </section>
-              <aside class="dashboard-panel">
-                <div class="panel-head">
-                  <div>
-                    <h3>Workspace Tools</h3>
-                    <p>Use the same account for submission and browsing without switching roles.</p>
-                  </div>
-                </div>
-                <div class="panel-body panel-stack">
-                  <div class="mini-card">
-                    <div class="mini-card-title">Next Step</div>
-                    <div class="mini-card-desc">Finish the remaining photo set and provenance notes for the Art Nouveau Lamp.</div>
-                    <div class="dashboard-actions"><a class="btn-sm btn-approve" href="submit.html">Resume Draft</a></div>
-                  </div>
-                  <div class="mini-card">
-                    <div class="mini-card-title">Watchlist Alert</div>
-                    <div class="mini-card-desc">Two of your saved items were updated with new provenance documents this week.</div>
-                  </div>
-                  <div class="mini-card">
-                    <div class="mini-card-title">Quick Notes</div>
-                    <div class="mini-card-desc">Open new submissions, compare verified pieces, or pull certificates from the same workspace.</div>
-                  </div>
-                </div>
-              </aside>
-            </div>
-          `;
-        }
-      }
-    };
+    const session = requireDashboardSession();
 
     function escapeHtml(value) {
-      return String(value)
+      return String(value || '')
         .replaceAll('&', '&amp;')
         .replaceAll('<', '&lt;')
         .replaceAll('>', '&gt;')
@@ -430,86 +45,41 @@
         .replaceAll("'", '&#39;');
     }
 
-    function renderSidebar(config) {
-      return `
-        <div class="dashboard-sidebar">
-          <div class="sidebar-profile">
-            <div class="sidebar-name">${escapeHtml(config.sidebar.name)}</div>
-            <div class="sidebar-role">${escapeHtml(config.sidebar.role)}</div>
-          </div>
-          ${config.sidebar.sections.map(section => `
-            <div class="sidebar-section-label">${escapeHtml(section.label)}</div>
-            <div class="sidebar-section">
-              ${section.items.map(item => `
-                <a class="sidebar-item${item.active ? ' active' : ''}" href="#">
-                  <span>${item.icon}</span> ${escapeHtml(item.label)}
-                  ${item.count ? `<span class="sidebar-count${item.countClass ? ' ' + item.countClass : ''}">${escapeHtml(item.count)}</span>` : ''}
-                </a>
-              `).join('')}
-            </div>
-          `).join('')}
-        </div>
-      `;
+    function getStatusBadge(status) {
+      const safeStatus = status || 'Pending';
+      const lower = safeStatus.toLowerCase();
+
+      let badgeClass = 'badge-pending';
+
+      if (lower.includes('verified') || lower.includes('approved')) {
+        badgeClass = 'badge-verified';
+      }
+
+      if (lower.includes('rejected')) {
+        badgeClass = 'badge-rejected';
+      }
+
+      return `<span class="badge ${badgeClass}">${escapeHtml(safeStatus)}</span>`;
     }
 
-    function renderStats(stats) {
-      return `
-        <div class="dash-stats">
-          ${stats.map(stat => `
-            <div class="dash-stat">
-              <div class="dash-stat-num${stat.className ? ' ' + stat.className : ''}">${escapeHtml(stat.value)}</div>
-              <div class="dash-stat-label">${escapeHtml(stat.label)}</div>
-            </div>
-          `).join('')}
-        </div>
-      `;
-    }
-
-    function renderDashboard(session) {
-      const config = DASHBOARD_CONFIG[session.role] || DASHBOARD_CONFIG.verifier;
-      document.title = config.title + ' — AntiqChain';
-
-      const root = document.getElementById('dashboard-root');
-      root.innerHTML = `
-        ${renderSidebar(config)}
-        <div class="dashboard-main">
-          <div class="dash-topbar">
-            <div>
-              <h2>${escapeHtml(config.title)}</h2>
-              <p>${escapeHtml(config.subtitle)}</p>
-            </div>
-            ${config.actionHref
-              ? `<a class="btn-primary" style="font-size:13px;padding:10px 20px;" href="${config.actionHref}">${escapeHtml(config.actionLabel)}</a>`
-              : `<button class="btn-primary" style="font-size:13px;padding:10px 20px;" onclick="showToast('${config.actionToast}')">${escapeHtml(config.actionLabel)}</button>`}
-          </div>
-          ${renderStats(config.stats)}
-          ${config.main()}
-        </div>
-      `;
-
-      document.querySelectorAll('.sidebar-item').forEach(item => {
-        item.addEventListener('click', function (e) {
-          e.preventDefault();
-          document.querySelectorAll('.sidebar-item').forEach(x => x.classList.remove('active'));
-          this.classList.add('active');
-        });
-      });
-    }
-
-    function showWelcomeBanner(session) {
+    function showWelcomeBanner(user) {
       const banner = document.getElementById('welcome-banner');
       const title = document.getElementById('welcome-banner-title');
-      const identity = session.email || session.displayName || 'user';
 
-      title.textContent = 'Welcome, ' + identity;
+      const name =
+        user.displayName ||
+        user.name ||
+        user.firstName ||
+        user.email ||
+        'user';
+
+      title.textContent = 'Welcome, ' + name;
       banner.style.display = 'block';
 
-      // Trigger entrance transition after initial paint.
       requestAnimationFrame(function () {
         banner.classList.add('show');
       });
 
-      // Auto-hide after a short delay while preserving the exit animation.
       setTimeout(function () {
         banner.classList.remove('show');
         setTimeout(function () {
@@ -518,41 +88,269 @@
       }, 4200);
     }
 
-    function openReview(itemName) {
-      document.getElementById('modal-item-name').textContent = 'Review: ' + itemName;
-      document.getElementById('modal-decision').value = '';
-      document.getElementById('modal-notes').value = '';
-      document.getElementById('score-num').textContent = '75';
-      document.getElementById('review-modal').classList.add('open');
+    function renderLoading() {
+      const root = document.getElementById('dashboard-root');
+
+      root.innerHTML = `
+        <div class="dashboard-main" style="width:100%; padding:40px;">
+          <div class="dashboard-panel">
+            <div class="panel-body">
+              <p>Loading dashboard data...</p>
+            </div>
+          </div>
+        </div>
+      `;
     }
 
-    function closeReview() {
-      document.getElementById('review-modal').classList.remove('open');
+    function renderError(message) {
+      const root = document.getElementById('dashboard-root');
+
+      root.innerHTML = `
+        <div class="dashboard-main" style="width:100%; padding:40px;">
+          <div class="dashboard-panel">
+            <div class="panel-head">
+              <div>
+                <h3>Unable to load dashboard</h3>
+                <p>${escapeHtml(message || 'Please try again later.')}</p>
+              </div>
+            </div>
+            <div class="panel-body">
+              <button class="btn-sm btn-review" onclick="loadDashboardData()">Retry</button>
+            </div>
+          </div>
+        </div>
+      `;
     }
 
-    function submitReview(decision) {
-      const notes = document.getElementById('modal-notes').value.trim();
-      if (!notes) {
-        showToast('Please provide expert notes before submitting.', true);
-        return;
+    function renderSidebar(user, items) {
+      const name =
+        user.displayName ||
+        user.name ||
+        `${user.firstName || ''} ${user.lastName || ''}`.trim() ||
+        'AntiqChain User';
+
+      const role = user.role || 'collector';
+
+      const totalItems = items.length;
+      const pendingItems = items.filter(item =>
+        String(item.verificationStatus || item.status || '').toLowerCase().includes('pending') ||
+        String(item.verificationStatus || item.status || '').toLowerCase().includes('review')
+      ).length;
+
+      const verifiedItems = items.filter(item =>
+        String(item.verificationStatus || item.status || '').toLowerCase().includes('verified') ||
+        String(item.verificationStatus || item.status || '').toLowerCase().includes('approved')
+      ).length;
+
+      return `
+        <div class="dashboard-sidebar">
+          <div class="sidebar-profile">
+            <div class="sidebar-name">${escapeHtml(name)}</div>
+            <div class="sidebar-role">${escapeHtml(role)} account</div>
+          </div>
+
+          <div class="sidebar-section-label">Collection</div>
+          <div class="sidebar-section">
+            <a class="sidebar-item active" href="#">
+              <span>📦</span> My Submissions
+              <span class="sidebar-count">${totalItems}</span>
+            </a>
+            <a class="sidebar-item" href="#">
+              <span>🟡</span> In Review
+              <span class="sidebar-count rust">${pendingItems}</span>
+            </a>
+            <a class="sidebar-item" href="#">
+              <span>📜</span> Verified
+              <span class="sidebar-count green">${verifiedItems}</span>
+            </a>
+          </div>
+
+          <div class="sidebar-section-label">Actions</div>
+          <div class="sidebar-section">
+            <a class="sidebar-item" href="submit.html">
+              <span>➕</span> Submit New Item
+            </a>
+            <a class="sidebar-item" href="../index.html">
+              <span>🏠</span> Back to Home
+            </a>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderStats(items) {
+      const total = items.length;
+
+      const pending = items.filter(item =>
+        String(item.verificationStatus || item.status || '').toLowerCase().includes('pending') ||
+        String(item.verificationStatus || item.status || '').toLowerCase().includes('review')
+      ).length;
+
+      const verified = items.filter(item =>
+        String(item.verificationStatus || item.status || '').toLowerCase().includes('verified') ||
+        String(item.verificationStatus || item.status || '').toLowerCase().includes('approved')
+      ).length;
+
+      const blockchainLinked = items.filter(item =>
+        item.transactionHash || item.certificateHash
+      ).length;
+
+      return `
+        <div class="dash-stats">
+          <div class="dash-stat">
+            <div class="dash-stat-num gold">${total}</div>
+            <div class="dash-stat-label">My Submissions</div>
+          </div>
+          <div class="dash-stat">
+            <div class="dash-stat-num rust">${pending}</div>
+            <div class="dash-stat-label">In Review</div>
+          </div>
+          <div class="dash-stat">
+            <div class="dash-stat-num green">${verified}</div>
+            <div class="dash-stat-label">Verified</div>
+          </div>
+          <div class="dash-stat">
+            <div class="dash-stat-num">${blockchainLinked}</div>
+            <div class="dash-stat-label">Blockchain Proofs</div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderItemRows(items) {
+      if (!items.length) {
+        return `
+          <tr>
+            <td colspan="6" style="text-align:center; padding:30px; color:var(--ink-light);">
+              No submitted items found. Submit your first antique item to begin verification.
+            </td>
+          </tr>
+        `;
       }
-      closeReview();
-      if (decision === 'approved') {
-        showToast('Item approved — generating blockchain hash and sealing record…');
-      } else {
-        showToast('Item rejected — collector has been notified.');
+
+      return items.map(item => {
+        const title = item.title || item.itemName || item.name || 'Untitled Item';
+        const category = item.category || 'Antique Item';
+        const origin = item.countryOfOrigin || item.country || 'Origin not provided';
+        const period = item.estimatedPeriod || item.year || 'Period not provided';
+        const status = item.verificationStatus || item.status || 'Pending';
+        const certificateHash = item.certificateHash || 'Pending';
+        const transactionHash = item.transactionHash || 'Pending';
+
+        return `
+          <tr>
+            <td class="item-row-thumb">🏺</td>
+            <td>
+              <div class="item-row-title">${escapeHtml(title)}</div>
+              <div class="item-row-sub">${escapeHtml(category)} · ${escapeHtml(period)} · ${escapeHtml(origin)}</div>
+            </td>
+            <td>${getStatusBadge(status)}</td>
+            <td style="font-size:13px;color:var(--ink-light);">${escapeHtml(certificateHash)}</td>
+            <td style="font-size:13px;color:var(--ink-light);">${escapeHtml(transactionHash)}</td>
+            <td>
+              <button class="btn-sm btn-review" onclick="showToast('Item details view will be connected later.')">
+                View
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function renderDashboard(user, items) {
+      const root = document.getElementById('dashboard-root');
+
+      const name =
+        user.displayName ||
+        user.name ||
+        user.firstName ||
+        user.email ||
+        'User';
+
+      root.innerHTML = `
+        ${renderSidebar(user, items)}
+
+        <div class="dashboard-main">
+          <div class="dash-topbar">
+            <div>
+              <h2>Collection Dashboard</h2>
+              <p>Track submitted antiques, verification progress, and blockchain proof references.</p>
+            </div>
+            <a class="btn-primary" style="font-size:13px;padding:10px 20px;" href="submit.html">
+              Submit New Item
+            </a>
+          </div>
+
+          ${renderStats(items)}
+
+          <div class="dash-content dashboard-grid dashboard-grid-single">
+            <section class="dashboard-panel dashboard-panel-wide">
+              <div class="panel-head">
+                <div>
+                  <h3>My Submitted Items</h3>
+                  <p>These records are loaded from the backend API when available.</p>
+                </div>
+                <button class="btn-sm btn-review" onclick="loadDashboardData()">Refresh</button>
+              </div>
+
+              <div class="panel-body">
+                <table class="review-table">
+                  <thead>
+                    <tr>
+                      <th></th>
+                      <th>Item</th>
+                      <th>Status</th>
+                      <th>Certificate Hash</th>
+                      <th>Transaction Hash</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${renderItemRows(items)}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </div>
+        </div>
+      `;
+
+      showWelcomeBanner(user);
+    }
+
+    function normalizeItems(response) {
+      if (Array.isArray(response)) return response;
+      if (Array.isArray(response.items)) return response.items;
+      if (Array.isArray(response.data)) return response.data;
+      return [];
+    }
+
+    async function loadDashboardData() {
+      if (!session) return;
+
+      renderLoading();
+
+      try {
+        const userResponse = await apiRequest('/auth/me', 'GET', null, true);
+        const itemsResponse = await apiRequest('/items/my-items', 'GET', null, true);
+
+        const user = userResponse.user || userResponse.data || userResponse || session;
+        const items = normalizeItems(itemsResponse);
+
+        renderDashboard(user, items);
+
+      } catch (error) {
+        renderError(error.message || 'Unable to load dashboard data.');
+        showToast(error.message || 'Unable to load dashboard data.', true);
       }
     }
 
-    document.getElementById('review-modal').addEventListener('click', function (e) {
-      if (e.target === this) closeReview();
+    document.addEventListener('DOMContentLoaded', function () {
+      if (session) {
+        loadDashboardData();
+      }
     });
-
-    const session = requireDashboardSession();
-    if (session) {
-      renderDashboard(session);
-      showWelcomeBanner(session);
-    }
   </script>
+
 </body>
 </html>
