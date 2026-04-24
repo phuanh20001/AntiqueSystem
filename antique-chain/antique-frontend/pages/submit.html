@@ -9,7 +9,6 @@
 </head>
 <body>
 
-  <!-- ── NAVIGATION ── -->
   <nav>
     <a class="nav-logo" href="../index.html">AntiqChain <span>— Verified Heritage</span></a>
     <div class="nav-links">
@@ -21,27 +20,22 @@
     </div>
   </nav>
 
-  <!-- ── PAGE HEADER ── -->
   <div class="page-header">
     <div class="page-header-eyebrow">Collector Portal</div>
     <h1>Submit an Antique Item</h1>
     <p>Provide accurate details and clear photographs for the fastest verification turnaround.</p>
   </div>
 
-  <!-- ── CONTENT ── -->
   <div class="page-content">
     <div class="submit-layout">
 
-      <!-- FORM COLUMN -->
       <div>
-        <!-- Upload Zone -->
-        <div class="upload-zone" onclick="showToast('File dialog would open here')">
+        <div class="upload-zone" onclick="showToast('File upload will be connected later.')">
           <div class="upload-icon">📷</div>
           <div class="upload-title">Upload Item Photographs</div>
           <div class="upload-hint">Drag & drop or click to browse · JPG, PNG, TIFF · Max 20MB each · Up to 10 photos</div>
         </div>
 
-        <!-- Form Fields -->
         <form id="antiqueForm" autocomplete="off">
           <div class="form-grid">
             <div class="form-group full">
@@ -49,6 +43,7 @@
               <input class="form-input" type="text" name="title" placeholder="e.g. Ming Dynasty Blue & White Porcelain Vase">
               <div class="error-message"></div>
             </div>
+
             <div class="form-group">
               <label class="form-label">Category *</label>
               <select class="form-select" name="category">
@@ -66,42 +61,48 @@
               </select>
               <div class="error-message"></div>
             </div>
+
             <div class="form-group">
               <label class="form-label">Estimated Year / Period *</label>
               <input class="form-input" type="text" name="year" placeholder="e.g. 1368–1644 or circa 1750">
               <div class="error-message"></div>
             </div>
+
             <div class="form-group">
               <label class="form-label">Country of Origin *</label>
               <input class="form-input" type="text" name="country" placeholder="e.g. China, France, England">
               <div class="error-message"></div>
             </div>
+
             <div class="form-group">
               <label class="form-label">Dimensions</label>
               <input class="form-input" type="text" name="dimensions" placeholder="e.g. 32cm H × 18cm W">
             </div>
+
             <div class="form-group full">
               <label class="form-label">Item Description *</label>
               <textarea class="form-textarea" name="description" placeholder="Describe the item in detail — materials, markings, style, condition, and any distinguishing features…"></textarea>
               <div class="error-message"></div>
             </div>
+
             <div class="form-group full">
               <label class="form-label">Provenance & History</label>
               <textarea class="form-textarea" name="provenance" style="min-height:90px;" placeholder="Describe known ownership history, acquisition, or any documentation you hold…"></textarea>
             </div>
+
             <div class="form-group full">
               <label class="form-label">Condition Notes</label>
               <input class="form-input" type="text" name="condition" placeholder="e.g. Minor crazing to glaze, hairline crack to base, otherwise excellent">
             </div>
           </div>
+
           <div class="submit-actions">
-            <button class="btn-primary" type="submit">Submit for Verification</button>
-            <button class="btn-outline" type="button" onclick="showToast('Draft saved successfully')">Save Draft</button>
+            <button class="btn-primary" type="submit" id="submitItemBtn">Submit for Verification</button>
+            <button class="btn-outline" type="button" onclick="showToast('Draft saving will be connected later.')">Save Draft</button>
           </div>
         </form>
       </div>
 
-      <!-- SIDEBAR -->
       <div>
         <div class="info-card">
           <div class="info-card-title">Before You Submit</div>
@@ -113,6 +114,7 @@
             <li>Accurate descriptions significantly speed up the review</li>
           </ul>
         </div>
+
         <div class="info-card">
           <div class="info-card-title">Processing Times</div>
           <ul class="info-list">
@@ -121,6 +123,7 @@
             <li>Email updates sent at every stage</li>
           </ul>
         </div>
+
         <div class="pricing-card">
           <div class="info-card-title">Verification Fee</div>
           <div class="pricing-amount">$49</div>
@@ -131,7 +134,6 @@
     </div>
   </div>
 
-  <!-- ── FOOTER ── -->
   <footer>
     <div>
       <div class="footer-brand">AntiqChain</div>
@@ -155,56 +157,113 @@
       </ul>
     </div>
   </footer>
-  <div class="footer-bottom">© 2025 AntiqChain — Blockchain Antique Verification System. All rights reserved.</div>
+
+  <div class="footer-bottom">©️ 2025 AntiqChain — Blockchain Antique Verification System. All rights reserved.</div>
 
   <div class="toast" id="toast"></div>
-  <script src="../js/utils.js"></script>
-  <script>
-    requirePageSession('submit.html');
 
-    function handleSubmit() {
-      showToast('Item submitted for verification — you will receive an email update within 5 business days.');
-      setTimeout(() => window.location.href = '../index.html', 1400);
+  <script src="../js/api.js"></script>
+  <script src="../js/utils.js"></script>
+
+  <script>
+    const currentSession = requirePageSession('submit.html');
+
+    function clearFormErrors(form) {
+      form.querySelectorAll('.error-message').forEach(error => {
+        error.textContent = '';
+        error.classList.remove('show');
+      });
+
+      form.querySelectorAll('.form-input, .form-select, .form-textarea').forEach(input => {
+        input.classList.remove('error');
+      });
     }
 
-    // Validation for antique submission form
-    document.addEventListener('DOMContentLoaded', function() {
+    function validateRequiredFields(form) {
+      let valid = true;
+
+      const requiredFields = [
+        { name: 'title' },
+        { name: 'category' },
+        { name: 'year' },
+        { name: 'country' },
+        { name: 'description' }
+      ];
+
+      requiredFields.forEach(field => {
+        const el = form.querySelector(`[name="${field.name}"]`);
+        const error = el.parentElement.querySelector('.error-message');
+
+        if (!el.value.trim()) {
+          error.textContent = 'This field is required.';
+          error.classList.add('show');
+          el.classList.add('error');
+          valid = false;
+        }
+      });
+
+      return valid;
+    }
+
+    function getFormPayload(form) {
+      return {
+        title: form.title.value.trim(),
+        category: form.category.value.trim(),
+        year: form.year.value.trim(),
+        country: form.country.value.trim(),
+        dimensions: form.dimensions.value.trim(),
+        description: form.description.value.trim(),
+        provenance: form.provenance.value.trim(),
+        condition: form.condition.value.trim(),
+        verificationStatus: 'Pending'
+      };
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
       const form = document.getElementById('antiqueForm');
+      const submitButton = document.getElementById('submitItemBtn');
+
       if (!form) return;
-      form.addEventListener('submit', function(e) {
+
+      form.addEventListener('submit', async function (e) {
         e.preventDefault();
-        let valid = true;
-        const requiredFields = [
-          { name: 'title', type: 'input' },
-          { name: 'category', type: 'select' },
-          { name: 'year', type: 'input' },
-          { name: 'country', type: 'input' },
-          { name: 'description', type: 'textarea' }
-        ];
-        requiredFields.forEach(field => {
-          const el = form.querySelector(`[name="${field.name}"]`);
-          const error = el.parentElement.querySelector('.error-message');
-          if (el.value.trim() === '' || (field.type === 'select' && el.value === '')) {
-            error.textContent = 'This field is required.';
-            error.classList.add('show');
-            el.classList.add('error');
-            valid = false;
-          } else {
-            error.textContent = '';
-            error.classList.remove('show');
-            el.classList.remove('error');
-          }
-        });
-        if (!valid) {
-          // Scroll to first error
+
+        clearFormErrors(form);
+
+        const isValid = validateRequiredFields(form);
+
+        if (!isValid) {
           const firstError = form.querySelector('.form-input.error, .form-select.error, .form-textarea.error');
-          if (firstError) firstError.scrollIntoView({behavior: 'smooth', block: 'center'});
+          if (firstError) {
+            firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+          showToast('Please complete all required fields.', true);
           return;
         }
-        showToast('Item submitted for verification — you will receive an email update within 5 business days.', 'success');
-        setTimeout(() => window.location.href = '../index.html', 1400);
+
+        const payload = getFormPayload(form);
+
+        try {
+          submitButton.disabled = true;
+          submitButton.textContent = 'Submitting...';
+
+          await apiRequest('/items', 'POST', payload, true);
+
+          showToast('Item submitted successfully for verification.');
+
+          setTimeout(() => {
+            window.location.href = 'dashboard.html';
+          }, 1000);
+
+        } catch (error) {
+          showToast(error.message || 'Unable to submit item. Please try again.', true);
+        } finally {
+          submitButton.disabled = false;
+          submitButton.textContent = 'Submit for Verification';
+        }
       });
     });
   </script>
+
 </body>
 </html>
