@@ -57,6 +57,8 @@
 
     <div class="auth-right">
       <div class="auth-shell">
+
+        <!-- LOGIN PANEL -->
         <div class="auth-panel active" id="panel-login">
           <div class="auth-panel-head">
             <div class="auth-title">Welcome back</div>
@@ -83,13 +85,7 @@
 
             <button class="btn-full" type="submit">Sign In</button>
 
-            <div class="auth-divider"><span>or continue as</span></div>
-
-            <div class="role-selector">
-              <button class="role-btn" type="button" onclick="loginAs('verifier', this)">Verifier</button>
-              <button class="role-btn" type="button" onclick="loginAs('admin', this)">Admin</button>
-              <button class="role-btn" type="button" onclick="loginAs('collector', this)">Collector / Buyer</button>
-            </div>
+            <div class="auth-divider"><span>secure login</span></div>
           </form>
 
           <div class="auth-switch">
@@ -98,6 +94,7 @@
           </div>
         </div>
 
+        <!-- REGISTER PANEL -->
         <div class="auth-panel" id="panel-register">
           <div class="auth-panel-head">
             <div class="auth-title">Create Account</div>
@@ -110,6 +107,7 @@
                 <label class="form-label" for="firstName">First Name</label>
                 <input class="form-input" type="text" id="firstName" placeholder="John">
               </div>
+
               <div class="form-group">
                 <label class="form-label" for="lastName">Last Name</label>
                 <input class="form-input" type="text" id="lastName" placeholder="Smith">
@@ -147,21 +145,29 @@
             <a href="#" onclick="switchPanel('login'); return false;">Sign in</a>
           </div>
         </div>
+
       </div>
     </div>
   </div>
 
   <div class="toast" id="toast"></div>
-  <script src="../js/utils.js"></script>
-  <script>
-    let selectedRole = 'verifier';
 
+  <script src="../js/api.js"></script>
+  <script src="../js/utils.js"></script>
+
+  <script>
     function switchPanel(name) {
-      document.querySelectorAll('.auth-panel').forEach(panel => panel.classList.remove('active'));
-      document.getElementById('panel-' + name).classList.add('active');
+      document.querySelectorAll('.auth-panel').forEach(panel => {
+        panel.classList.remove('active');
+      });
+
+      const selectedPanel = document.getElementById('panel-' + name);
+      if (selectedPanel) {
+        selectedPanel.classList.add('active');
+      }
     }
 
-    function handleLogin(event) {
+    async function handleLogin(event) {
       if (event) {
         event.preventDefault();
       }
@@ -173,8 +179,8 @@
       const emailInput = document.getElementById('email');
       const passwordInput = document.getElementById('password');
       const rememberMe = document.getElementById('rememberMe').checked;
+      const signInButton = document.querySelector('#loginForm button[type="submit"]');
 
-      // clear previous errors
       emailError.textContent = '';
       passwordError.textContent = '';
       emailInput.classList.remove('input-error');
@@ -196,40 +202,74 @@
 
       if (!valid) return;
 
-      const session = setAuthSession(selectedRole, { email: email }, rememberMe);
-      showToast('Signed in as ' + session.roleLabel + ' — opening dashboard...');
-      setTimeout(() => {
-        window.location.href = getPostLoginPath();
-      }, 900);
-    }
+      try {
+        signInButton.disabled = true;
+        signInButton.textContent = 'Signing in...';
 
-    function handleRegister() {
-      const role = document.getElementById('regRole').value || 'collector';
-      showToast('Account created — please sign in to continue.');
-      setTimeout(() => {
-        selectedRole = role;
-        document.querySelectorAll('.role-btn').forEach(item => {
-          const roleText = item.textContent.toLowerCase();
-          const shouldSelect = (role === 'collector' && roleText.includes('collector')) ||
-            (role === 'verifier' && roleText.includes('verifier'));
-          item.classList.toggle('active', shouldSelect);
+        const result = await apiRequest('/auth/login', 'POST', {
+          email: email,
+          password: password
         });
-        switchPanel('login');
-      }, 900);
+
+        setAuthSession(result.user, result.token, rememberMe);
+
+        showToast('Login successful — opening dashboard...');
+
+        setTimeout(() => {
+          window.location.href = getPostLoginPath();
+        }, 800);
+
+      } catch (error) {
+        showToast(error.message || 'Login failed. Please try again.', true);
+      } finally {
+        signInButton.disabled = false;
+        signInButton.textContent = 'Sign In';
+      }
     }
 
-    function loginAs(role, button) {
-      selectedRole = role;
-      document.querySelectorAll('.role-btn').forEach(item => item.classList.remove('active'));
-      if (button) {
-        button.classList.add('active');
+    async function handleRegister() {
+      const firstName = document.getElementById('firstName').value.trim();
+      const lastName = document.getElementById('lastName').value.trim();
+      const email = document.getElementById('regEmail').value.trim();
+      const role = document.getElementById('regRole').value || 'collector';
+      const password = document.getElementById('regPassword').value.trim();
+      const confirmPassword = document.getElementById('confirmPassword').value.trim();
+
+      if (!firstName || !lastName || !email || !password || !confirmPassword) {
+        showToast('Please fill all registration fields.', true);
+        return;
       }
-      handleLogin();
+
+      if (password !== confirmPassword) {
+        showToast('Passwords do not match.', true);
+        return;
+      }
+
+      try {
+        await apiRequest('/auth/register', 'POST', {
+          firstName: firstName,
+          lastName: lastName,
+          email: email,
+          role: role,
+          password: password
+        });
+
+        showToast('Account created — please sign in to continue.');
+
+        setTimeout(() => {
+          switchPanel('login');
+          document.getElementById('email').value = email;
+        }, 800);
+
+      } catch (error) {
+        showToast(error.message || 'Registration failed. Please try again.', true);
+      }
     }
 
     document.addEventListener('DOMContentLoaded', function () {
       const search = new URLSearchParams(window.location.search);
       const unauthorized = search.get('unauthorized') === '1';
+
       if (unauthorized) {
         const authAlert = document.getElementById('authAlert');
         authAlert.textContent = 'Unauthorized: please sign in first to access that page.';
@@ -240,12 +280,8 @@
       if (loginForm) {
         loginForm.addEventListener('submit', handleLogin);
       }
-
-      const firstRole = document.querySelector('.role-btn');
-      if (firstRole) {
-        firstRole.classList.add('active');
-      }
     });
   </script>
+
 </body>
 </html>
