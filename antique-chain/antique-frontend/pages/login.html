@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign In — AntiqChain</title>
+  <link rel="stylesheet" href="../css/global.css">
+  <link rel="stylesheet" href="../css/auth.css">
+</head>
+<body>
+
+  <!-- ── NAVIGATION ── -->
+  <nav>
+    <a class="nav-logo" href="../index.html">AntiqChain <span>— Verified Heritage</span></a>
+    <div class="nav-links">
+      <a href="../index.html">Home</a>
+      <a href="about.html">About</a>
+      <a href="submit.html">Submit Item</a>
+      <a href="dashboard.html">Dashboard</a>
+      <a href="login.html" class="nav-cta active">Sign In</a>
+    </div>
+  </nav>
+
+  <div class="auth-alert" id="authAlert" style="display:none;"></div>
+
+  <!-- ── AUTH LAYOUT ── -->
+  <div class="auth-wrap">
+    <div class="auth-left">
+      <div class="auth-left-content">
+        <div class="auth-kicker">Trusted Antique Verification</div>
+        <a class="auth-logo" href="../index.html">AntiqChain</a>
+        <div class="auth-quote">
+          "Every antique holds a story. We protect what history made."
+        </div>
+        <div class="auth-quote-attr">— AntiqChain Founding Principle</div>
+
+        <div class="auth-stats">
+          <div class="auth-stat-card">
+            <div class="auth-stat-num">4,821</div>
+            <div class="auth-stat-label">Items Verified</div>
+          </div>
+          <div class="auth-stat-card">
+            <div class="auth-stat-num">38</div>
+            <div class="auth-stat-label">Expert Verifiers</div>
+          </div>
+          <div class="auth-stat-card">
+            <div class="auth-stat-num">96.4%</div>
+            <div class="auth-stat-label">Accuracy Rate</div>
+          </div>
+        </div>
+
+        <div class="auth-left-note">
+          Immutable verification records, expert-led review, and a collector experience designed around provenance.
+        </div>
+      </div>
+    </div>
+
+    <div class="auth-right">
+      <div class="auth-shell">
+
+        <!-- LOGIN PANEL -->
+        <div class="auth-panel active" id="panel-login">
+          <div class="auth-panel-head">
+            <div class="auth-title">Welcome back</div>
+            <div class="auth-subtitle">Sign in to your AntiqChain account to continue to the dashboard.</div>
+          </div>
+
+          <form class="auth-form" id="loginForm" autocomplete="off">
+            <div class="form-group">
+              <label class="form-label" for="email">Email Address</label>
+              <input class="form-input" type="email" id="email" placeholder="collector@example.com">
+              <span class="field-error" id="emailError"></span>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="password">Password</label>
+              <input class="form-input" type="password" id="password" placeholder="••••••••••">
+              <span class="field-error" id="passwordError"></span>
+            </div>
+
+            <label class="auth-remember" for="rememberMe">
+              <input type="checkbox" id="rememberMe">
+              <span>Remember me</span>
+            </label>
+
+            <button class="btn-full" type="submit">Sign In</button>
+
+            <div class="auth-divider"><span>secure login</span></div>
+          </form>
+
+          <div class="auth-switch">
+            Need an account?
+            <a href="#" onclick="switchPanel('register'); return false;">Create one</a>
+          </div>
+        </div>
+
+        <!-- REGISTER PANEL -->
+        <div class="auth-panel" id="panel-register">
+          <div class="auth-panel-head">
+            <div class="auth-title">Create Account</div>
+            <div class="auth-subtitle">Join AntiqChain to submit pieces and track verification history.</div>
+          </div>
+
+          <div class="auth-form">
+            <div class="auth-form-row">
+              <div class="form-group">
+                <label class="form-label" for="firstName">First Name</label>
+                <input class="form-input" type="text" id="firstName" placeholder="John">
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="lastName">Last Name</label>
+                <input class="form-input" type="text" id="lastName" placeholder="Smith">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="regEmail">Email Address</label>
+              <input class="form-input" type="email" id="regEmail" placeholder="john@example.com">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="regRole">I am registering as</label>
+              <select class="form-select" id="regRole">
+                <option value="collector">Collector / Buyer</option>
+                <option value="verifier">Expert Verifier</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="regPassword">Password</label>
+              <input class="form-input" type="password" id="regPassword" placeholder="Min. 8 characters">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="confirmPassword">Confirm Password</label>
+              <input class="form-input" type="password" id="confirmPassword" placeholder="Repeat password">
+            </div>
+
+            <button class="btn-full" type="button" onclick="handleRegister()">Create Account</button>
+          </div>
+
+          <div class="auth-switch">
+            Already have an account?
+            <a href="#" onclick="switchPanel('login'); return false;">Sign in</a>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="../js/api.js"></script>
+  <script src="../js/utils.js"></script>
+
+  <script>
+    function switchPanel(name) {
+      document.querySelectorAll('.auth-panel').forEach(panel => {
+        panel.classList.remove('active');
+      });
+
+      const selectedPanel = document.getElementById('panel-' + name);
+      if (selectedPanel) {
+        selectedPanel.classList.add('active');
+      }
+    }
+
+    async function handleLogin(event) {
+      if (event) {
+        event.preventDefault();
+      }
+
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value.trim();
+      const emailError = document.getElementById('emailError');
+      const passwordError = document.getElementById('passwordError');
+      const emailInput = document.getElementById('email');
+      const passwordInput = document.getElementById('password');
+      const rememberMe = document.getElementById('rememberMe').checked;
+      const signInButton = document.querySelector('#loginForm button[type="submit"]');
+
+      emailError.textContent = '';
+      passwordError.textContent = '';
+      emailInput.classList.remove('input-error');
+      passwordInput.classList.remove('input-error');
+
+      let valid = true;
+
+      if (!email) {
+        emailError.textContent = 'Please enter your email address.';
+        emailInput.classList.add('input-error');
+        valid = false;
+      }
+
+      if (!password) {
+        passwordError.textContent = 'Please enter your password.';
+        passwordInput.classList.add('input-error');
+        valid = false;
+      }
+
+      if (!valid) return;
+
+      try {
+        signInButton.disabled = true;
+        signInButton.textContent = 'Signing in...';
+
+        const result = await apiRequest('/auth/login', 'POST', {
+          email: email,
+          password: password
+        });
+
+        setAuthSession(result.user, result.token, rememberMe);
+
+        showToast('Login successful — opening dashboard...');
+
+        setTimeout(() => {
+          window.location.href = getPostLoginPath();
+        }, 800);
+
+      } catch (error) {
+        showToast(error.message || 'Login failed. Please try again.', true);
+      } finally {
+        signInButton.disabled = false;
+        signInButton.textContent = 'Sign In';
+      }
+    }
+
+    async function handleRegister() {
+      const firstName = document.getElementById('firstName').value.trim();
+      const lastName = document.getElementById('lastName').value.trim();
+      const email = document.getElementById('regEmail').value.trim();
+      const role = document.getElementById('regRole').value || 'collector';
+      const password = document.getElementById('regPassword').value.trim();
+      const confirmPassword = document.getElementById('confirmPassword').value.trim();
+
+      if (!firstName || !lastName || !email || !password || !confirmPassword) {
+        showToast('Please fill all registration fields.', true);
+        return;
+      }
+
+      if (password !== confirmPassword) {
+        showToast('Passwords do not match.', true);
+        return;
+      }
+
+      try {
+        await apiRequest('/auth/register', 'POST', {
+          firstName: firstName,
+          lastName: lastName,
+          email: email,
+          role: role,
+          password: password
+        });
+
+        showToast('Account created — please sign in to continue.');
+
+        setTimeout(() => {
+          switchPanel('login');
+          document.getElementById('email').value = email;
+        }, 800);
+
+      } catch (error) {
+        showToast(error.message || 'Registration failed. Please try again.', true);
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+      const search = new URLSearchParams(window.location.search);
+      const unauthorized = search.get('unauthorized') === '1';
+
+      if (unauthorized) {
+        const authAlert = document.getElementById('authAlert');
+        authAlert.textContent = 'Unauthorized: please sign in first to access that page.';
+        authAlert.style.display = 'block';
+      }
+
+      const loginForm = document.getElementById('loginForm');
+      if (loginForm) {
+        loginForm.addEventListener('submit', handleLogin);
+      }
+    });
+  </script>
+
+</body>
+</html>

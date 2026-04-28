@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Submit an Item — AntiqChain</title>
+  <link rel="stylesheet" href="../css/global.css">
+  <link rel="stylesheet" href="../css/submit.css">
+</head>
+<body>
+
+  <nav>
+    <a class="nav-logo" href="../index.html">AntiqChain <span>— Verified Heritage</span></a>
+    <div class="nav-links">
+      <a href="../index.html">Home</a>
+      <a href="about.html">About</a>
+      <a href="submit.html" class="active">Submit Item</a>
+      <a href="dashboard.html">Dashboard</a>
+      <a href="login.html" class="nav-cta">Sign In</a>
+    </div>
+  </nav>
+
+  <div class="page-header">
+    <div class="page-header-eyebrow">Collector Portal</div>
+    <h1>Submit an Antique Item</h1>
+    <p>Provide accurate details and clear photographs for the fastest verification turnaround.</p>
+  </div>
+
+  <div class="page-content">
+    <div class="submit-layout">
+
+      <div>
+        <div class="upload-zone" onclick="showToast('File upload will be connected later.')">
+          <div class="upload-icon">📷</div>
+          <div class="upload-title">Upload Item Photographs</div>
+          <div class="upload-hint">Drag & drop or click to browse · JPG, PNG, TIFF · Max 20MB each · Up to 10 photos</div>
+        </div>
+
+        <form id="antiqueForm" autocomplete="off">
+          <div class="form-grid">
+            <div class="form-group full">
+              <label class="form-label">Item Title *</label>
+              <input class="form-input" type="text" name="title" placeholder="e.g. Ming Dynasty Blue & White Porcelain Vase">
+              <div class="error-message"></div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Category *</label>
+              <select class="form-select" name="category">
+                <option value="">Select a category…</option>
+                <option>Ceramics & Pottery</option>
+                <option>Paintings & Fine Art</option>
+                <option>Furniture</option>
+                <option>Jewellery & Watches</option>
+                <option>Arms & Armour</option>
+                <option>Textiles & Clothing</option>
+                <option>Books & Manuscripts</option>
+                <option>Coins & Currency</option>
+                <option>Sculptures & Statues</option>
+                <option>Other</option>
+              </select>
+              <div class="error-message"></div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Estimated Year / Period *</label>
+              <input class="form-input" type="text" name="year" placeholder="e.g. 1368–1644 or circa 1750">
+              <div class="error-message"></div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Country of Origin *</label>
+              <input class="form-input" type="text" name="country" placeholder="e.g. China, France, England">
+              <div class="error-message"></div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Dimensions</label>
+              <input class="form-input" type="text" name="dimensions" placeholder="e.g. 32cm H × 18cm W">
+            </div>
+
+            <div class="form-group full">
+              <label class="form-label">Item Description *</label>
+              <textarea class="form-textarea" name="description" placeholder="Describe the item in detail — materials, markings, style, condition, and any distinguishing features…"></textarea>
+              <div class="error-message"></div>
+            </div>
+
+            <div class="form-group full">
+              <label class="form-label">Provenance & History</label>
+              <textarea class="form-textarea" name="provenance" style="min-height:90px;" placeholder="Describe known ownership history, acquisition, or any documentation you hold…"></textarea>
+            </div>
+
+            <div class="form-group full">
+              <label class="form-label">Condition Notes</label>
+              <input class="form-input" type="text" name="condition" placeholder="e.g. Minor crazing to glaze, hairline crack to base, otherwise excellent">
+            </div>
+          </div>
+
+          <div class="submit-actions">
+            <button class="btn-primary" type="submit" id="submitItemBtn">Submit for Verification</button>
+            <button class="btn-outline" type="button" onclick="showToast('Draft saving will be connected later.')">Save Draft</button>
+          </div>
+        </form>
+      </div>
+
+      <div>
+        <div class="info-card">
+          <div class="info-card-title">Before You Submit</div>
+          <ul class="info-list">
+            <li>Upload at least 4 clear photos from different angles</li>
+            <li>Include a close-up of any maker's marks or signatures</li>
+            <li>Photograph any damage, repairs, or restorations honestly</li>
+            <li>Provide any existing documentation or receipts</li>
+            <li>Accurate descriptions significantly speed up the review</li>
+          </ul>
+        </div>
+
+        <div class="info-card">
+          <div class="info-card-title">Processing Times</div>
+          <ul class="info-list">
+            <li>Standard items: 5–10 business days</li>
+            <li>Complex or high-value items: 10–21 days</li>
+            <li>Email updates sent at every stage</li>
+          </ul>
+        </div>
+
+        <div class="pricing-card">
+          <div class="info-card-title">Verification Fee</div>
+          <div class="pricing-amount">$49</div>
+          <div class="pricing-desc">Per item submitted. Includes full expert review, blockchain registration, and digital certificate of authenticity.</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <footer>
+    <div>
+      <div class="footer-brand">AntiqChain</div>
+      <div class="footer-desc">The trusted platform for blockchain-verified antique authentication.</div>
+    </div>
+    <div>
+      <div class="footer-col-title">Platform</div>
+      <ul class="footer-links">
+        <li><a href="../index.html">Browse Items</a></li>
+        <li><a href="submit.html">Submit an Antique</a></li>
+        <li><a href="dashboard.html">Verifier Dashboard</a></li>
+        <li><a href="about.html">About Us</a></li>
+      </ul>
+    </div>
+    <div>
+      <div class="footer-col-title">Trust & Security</div>
+      <ul class="footer-links">
+        <li><a href="#">Blockchain Registry</a></li>
+        <li><a href="#">Verification Process</a></li>
+        <li><a href="#">Privacy Policy</a></li>
+      </ul>
+    </div>
+  </footer>
+
+  <div class="footer-bottom">©️ 2025 AntiqChain — Blockchain Antique Verification System. All rights reserved.</div>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="../js/api.js"></script>
+  <script src="../js/utils.js"></script>
+
+  <script>
+    const currentSession = requirePageSession('submit.html');
+
+    function clearFormErrors(form) {
+      form.querySelectorAll('.error-message').forEach(error => {
+        error.textContent = '';
+        error.classList.remove('show');
+      });
+
+      form.querySelectorAll('.form-input, .form-select, .form-textarea').forEach(input => {
+        input.classList.remove('error');
+      });
+    }
+
+    function validateRequiredFields(form) {
+      let valid = true;
+
+      const requiredFields = [
+        { name: 'title' },
+        { name: 'category' },
+        { name: 'year' },
+        { name: 'country' },
+        { name: 'description' }
+      ];
+
+      requiredFields.forEach(field => {
+        const el = form.querySelector(`[name="${field.name}"]`);
+        const error = el.parentElement.querySelector('.error-message');
+
+        if (!el.value.trim()) {
+          error.textContent = 'This field is required.';
+          error.classList.add('show');
+          el.classList.add('error');
+          valid = false;
+        }
+      });
+
+      return valid;
+    }
+
+    function getFormPayload(form) {
+      return {
+        title: form.title.value.trim(),
+        category: form.category.value.trim(),
+        year: form.year.value.trim(),
+        country: form.country.value.trim(),
+        dimensions: form.dimensions.value.trim(),
+        description: form.description.value.trim(),
+        provenance: form.provenance.value.trim(),
+        condition: form.condition.value.trim(),
+        verificationStatus: 'Pending'
+      };
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+      const form = document.getElementById('antiqueForm');
+      const submitButton = document.getElementById('submitItemBtn');
+
+      if (!form) return;
+
+      form.addEventListener('submit', async function (e) {
+        e.preventDefault();
+
+        clearFormErrors(form);
+
+        const isValid = validateRequiredFields(form);
+
+        if (!isValid) {
+          const firstError = form.querySelector('.form-input.error, .form-select.error, .form-textarea.error');
+          if (firstError) {
+            firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+          showToast('Please complete all required fields.', true);
+          return;
+        }
+
+        const payload = getFormPayload(form);
+
+        try {
+          submitButton.disabled = true;
+          submitButton.textContent = 'Submitting...';
+
+          await apiRequest('/items', 'POST', payload, true);
+
+          showToast('Item submitted successfully for verification.');
+
+          setTimeout(() => {
+            window.location.href = 'dashboard.html';
+          }, 1000);
+
+        } catch (error) {
+          showToast(error.message || 'Unable to submit item. Please try again.', true);
+        } finally {
+          submitButton.disabled = false;
+          submitButton.textContent = 'Submit for Verification';
+        }
+      });
+    });
+  </script>
+
+</body>
+</html>
