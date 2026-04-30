@@ -1,30 +1,23 @@
-import { network } from "hardhat";
+const { ethers } = require("hardhat");
 
 async function main() {
   console.log("Deploying AntiqueVerification contract to Sepolia...");
 
-  const { ethers } = await network.create({
-    network: "hardhatMainnet",
-    chainType: "l1",
-  });
-
   // Get the contract factory — Hardhat uses this to deploy
   const Contract = await ethers.getContractFactory("AntiqueVerification");
 
-  // Deploy the contract — this sends a real transaction to Sepolia (or the selected network)
+  // Deploy the contract — this sends a real transaction to Sepolia
   const contract = await Contract.deploy();
 
-  // Wait until the transaction is mined
+  // Wait until the transaction is mined on Sepolia
   await contract.waitForDeployment();
 
-  // Get the contract's permanent address
+  // Get the contract's permanent address on Sepolia
   const address = await contract.getAddress();
 
   console.log("✅ Contract deployed successfully!");
   console.log("📋 Contract address:", address);
-  if (process.env.ALCHEMY_SEPOLIA_URL) {
-    console.log("🔗 View on Etherscan: https://sepolia.etherscan.io/address/" + address);
-  }
+  console.log("🔗 View on Etherscan: https://sepolia.etherscan.io/address/" + address);
   console.log("");
   console.log("⚠️  IMPORTANT: Copy the contract address above and paste it");
   console.log("    into your .env file as CONTRACT_ADDRESS=", address);
