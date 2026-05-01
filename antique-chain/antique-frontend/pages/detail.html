@@ -190,5 +190,35 @@
       });
     });
   </script>
+  <!-- Add this inside your blockchain card section -->
+<script>
+async function loadVerification() {
+  const itemId = new URLSearchParams(window.location.search).get('id');
+  if (!itemId) return;
+
+  const res  = await fetch(`http://localhost:5000/api/verifications/${itemId}`);
+  const data = await res.json();
+
+  // Show the transaction hash
+  document.querySelector('.hash-display').textContent = data.blockchainRef;
+
+  // Add a clickable Etherscan link
+  const link = document.createElement('a');
+  link.href   = `https://sepolia.etherscan.io/tx/${data.blockchainRef}`;
+  link.target = '_blank';
+  link.textContent = 'View on Etherscan →';
+  link.style.cssText = `
+    display: block;
+    margin-top: 12px;
+    font-family: var(--font-ui);
+    font-size: 12px;
+    color: var(--sepia-light);
+    text-decoration: none;
+  `;
+  document.querySelector('.blockchain-card').appendChild(link);
+}
+
+loadVerification();
+</script>
 </body>
 </html>
