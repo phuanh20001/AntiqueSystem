@@ -228,24 +228,75 @@
     }
 
     async function handleRegister() {
-      const firstName = document.getElementById('firstName').value.trim();
-      const lastName = document.getElementById('lastName').value.trim();
-      const email = document.getElementById('regEmail').value.trim();
-      const role = document.getElementById('regRole').value || 'collector';
-      const password = document.getElementById('regPassword').value.trim();
-      const confirmPassword = document.getElementById('confirmPassword').value.trim();
+      const firstNameInput = document.getElementById('firstName');
+      const lastNameInput = document.getElementById('lastName');
+      const emailInput = document.getElementById('regEmail');
+      const roleInput = document.getElementById('regRole');
+      const passwordInput = document.getElementById('regPassword');
+      const confirmPasswordInput = document.getElementById('confirmPassword');
+      const registerButton = document.querySelector('#panel-register button[type="button"]');
 
-      if (!firstName || !lastName || !email || !password || !confirmPassword) {
-        showToast('Please fill all registration fields.', true);
+      const firstName = firstNameInput.value.trim();
+      const lastName = lastNameInput.value.trim();
+      const email = emailInput.value.trim();
+      const role = roleInput.value || 'collector';
+      const password = passwordInput.value.trim();
+      const confirmPassword = confirmPasswordInput.value.trim();
+
+      // Clear previous error states
+      document.querySelectorAll('#panel-register .form-input').forEach(input => {
+        input.classList.remove('input-error');
+      });
+
+      let valid = true;
+      let firstErrorField = null;
+
+      if (!firstName) {
+        firstNameInput.classList.add('input-error');
+        valid = false;
+        if (!firstErrorField) firstErrorField = 'First Name';
+      }
+
+      if (!lastName) {
+        lastNameInput.classList.add('input-error');
+        valid = false;
+        if (!firstErrorField) firstErrorField = 'Last Name';
+      }
+
+      if (!email) {
+        emailInput.classList.add('input-error');
+        valid = false;
+        if (!firstErrorField) firstErrorField = 'Email';
+      }
+
+      if (!password) {
+        passwordInput.classList.add('input-error');
+        valid = false;
+        if (!firstErrorField) firstErrorField = 'Password';
+      }
+
+      if (!confirmPassword) {
+        confirmPasswordInput.classList.add('input-error');
+        valid = false;
+        if (!firstErrorField) firstErrorField = 'Confirm Password';
+      }
+
+      if (!valid) {
+        showToast(`Please fill in your ${firstErrorField}.`, true);
         return;
       }
 
       if (password !== confirmPassword) {
+        passwordInput.classList.add('input-error');
+        confirmPasswordInput.classList.add('input-error');
         showToast('Passwords do not match.', true);
         return;
       }
 
       try {
+        registerButton.disabled = true;
+        registerButton.textContent = 'Creating Account...';
+
         await apiRequest('/auth/register', 'POST', {
           firstName: firstName,
           lastName: lastName,
@@ -257,12 +308,24 @@
         showToast('Account created — please sign in to continue.');
 
         setTimeout(() => {
+          // Clear form fields
+          firstNameInput.value = '';
+          lastNameInput.value = '';
+          emailInput.value = '';
+          passwordInput.value = '';
+          confirmPasswordInput.value = '';
+          roleInput.value = 'collector';
+
           switchPanel('login');
           document.getElementById('email').value = email;
+          registerButton.disabled = false;
+          registerButton.textContent = 'Create Account';
         }, 800);
 
       } catch (error) {
         showToast(error.message || 'Registration failed. Please try again.', true);
+        registerButton.disabled = false;
+        registerButton.textContent = 'Create Account';
       }
     }
 
