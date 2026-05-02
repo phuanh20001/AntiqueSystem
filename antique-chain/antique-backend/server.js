@@ -16,10 +16,12 @@ const { connectDB } = require('./config/db');
 // Routes
 const authRoutes = require('./routes/authRoutes');
 const itemRoutes = require('./routes/itemRoutes');
+const verificationRoutes = require('./routes/verification');
 const verificationRecordRoutes = require('./routes/verificationRecordRoutes');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/items', itemRoutes);
+app.use('/api/verifications', verificationRoutes);
 app.use('/api/verification-records', verificationRecordRoutes);
 
 // Health check endpoint

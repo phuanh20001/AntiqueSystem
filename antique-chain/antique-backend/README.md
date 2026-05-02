@@ -32,26 +32,18 @@ npx hardhat test mocha
 
 ### Make a deployment to Sepolia
 
-This project includes an example Ignition module to deploy the contract. You can deploy this module to a locally simulated chain or to Sepolia.
+This backend now uses a CommonJS Hardhat setup.
 
-To run the deployment to a local chain:
-
-```shell
-npx hardhat ignition deploy ignition/modules/Counter.ts
-```
-
-To run the deployment to Sepolia, you need an account with funds to send the transaction. The provided Hardhat configuration includes a Configuration Variable called `SEPOLIA_PRIVATE_KEY`, which you can use to set the private key of the account you want to use.
-
-You can set the `SEPOLIA_PRIVATE_KEY` variable using the `hardhat-keystore` plugin or by setting it as an environment variable.
-
-To set the `SEPOLIA_PRIVATE_KEY` config variable using `hardhat-keystore`:
+To compile the contracts:
 
 ```shell
-npx hardhat keystore set SEPOLIA_PRIVATE_KEY
+npm run compile
 ```
 
-After setting the variable, you can run the deployment with the Sepolia network:
+To deploy `AntiqueVerification` to Sepolia, make sure `.env` contains `ALCHEMY_SEPOLIA_URL` and `DEPLOYER_PRIVATE_KEY`, then run:
 
 ```shell
-npx hardhat ignition deploy --network sepolia ignition/modules/Counter.ts
+npm run deploy:antique
 ```
+
+After deployment, copy the printed contract address into `.env` as `CONTRACT_ADDRESS`.

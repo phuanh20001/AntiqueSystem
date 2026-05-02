@@ -1,18 +1,39 @@
-import { network } from "hardhat";
+require('dotenv').config();
+
+const fs = require('fs');
+const path = require('path');
+const { ethers } = require('ethers');
 
 async function main() {
   console.log("Deploying AntiqueVerification contract to Sepolia...");
 
-  const { ethers } = await network.create({
-    network: "hardhatMainnet",
-    chainType: "l1",
-  });
+  const artifactPath = path.join(
+    __dirname,
+    '..',
+    'artifacts',
+    'contracts',
+    'AntiqueVerification.sol',
+    'AntiqueVerification.json'
+  );
 
-  // Get the contract factory — Hardhat uses this to deploy
-  const Contract = await ethers.getContractFactory("AntiqueVerification");
+  if (!fs.existsSync(artifactPath)) {
+    throw new Error('Missing contract artifact. Run `npm run compile` first.');
+  }
 
-  // Deploy the contract — this sends a real transaction to Sepolia (or the selected network)
-  const contract = await Contract.deploy();
+  const artifact = JSON.parse(fs.readFileSync(artifactPath, 'utf8'));
+  const providerUrl = process.env.ALCHEMY_SEPOLIA_URL;
+  const deployerPrivateKey = process.env.DEPLOYER_PRIVATE_KEY;
+
+  if (!providerUrl || !deployerPrivateKey) {
+    throw new Error('ALCHEMY_SEPOLIA_URL and DEPLOYER_PRIVATE_KEY must be set in .env');
+  }
+
+  const provider = new ethers.JsonRpcProvider(providerUrl);
+  const wallet = new ethers.Wallet(deployerPrivateKey, provider);
+  const factory = new ethers.ContractFactory(artifact.abi, artifact.bytecode, wallet);
+
+  // Deploy the contract to Sepolia using the configured wallet.
+  const contract = await factory.deploy();
 
   // Wait until the transaction is mined
   await contract.waitForDeployment();
