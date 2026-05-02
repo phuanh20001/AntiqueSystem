@@ -5,6 +5,7 @@ const {
   getAllItems,
   getItemById,
   getItemsByOwner,
+  getMyItems,
   updateItem,
   updateVerificationStatus,
   saveBlockchainDetails,
@@ -18,11 +19,20 @@ const { protect } = require('../middleware/authMiddleware');
  */
 router.get('/', getAllItems);
 router.get('/search', searchItems);
+
+/**
+ * Protected routes (must come before :id route)
+ */
+router.get('/my-items', protect, getMyItems);
+
+/**
+ * Public routes with ID parameter
+ */
 router.get('/:id', getItemById);
 router.get('/owner/:ownerId', getItemsByOwner);
 
 /**
- * Protected routes
+ * Protected routes for modification
  */
 router.post('/', protect, createItem);
 router.put('/:id', protect, updateItem);

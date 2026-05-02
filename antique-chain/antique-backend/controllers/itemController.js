@@ -435,11 +435,54 @@ const searchItems = async (req, res) => {
   }
 };
 
+/**
+ * @desc    Get items owned by the authenticated user
+ * @route   GET /api/items/my-items
+ * @access  Private
+ */
+const getMyItems = async (req, res) => {
+  try {
+    if (!req.user || !req.user._id) {
+      return res.status(401).json({ success: false, message: 'User not authenticated' });
+    }
+
+    const { page = 1, limit = 10 } = req.query;
+    const skip = (page - 1) * limit;
+
+    const items = await Item.find({ owner: req.user._id })
+      .skip(skip)
+      .limit(parseInt(limit))
+      .sort({ createdAt: -1 })
+      .populate('owner', 'username email')
+      .populate('verificationRecord');
+
+    const total = await Item.countDocuments({ owner: req.user._id });
+
+    res.status(200).json({
+      success: true,
+      data: items,
+      pagination: {
+        total,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        pages: Math.ceil(total / limit),
+      },
+    });
+  } catch (error) {
+    console.error('Get My Items Error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Error fetching your items',
+    });
+  }
+};
+
 module.exports = {
   createItem,
   getAllItems,
   getItemById,
   getItemsByOwner,
+  getMyItems,
   updateItem,
   updateVerificationStatus,
   saveBlockchainDetails,

@@ -303,6 +303,87 @@
   color: var(--ink);
 }
 
+/* ── QUICK LOGIN BUTTONS ── */
+.quick-login-buttons {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.btn-quick-login {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 14px 12px;
+  border-radius: 12px;
+  border: 1.5px solid rgba(200, 184, 154, 0.6);
+  background: rgba(245, 239, 224, 0.5);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-height: 72px;
+}
+
+.quick-login-icon {
+  font-size: 24px;
+  line-height: 1;
+  display: block;
+}
+
+.quick-login-label {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.btn-quick-login:hover {
+  transform: translateY(-2px);
+  border-color: var(--sepia);
+  background: rgba(200, 169, 74, 0.1);
+  box-shadow: 0 6px 16px rgba(200, 169, 74, 0.12);
+}
+
+.btn-quick-login:active {
+  transform: translateY(0);
+}
+
+.btn-collector {
+  border-color: rgba(100, 150, 200, 0.4);
+}
+
+.btn-collector:hover {
+  border-color: rgb(100, 150, 200);
+  background: rgba(100, 150, 200, 0.08);
+  box-shadow: 0 6px 16px rgba(100, 150, 200, 0.1);
+}
+
+.btn-verifier {
+  border-color: rgba(76, 175, 80, 0.4);
+}
+
+.btn-verifier:hover {
+  border-color: rgb(76, 175, 80);
+  background: rgba(76, 175, 80, 0.08);
+  box-shadow: 0 6px 16px rgba(76, 175, 80, 0.1);
+}
+
+.btn-admin {
+  border-color: rgba(255, 152, 0, 0.4);
+}
+
+.btn-admin:hover {
+  border-color: rgb(255, 152, 0);
+  background: rgba(255, 152, 0, 0.08);
+  box-shadow: 0 6px 16px rgba(255, 152, 0, 0.1);
+}
+
 /* ── FIELD VALIDATION ── */
 .field-error {
   display: block;
@@ -398,5 +479,19 @@
   .auth-panel {
     border-radius: 22px;
     padding: 24px 18px;
+  }
+
+  .quick-login-buttons {
+    gap: 8px;
+  }
+
+  .btn-quick-login {
+    min-height: 64px;
+    padding: 12px 10px;
+    font-size: 10px;
+  }
+
+  .quick-login-icon {
+    font-size: 20px;
   }
 }

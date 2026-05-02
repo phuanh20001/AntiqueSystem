@@ -30,8 +30,8 @@
 
   <div class="toast" id="toast"></div>
 
-  <script src="../js/api.js"></script>
   <script src="../js/utils.js"></script>
+  <script src="../js/api.js"></script>
 
   <script>
     const session = requireDashboardSession();
@@ -345,22 +345,37 @@
 
       renderLoading();
 
+      console.log('loadDashboardData: session present:', !!session);
+
       try {
-        const [userResponse, itemsResponse, healthResponse] = await Promise.all([
-          apiRequest('/auth/me', 'GET', null, true),
-          apiRequest('/items/my-items', 'GET', null, true),
-          getBackendHealth(),
-        ]);
+        console.log('loadDashboardData: fetching /auth/me');
+        const userResponse = await apiRequest('/auth/me', 'GET', null, true);
+        console.log('loadDashboardData: /auth/me response:', userResponse);
+
+        console.log('loadDashboardData: fetching user items via /items?owner=');
+        const ownerId = (session && session._id) || (userResponse && (userResponse._id || userResponse.id));
+        const itemsResponse = await apiRequest(`/items?owner=${encodeURIComponent(ownerId)}`, 'GET', null, true);
+        console.log('loadDashboardData: /items?owner response:', itemsResponse);
+
+        console.log('loadDashboardData: fetching backend health');
+        const healthResponse = await getBackendHealth();
+        console.log('loadDashboardData: health response:', healthResponse);
 
         const user = userResponse.user || userResponse.data || userResponse || session;
         const items = normalizeItems(itemsResponse);
         const health = healthResponse || null;
 
+        console.log('loadDashboardData: rendering dashboard with', items.length, 'items');
         renderDashboard(user, items, health);
 
       } catch (error) {
+        console.error('loadDashboardData: error', error);
         renderError(error.message || 'Unable to load dashboard data.');
-        showToast(error.message || 'Unable to load dashboard data.', true);
+        if (typeof showToast === 'function') {
+          showToast(error.message || 'Unable to load dashboard data.', true);
+        } else {
+          alert(error.message || 'Unable to load dashboard data.');
+        }
       }
     }
 
