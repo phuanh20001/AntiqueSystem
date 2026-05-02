@@ -132,7 +132,6 @@ const itemSchema = new mongoose.Schema(
 // Index for faster queries
 itemSchema.index({ owner: 1, createdAt: -1 });
 itemSchema.index({ verificationStatus: 1 });
-itemSchema.index({ blockchainHash: 1 });
 
 // Pre-save hook to populate owner details if needed
 itemSchema.pre(/^find/, function (next) {

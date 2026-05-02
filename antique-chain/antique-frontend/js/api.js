@@ -1,4 +1,5 @@
 const API_BASE_URL = "http://localhost:5000/api";
+const BACKEND_BASE_URL = "http://localhost:5000";
 
 function getStoredToken() {
   return sessionStorage.getItem("token") || localStorage.getItem("token");
@@ -36,6 +37,23 @@ async function apiRequest(endpoint, method = "GET", data = null, requiresAuth = 
 
   if (!response.ok) {
     throw new Error(result.message || "Request failed");
+  }
+
+  return result;
+}
+
+async function getBackendHealth() {
+  const response = await fetch(`${BACKEND_BASE_URL}/health`);
+
+  let result = {};
+  try {
+    result = await response.json();
+  } catch (error) {
+    result = {};
+  }
+
+  if (!response.ok) {
+    throw new Error(result.message || 'Backend health check failed');
   }
 
   return result;

@@ -1,10 +1,13 @@
 const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
+const path = require('path');
+const mongoose = require('mongoose');
 
-dotenv.config();
+dotenv.config({ path: path.resolve(__dirname, '.env') });
 
 const app = express();
+const healthCheckTimeoutMs = 3000;
 
 // Middleware
 app.use(cors());
@@ -12,6 +15,7 @@ app.use(express.json());
 
 // Database connection
 const { connectDB } = require('./config/db');
+const { provider, contract } = require('./services/blockchainService');
 
 // Routes
 const authRoutes = require('./routes/authRoutes');
@@ -29,8 +33,39 @@ app.get("/", (req, res) => {
   res.send("AntiqChain backend is running");
 });
 
+app.get('/health', async (req, res) => {
+  const mongoStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
+  let blockchainStatus = 'unavailable';
+
+  try {
+    if (provider) {
+      const blockNumber = await Promise.race([
+        provider.getBlockNumber(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), healthCheckTimeoutMs)),
+      ]);
+
+      blockchainStatus = `reachable (latest block ${blockNumber})`;
+    }
+  } catch (error) {
+    blockchainStatus = `error (${error.message})`;
+  }
+
+  const ok = mongoStatus === 'connected' && blockchainStatus.startsWith('reachable');
+
+  res.status(ok ? 200 : 503).json({
+    status: ok ? 'ok' : 'degraded',
+    mongo: mongoStatus,
+    blockchain: blockchainStatus,
+    timestamp: new Date().toISOString(),
+  });
+});
+
 const PORT = process.env.PORT || 5000;
 const startServer = async () => {
+  console.log('Starting AntiqueChain backend...');
+  console.log(`Blockchain provider: ${provider ? 'configured' : 'not configured'}`);
+  console.log(`Blockchain contract: ${contract ? 'configured' : 'not configured'}`);
+
   await connectDB();
 
   app.listen(PORT, () => {

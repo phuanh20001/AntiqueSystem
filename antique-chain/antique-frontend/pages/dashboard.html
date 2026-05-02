@@ -62,6 +62,18 @@
       return `<span class="badge ${badgeClass}">${escapeHtml(safeStatus)}</span>`;
     }
 
+    function getHealthBadge(health) {
+      if (!health) {
+        return '<span class="backend-health-pill backend-health-unknown">Checking backend...</span>';
+      }
+
+      if (health.status === 'ok') {
+        return `<span class="backend-health-pill backend-health-ok">Live · ${escapeHtml(health.mongo)} · ${escapeHtml(health.blockchain)}</span>`;
+      }
+
+      return `<span class="backend-health-pill backend-health-degraded">Degraded · ${escapeHtml(health.mongo)} · ${escapeHtml(health.blockchain)}</span>`;
+    }
+
     function showWelcomeBanner(user) {
       const banner = document.getElementById('welcome-banner');
       const title = document.getElementById('welcome-banner-title');
@@ -257,7 +269,7 @@
       }).join('');
     }
 
-    function renderDashboard(user, items) {
+    function renderDashboard(user, items, health) {
       const root = document.getElementById('dashboard-root');
 
       const name =
@@ -276,9 +288,12 @@
               <h2>Collection Dashboard</h2>
               <p>Track submitted antiques, verification progress, and blockchain proof references.</p>
             </div>
-            <a class="btn-primary" style="font-size:13px;padding:10px 20px;" href="submit.html">
-              Submit New Item
-            </a>
+            <div class="dash-topbar-actions">
+              ${getHealthBadge(health)}
+              <a class="btn-primary" style="font-size:13px;padding:10px 20px;" href="submit.html">
+                Submit New Item
+              </a>
+            </div>
           </div>
 
           ${renderStats(items)}
@@ -331,13 +346,17 @@
       renderLoading();
 
       try {
-        const userResponse = await apiRequest('/auth/me', 'GET', null, true);
-        const itemsResponse = await apiRequest('/items/my-items', 'GET', null, true);
+        const [userResponse, itemsResponse, healthResponse] = await Promise.all([
+          apiRequest('/auth/me', 'GET', null, true),
+          apiRequest('/items/my-items', 'GET', null, true),
+          getBackendHealth(),
+        ]);
 
         const user = userResponse.user || userResponse.data || userResponse || session;
         const items = normalizeItems(itemsResponse);
+        const health = healthResponse || null;
 
-        renderDashboard(user, items);
+        renderDashboard(user, items, health);
 
       } catch (error) {
         renderError(error.message || 'Unable to load dashboard data.');

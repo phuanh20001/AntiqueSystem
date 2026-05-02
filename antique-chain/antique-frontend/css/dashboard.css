@@ -100,6 +100,34 @@
 .sidebar-count.green { background: var(--sage-light); color: #fff; }
 .sidebar-count.rust  { background: var(--rust-light);  color: #fff; }
 
+.backend-health-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+.backend-health-ok {
+  background: rgba(125, 165, 111, 0.14);
+  color: var(--sage);
+  border-color: rgba(125, 165, 111, 0.28);
+}
+.backend-health-degraded {
+  background: rgba(202, 111, 77, 0.14);
+  color: var(--rust);
+  border-color: rgba(202, 111, 77, 0.28);
+}
+.backend-health-unknown {
+  background: rgba(120, 111, 96, 0.12);
+  color: var(--ink-light);
+  border-color: rgba(120, 111, 96, 0.22);
+}
+
 /* ── DASHBOARD MAIN ── */
 .dashboard-main { background: var(--cream); }
 .dash-topbar {
@@ -109,6 +137,14 @@
   align-items: center;
   justify-content: space-between;
   background: var(--parchment);
+  gap: 16px;
+}
+.dash-topbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
 }
 .dash-topbar h2 {
   font-family: var(--font-display);
