@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard — AntiqChain</title>
+  <link rel="stylesheet" href="../css/global.css">
+  <link rel="stylesheet" href="../css/dashboard.css">
+</head>
+<body>
+
+  <nav>
+    <a class="nav-logo" href="../index.html">AntiqChain <span>— Verified Heritage</span></a>
+    <div class="nav-links">
+      <a href="../index.html">Home</a>
+      <a href="about.html">About</a>
+      <a href="submit.html">Submit Item</a>
+      <a href="dashboard.html" class="active">Dashboard</a>
+      <a href="login.html" class="nav-cta">Sign In</a>
+    </div>
+  </nav>
+
+  <div class="welcome-banner" id="welcome-banner" style="display:none;">
+    <div class="welcome-banner-title" id="welcome-banner-title"></div>
+  </div>
+
+  <div class="dashboard-layout" id="dashboard-root">
+    <div style="padding: 40px;">Loading dashboard data...</div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="../js/utils.js"></script>
+  <script src="../js/api.js"></script>
+
+  <script>
+    const session = requireDashboardSession();
+
+    function escapeHtml(value) {
+      return String(value || '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+    }
+
+    function getStatusBadge(status) {
+      const safeStatus = status || 'Pending';
+      const lower = safeStatus.toLowerCase();
+
+      let badgeClass = 'badge-pending';
+
+      if (lower.includes('verified') || lower.includes('approved')) {
+        badgeClass = 'badge-verified';
+      }
+
+      if (lower.includes('rejected')) {
+        badgeClass = 'badge-rejected';
+      }
+
+      return `<span class="badge ${badgeClass}">${escapeHtml(safeStatus)}</span>`;
+    }
+
+    function getHealthBadge(health) {
+      if (!health) {
+        return '<span class="backend-health-pill backend-health-unknown">Checking backend...</span>';
+      }
+
+      if (health.status === 'ok') {
+        return `<span class="backend-health-pill backend-health-ok">Live · ${escapeHtml(health.mongo)} · ${escapeHtml(health.blockchain)}</span>`;
+      }
+
+      return `<span class="backend-health-pill backend-health-degraded">Degraded · ${escapeHtml(health.mongo)} · ${escapeHtml(health.blockchain)}</span>`;
+    }
+
+    function showWelcomeBanner(user) {
+      const banner = document.getElementById('welcome-banner');
+      const title = document.getElementById('welcome-banner-title');
+
+      const name =
+        user.displayName ||
+        user.name ||
+        user.firstName ||
+        user.email ||
+        'user';
+
+      title.textContent = 'Welcome, ' + name;
+      banner.style.display = 'block';
+
+      requestAnimationFrame(function () {
+        banner.classList.add('show');
+      });
+
+      setTimeout(function () {
+        banner.classList.remove('show');
+        setTimeout(function () {
+          banner.style.display = 'none';
+        }, 350);
+      }, 4200);
+    }
+
+    function renderLoading() {
+      const root = document.getElementById('dashboard-root');
+
+      root.innerHTML = `
+        <div class="dashboard-main" style="width:100%; padding:40px;">
+          <div class="dashboard-panel">
+            <div class="panel-body">
+              <p>Loading dashboard data...</p>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderError(message) {
+      const root = document.getElementById('dashboard-root');
+
+      root.innerHTML = `
+        <div class="dashboard-main" style="width:100%; padding:40px;">
+          <div class="dashboard-panel">
+            <div class="panel-head">
+              <div>
+                <h3>Unable to load dashboard</h3>
+                <p>${escapeHtml(message || 'Please try again later.')}</p>
+              </div>
+            </div>
+            <div class="panel-body">
+              <button class="btn-sm btn-review" onclick="loadDashboardData()">Retry</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderSidebar(user, items) {
+      const name =
+        user.displayName ||
+        user.name ||
+        `${user.firstName || ''} ${user.lastName || ''}`.trim() ||
+        'AntiqChain User';
+
+      const role = user.role || 'collector';
+
+      const totalItems = items.length;
+      const pendingItems = items.filter(item =>
+        String(item.verificationStatus || item.status || '').toLowerCase().includes('pending') ||
+        String(item.verificationStatus || item.status || '').toLowerCase().includes('review')
+      ).length;
+
+      const verifiedItems = items.filter(item =>
+        String(item.verificationStatus || item.status || '').toLowerCase().includes('verified') ||
+        String(item.verificationStatus || item.status || '').toLowerCase().includes('approved')
+      ).length;
+
+      return `
+        <div class="dashboard-sidebar">
+          <div class="sidebar-profile">
+            <div class="sidebar-name">${escapeHtml(name)}</div>
+            <div class="sidebar-role">${escapeHtml(role)} account</div>
+          </div>
+
+          <div class="sidebar-section-label">Collection</div>
+          <div class="sidebar-section">
+            <a class="sidebar-item active" href="#">
+              <span>📦</span> My Submissions
+              <span class="sidebar-count">${totalItems}</span>
+            </a>
+            <a class="sidebar-item" href="#">
+              <span>🟡</span> In Review
+              <span class="sidebar-count rust">${pendingItems}</span>
+            </a>
+            <a class="sidebar-item" href="#">
+              <span>📜</span> Verified
+              <span class="sidebar-count green">${verifiedItems}</span>
+            </a>
+          </div>
+
+          <div class="sidebar-section-label">Actions</div>
+          <div class="sidebar-section">
+            <a class="sidebar-item" href="submit.html">
+              <span>➕</span> Submit New Item
+            </a>
+            <a class="sidebar-item" href="../index.html">
+              <span>🏠</span> Back to Home
+            </a>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderStats(items) {
+      const total = items.length;
+
+      const pending = items.filter(item =>
+        String(item.verificationStatus || item.status || '').toLowerCase().includes('pending') ||
+        String(item.verificationStatus || item.status || '').toLowerCase().includes('review')
+      ).length;
+
+      const verified = items.filter(item =>
+        String(item.verificationStatus || item.status || '').toLowerCase().includes('verified') ||
+        String(item.verificationStatus || item.status || '').toLowerCase().includes('approved')
+      ).length;
+
+      const blockchainLinked = items.filter(item =>
+        item.blockchainHash || item.blockchainTransactionHash
+      ).length;
+
+      return `
+        <div class="dash-stats">
+          <div class="dash-stat">
+            <div class="dash-stat-num gold">${total}</div>
+            <div class="dash-stat-label">My Submissions</div>
+          </div>
+          <div class="dash-stat">
+            <div class="dash-stat-num rust">${pending}</div>
+            <div class="dash-stat-label">In Review</div>
+          </div>
+          <div class="dash-stat">
+            <div class="dash-stat-num green">${verified}</div>
+            <div class="dash-stat-label">Verified</div>
+          </div>
+          <div class="dash-stat">
+            <div class="dash-stat-num">${blockchainLinked}</div>
+            <div class="dash-stat-label">Blockchain Proofs</div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderItemRows(items) {
+      if (!items.length) {
+        return `
+          <tr>
+            <td colspan="6" style="text-align:center; padding:30px; color:var(--ink-light);">
+              No submitted items found. Submit your first antique item to begin verification.
+            </td>
+          </tr>
+        `;
+      }
+
+      return items.map(item => {
+        const title = item.title || item.itemName || item.name || 'Untitled Item';
+        const category = item.category || 'Antique Item';
+        const origin = item.countryOfOrigin || item.country || 'Origin not provided';
+        const period = item.estimatedPeriod || item.year || 'Period not provided';
+        const status = item.verificationStatus || item.status || 'Pending';
+        const certificateHash = item.blockchainHash || 'Pending';
+        const transactionHash = item.blockchainTransactionHash || 'Pending';
+
+        return `
+          <tr>
+            <td class="item-row-thumb">🏺</td>
+            <td>
+              <div class="item-row-title">${escapeHtml(title)}</div>
+              <div class="item-row-sub">${escapeHtml(category)} · ${escapeHtml(period)} · ${escapeHtml(origin)}</div>
+            </td>
+            <td>${getStatusBadge(status)}</td>
+            <td style="font-size:13px;color:var(--ink-light);">${escapeHtml(certificateHash)}</td>
+            <td style="font-size:13px;color:var(--ink-light);">${escapeHtml(transactionHash)}</td>
+            <td>
+              <button class="btn-sm btn-review" onclick="showToast('Item details view will be connected later.')">
+                View
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function renderDashboard(user, items, health) {
+      const root = document.getElementById('dashboard-root');
+
+      const name =
+        user.displayName ||
+        user.name ||
+        user.firstName ||
+        user.email ||
+        'User';
+
+      root.innerHTML = `
+        ${renderSidebar(user, items)}
+
+        <div class="dashboard-main">
+          <div class="dash-topbar">
+            <div>
+              <h2>Collection Dashboard</h2>
+              <p>Track submitted antiques, verification progress, and blockchain proof references.</p>
+            </div>
+            <div class="dash-topbar-actions">
+              ${getHealthBadge(health)}
+              <a class="btn-primary" style="font-size:13px;padding:10px 20px;" href="submit.html">
+                Submit New Item
+              </a>
+            </div>
+          </div>
+
+          ${renderStats(items)}
+
+          <div class="dash-content dashboard-grid dashboard-grid-single">
+            <section class="dashboard-panel dashboard-panel-wide">
+              <div class="panel-head">
+                <div>
+                  <h3>My Submitted Items</h3>
+                  <p>These records are loaded from the backend API when available.</p>
+                </div>
+                <button class="btn-sm btn-review" onclick="loadDashboardData()">Refresh</button>
+              </div>
+
+              <div class="panel-body">
+                <table class="review-table">
+                  <thead>
+                    <tr>
+                      <th></th>
+                      <th>Item</th>
+                      <th>Status</th>
+                      <th>Certificate Hash</th>
+                      <th>Transaction Hash</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${renderItemRows(items)}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </div>
+        </div>
+      `;
+
+      showWelcomeBanner(user);
+    }
+
+    function normalizeItems(response) {
+      if (Array.isArray(response)) return response;
+      if (Array.isArray(response.items)) return response.items;
+      if (Array.isArray(response.data)) return response.data;
+      return [];
+    }
+
+    async function loadDashboardData() {
+      if (!session) return;
+
+      renderLoading();
+
+      console.log('loadDashboardData: session present:', !!session);
+
+      try {
+        console.log('loadDashboardData: fetching /auth/me');
+        const userResponse = await apiRequest('/auth/me', 'GET', null, true);
+        console.log('loadDashboardData: /auth/me response:', userResponse);
+
+        console.log('loadDashboardData: fetching user items via /items?owner=');
+        const ownerId = (session && session._id) || (userResponse && (userResponse._id || userResponse.id));
+        const itemsResponse = await apiRequest(`/items?owner=${encodeURIComponent(ownerId)}`, 'GET', null, true);
+        console.log('loadDashboardData: /items?owner response:', itemsResponse);
+
+        console.log('loadDashboardData: fetching backend health');
+        const healthResponse = await getBackendHealth();
+        console.log('loadDashboardData: health response:', healthResponse);
+
+        const user = userResponse.user || userResponse.data || userResponse || session;
+        const items = normalizeItems(itemsResponse);
+        const health = healthResponse || null;
+
+        console.log('loadDashboardData: rendering dashboard with', items.length, 'items');
+        renderDashboard(user, items, health);
+
+      } catch (error) {
+        console.error('loadDashboardData: error', error);
+        renderError(error.message || 'Unable to load dashboard data.');
+        if (typeof showToast === 'function') {
+          showToast(error.message || 'Unable to load dashboard data.', true);
+        } else {
+          alert(error.message || 'Unable to load dashboard data.');
+        }
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+      if (session) {
+        loadDashboardData();
+      }
+    });
+  </script>
+
+</body>
+</html>
