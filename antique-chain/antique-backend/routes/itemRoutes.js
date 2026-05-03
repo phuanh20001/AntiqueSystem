@@ -28,8 +28,8 @@ router.get('/my-items', protect, getMyItems);
 /**
  * Public routes with ID parameter
  */
-router.get('/:id', getItemById);
 router.get('/owner/:ownerId', getItemsByOwner);
+router.get('/:id', getItemById);
 
 /**
  * Protected routes for modification

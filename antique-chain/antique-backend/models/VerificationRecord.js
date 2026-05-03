@@ -99,13 +99,13 @@ verificationRecordSchema.index({ createdAt: -1 });
 verificationRecordSchema.index({ 'blockchainDetails.transactionHash': 1 });
 
 // Pre-save hook to populate item and verifier
-verificationRecordSchema.pre(/^find/, function (next) {
+verificationRecordSchema.pre(/^find/, function () {
   if (this.options._recursed) {
-    return next();
+    return;
   }
+
   this.populate('item').populate('verifier', 'username email');
   this.options._recursed = true;
-  next();
 });
 
 module.exports = mongoose.model('VerificationRecord', verificationRecordSchema);
