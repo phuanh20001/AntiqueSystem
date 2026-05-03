@@ -413,6 +413,7 @@
         registerButton.textContent = 'Creating Account...';
 
         await apiRequest('/auth/register', 'POST', {
+          username: firstName + ' ' + lastName,
           firstName: firstName,
           lastName: lastName,
           email: email,

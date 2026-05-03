@@ -204,7 +204,7 @@
       ).length;
 
       const blockchainLinked = items.filter(item =>
-        item.transactionHash || item.certificateHash
+        item.blockchainHash || item.blockchainTransactionHash
       ).length;
 
       return `
@@ -246,8 +246,8 @@
         const origin = item.countryOfOrigin || item.country || 'Origin not provided';
         const period = item.estimatedPeriod || item.year || 'Period not provided';
         const status = item.verificationStatus || item.status || 'Pending';
-        const certificateHash = item.certificateHash || 'Pending';
-        const transactionHash = item.transactionHash || 'Pending';
+        const certificateHash = item.blockchainHash || 'Pending';
+        const transactionHash = item.blockchainTransactionHash || 'Pending';
 
         return `
           <tr>

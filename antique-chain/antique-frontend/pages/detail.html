@@ -200,22 +200,25 @@ async function loadVerification() {
   const data = await res.json();
 
   // Show the transaction hash
-  document.querySelector('.hash-display').textContent = data.blockchainRef;
+  const txHash = data.blockchainDetails?.transactionHash || 'Pending';
+  document.querySelector('.hash-display').textContent = txHash;
 
   // Add a clickable Etherscan link
-  const link = document.createElement('a');
-  link.href   = `https://sepolia.etherscan.io/tx/${data.blockchainRef}`;
-  link.target = '_blank';
-  link.textContent = 'View on Etherscan →';
-  link.style.cssText = `
-    display: block;
-    margin-top: 12px;
-    font-family: var(--font-ui);
-    font-size: 12px;
-    color: var(--sepia-light);
-    text-decoration: none;
-  `;
-  document.querySelector('.blockchain-card').appendChild(link);
+  if (txHash !== 'Pending') {
+    const link = document.createElement('a');
+    link.href   = `https://sepolia.etherscan.io/tx/${txHash}`;
+    link.target = '_blank';
+    link.textContent = 'View on Etherscan →';
+    link.style.cssText = `
+      display: block;
+      margin-top: 12px;
+      font-family: var(--font-ui);
+      font-size: 12px;
+      color: var(--sepia-light);
+      text-decoration: none;
+    `;
+    document.querySelector('.blockchain-card').appendChild(link);
+  }
 }
 
 loadVerification();

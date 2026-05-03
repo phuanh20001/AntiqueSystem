@@ -48,16 +48,16 @@
               <label class="form-label">Category *</label>
               <select class="form-select" name="category">
                 <option value="">Select a category…</option>
-                <option>Ceramics & Pottery</option>
-                <option>Paintings & Fine Art</option>
-                <option>Furniture</option>
-                <option>Jewellery & Watches</option>
-                <option>Arms & Armour</option>
-                <option>Textiles & Clothing</option>
-                <option>Books & Manuscripts</option>
-                <option>Coins & Currency</option>
-                <option>Sculptures & Statues</option>
-                <option>Other</option>
+                <option value="ceramics">Ceramics & Pottery</option>
+                <option value="artwork">Paintings & Fine Art</option>
+                <option value="furniture">Furniture</option>
+                <option value="jewelry">Jewellery & Watches</option>
+                <option value="metalware">Arms & Armour / Metalware</option>
+                <option value="textiles">Textiles & Clothing</option>
+                <option value="books">Books & Manuscripts</option>
+                <option value="collectibles">Coins & Currency / Collectibles</option>
+                <option value="timepieces">Timepieces</option>
+                <option value="other">Other</option>
               </select>
               <div class="error-message"></div>
             </div>
@@ -209,13 +209,14 @@
       return {
         title: form.title.value.trim(),
         category: form.category.value.trim(),
-        year: form.year.value.trim(),
+        estimatedYear: form.year.value.trim(),
         country: form.country.value.trim(),
         dimensions: form.dimensions.value.trim(),
         description: form.description.value.trim(),
         provenance: form.provenance.value.trim(),
         condition: form.condition.value.trim(),
-        verificationStatus: 'Pending'
+        material: 'Not Specified',
+        verificationStatus: 'pending'
       };
     }
 
