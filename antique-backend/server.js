@@ -70,6 +70,7 @@ const PORT = process.env.PORT || 5000;
 // Initialize and start the server
 const startServer = async () => {
   console.log('Starting AntiqueChain backend...');
+  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`Blockchain provider: ${provider ? 'configured' : 'not configured'}`);
   console.log(`Blockchain contract: ${contract ? 'configured' : 'not configured'}`);
 
