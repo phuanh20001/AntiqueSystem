@@ -1,3 +1,7 @@
+/**
+ * AntiqChain Server
+ * Main entry point for the backend application
+ */
 const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
