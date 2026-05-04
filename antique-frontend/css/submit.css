@@ -1,0 +1,122 @@
+/* ── SUBMIT LAYOUT ── */
+.submit-layout {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 40px;
+  align-items: start;
+}
+
+/* ── UPLOAD ZONE ── */
+.upload-zone {
+  border: 2px dashed var(--border);
+  border-radius: 8px;
+  background: var(--parchment);
+  padding: 48px 24px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: 32px;
+}
+.upload-zone:hover {
+  border-color: var(--sepia);
+  background: var(--parchment2);
+}
+.upload-icon  { font-size: 40px; margin-bottom: 12px; }
+.upload-title {
+  font-family: var(--font-display);
+  font-size: 19px;
+  color: var(--ink);
+  margin-bottom: 6px;
+}
+.upload-hint {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  color: var(--ink-light);
+}
+
+/* ── FORM ACTIONS ── */
+.submit-actions {
+  display: flex;
+  gap: 14px;
+  margin-top: 28px;
+}
+
+/* ── SIDEBAR CARDS ── */
+.info-card {
+  background: var(--parchment);
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  padding: 24px;
+  margin-bottom: 20px;
+}
+.info-card-title {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 12px;
+}
+.info-list { list-style: none; }
+.info-list li {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  color: var(--ink-light);
+  padding: 7px 0;
+  border-bottom: 1px solid var(--border-light);
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  line-height: 1.5;
+}
+.info-list li:last-child { border-bottom: none; }
+.info-list li::before {
+  content: '◆';
+  color: var(--sepia-light);
+  font-size: 8px;
+  margin-top: 5px;
+  flex-shrink: 0;
+}
+
+/* ── PRICING CARD ── */
+.pricing-card {
+  background: var(--ink);
+  border: 1px solid rgba(200,169,74,0.3);
+  border-radius: 8px;
+  padding: 24px;
+}
+.pricing-card .info-card-title { color: var(--sepia-light); }
+.pricing-amount {
+  font-family: var(--font-display);
+  font-size: 36px;
+  color: var(--parchment);
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+.pricing-desc {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  color: var(--parchment2);
+  font-weight: 300;
+  line-height: 1.5;
+}
+
+/* Error message styling for form validation */
+.error-message {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  color: #b94a48;
+  margin-top: 4px;
+  min-height: 16px;
+  opacity: 0;
+  transform: translateY(-5px);
+  transition: all 0.2s ease;
+  display: block;
+}
+.error-message.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+.form-input.error, .form-select.error, .form-textarea.error {
+  border-color: #b94a48;
+  box-shadow: 0 0 0 2px rgba(185,74,72,0.08);
+}
