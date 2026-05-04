@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const Item = require('../models/Item');
 const User = require('../models/User');
+const blockchainService = require('../services/blockchainService');
 
 const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
 
@@ -477,6 +478,73 @@ const getMyItems = async (req, res) => {
   }
 };
 
+/**
+ * @desc    Get consolidated blockchain proof for an item
+ * @route   GET /api/items/:id/proof
+ * @access  Public
+ */
+const getItemProof = async (req, res) => {
+  try {
+    if (!isValidObjectId(req.params.id)) {
+      return res.status(400).json({ success: false, message: 'Invalid item ID' });
+    }
+
+    const item = await Item.findById(req.params.id)
+      .populate('owner', 'username email')
+      .populate('verificationRecord');
+
+    if (!item) {
+      return res.status(404).json({ success: false, message: 'Item not found' });
+    }
+
+    const localHash = item.blockchainHash || null;
+    const txHash = item.blockchainTransactionHash || null;
+    const contractAddress = item.blockchainContractAddress || null;
+
+    const proof = {
+      itemId: item._id,
+      localHash,
+      txHash,
+      contractAddress,
+      network: item.blockchainNetwork || null,
+      onChainRecord: null,
+      hashMatches: null,
+      etherscanUrl: txHash ? blockchainService.getEtherscanUrl(txHash) : null,
+    };
+
+    // If contract is configured, attempt to read the on-chain record
+    if (blockchainService.contract) {
+      try {
+        console.log(`[itemController] Attempting to read proof for item ${item._id}`);
+        const onChain = await blockchainService.getVerificationFromChain(String(item._id));
+        proof.onChainRecord = onChain || null;
+
+        if (localHash && onChain && onChain.metadataHash) {
+          proof.hashMatches = localHash === onChain.metadataHash;
+        } else if (!localHash && onChain && onChain.metadataHash) {
+          proof.hashMatches = false;
+        } else {
+          proof.hashMatches = null;
+        }
+      } catch (err) {
+        // don't fail the whole request on a chain read error
+        console.log(`[itemController] Chain read error for item ${item._id}: ${err.message}`);
+        proof.onChainRecord = { 
+          error: err.message,
+          notFound: err.message.includes('No verification record found'),
+          contractAddress: blockchainService.contract ? await blockchainService.contract.getAddress().catch(() => null) : null
+        };
+        proof.hashMatches = null;
+      }
+    }
+
+    res.status(200).json({ success: true, data: proof });
+  } catch (error) {
+    console.error('Get Item Proof Error:', error);
+    res.status(500).json({ success: false, message: error.message || 'Error fetching item proof' });
+  }
+};
+
 module.exports = {
   createItem,
   getAllItems,
@@ -488,4 +556,6 @@ module.exports = {
   saveBlockchainDetails,
   deleteItem,
   searchItems,
+  // new
+  getItemProof,
 };
