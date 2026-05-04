@@ -28,8 +28,8 @@
     "@types/node": "^22.19.17",
     "chai": "^6.2.2",
     "forge-std": "github:foundry-rs/forge-std#v1.9.4",
-    "hardhat": "^2.26.3",
-    "mocha": "^11.7.5",
+    "hardhat": "^3.4.3",
+    "mocha": "^11.3.0",
     "typescript": "~5.8.0"
   }
 }

@@ -143,7 +143,7 @@
             <span class="chain-label">Status</span>
             <span class="chain-val ok">✓ Chain Intact</span>
           </div>
-          <button class="chain-verify-btn" onclick="showToast('Chain integrity verified — all hashes match')">
+          <button class="chain-verify-btn" onclick="checkBlockchainProof()">
             Verify Chain Integrity
           </button>
         </div>
@@ -179,9 +179,142 @@
   <div class="footer-bottom">© 2025 AntiqChain — Blockchain Antique Verification System. All rights reserved.</div>
 
   <div class="toast" id="toast"></div>
+
+  <!-- Proof Modal -->
+  <div id="proofModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:1000;padding:20px;overflow-y:auto;">
+    <div style="background:white;border-radius:8px;max-width:800px;margin:40px auto;padding:24px;box-shadow:0 10px 40px rgba(0,0,0,0.3);font-family:var(--font-ui),monospace;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+        <h2 style="margin:0;font-size:20px;color:var(--ink);">Blockchain Proof Report</h2>
+        <button onclick="closeProofModal()" style="background:none;border:none;font-size:24px;cursor:pointer;padding:0;width:30px;height:30px;display:flex;align-items:center;justify-content:center;">✕</button>
+      </div>
+      <div id="proofModalContent" style="font-size:13px;line-height:1.6;color:var(--ink-dim);">
+        Loading...
+      </div>
+    </div>
+  </div>
+
+  <style>
+    #proofModalContent > div { margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid var(--divider, #e5e5e5); }
+    #proofModalContent .proof-label { font-weight: 600; color: var(--ink); margin-bottom: 4px; }
+    #proofModalContent .proof-value { background: #f5f5f5; padding: 8px 12px; border-radius: 4px; word-break: break-all; font-family: monospace; font-size: 12px; }
+    #proofModalContent .proof-error { background: #ffe0e0; padding: 8px 12px; border-radius: 4px; border-left: 3px solid var(--error, #c00); color: #900; }
+    #proofModalContent .proof-success { background: #e0ffe0; padding: 8px 12px; border-radius: 4px; border-left: 3px solid var(--success, #0a0); color: #090; }
+  </style>
+
   <script src="../js/utils.js"></script>
+  <script src="../js/api.js"></script>
   <script>
     requirePageSession('detail.html');
+
+    function closeProofModal() {
+      document.getElementById('proofModal').style.display = 'none';
+    }
+
+    function showProofModal(proof) {
+      const content = document.getElementById('proofModalContent');
+      let html = '';
+
+      // Local Hash section
+      html += '<div>';
+      html += '<div class="proof-label">Local Metadata Hash (stored in DB)</div>';
+      html += proof.localHash 
+        ? `<div class="proof-value">${proof.localHash}</div>`
+        : '<div class="proof-value" style="color:#999;">None — item not yet submitted to blockchain</div>';
+      html += '</div>';
+
+      // Transaction section
+      html += '<div>';
+      html += '<div class="proof-label">Transaction Hash</div>';
+      if (proof.txHash) {
+        html += `<div class="proof-value"><a href="${proof.etherscanUrl}" target="_blank" style="color:var(--sepia);">View on Etherscan →</a><br>${proof.txHash}</div>`;
+      } else {
+        html += '<div class="proof-value" style="color:#999;">None — item verification not submitted to blockchain</div>';
+      }
+      html += '</div>';
+
+      // Contract Address section
+      html += '<div>';
+      html += '<div class="proof-label">Contract Address</div>';
+      html += proof.contractAddress
+        ? `<div class="proof-value">${proof.contractAddress}</div>`
+        : '<div class="proof-value" style="color:#999;">None</div>';
+      html += '</div>';
+
+      // On-chain Record section
+      html += '<div>';
+      html += '<div class="proof-label">On-Chain Verification Record</div>';
+      if (proof.onChainRecord && proof.onChainRecord.error) {
+        html += `<div class="proof-error"><strong>RPC Error:</strong> ${proof.onChainRecord.error}</div>`;
+        if (proof.onChainRecord.notFound) {
+          html += '<div style="margin-top:8px;color:#666;font-size:12px;">✓ This means the item has NOT been verified on-chain yet. It\'s normal for items that are still pending.</div>';
+        } else {
+          html += '<div style="margin-top:8px;color:#666;font-size:12px;">⚠ Check that the CONTRACT_ADDRESS and RPC endpoint are correctly configured in the backend.</div>';
+        }
+      } else if (proof.onChainRecord) {
+        html += `<div class="proof-success"><strong>✓ Record Found on Chain</strong></div>`;
+        html += '<div style="margin-top:8px;">';
+        html += `<div><strong>Item ID:</strong> <span class="proof-value">${proof.onChainRecord.itemId}</span></div>`;
+        html += `<div><strong>Verifier:</strong> <span class="proof-value">${proof.onChainRecord.verifier}</span></div>`;
+        html += `<div><strong>Authentic:</strong> <span class="proof-value">${proof.onChainRecord.isAuthentic ? 'Yes ✓' : 'No ✗'}</span></div>`;
+        html += `<div><strong>Metadata Hash:</strong> <span class="proof-value">${proof.onChainRecord.metadataHash}</span></div>`;
+        html += `<div><strong>Timestamp:</strong> <span class="proof-value">${proof.onChainRecord.timestamp}</span></div>`;
+        html += '</div>';
+      } else {
+        html += '<div class="proof-value" style="color:#999;">Contract not configured or record not queried</div>';
+      }
+      html += '</div>';
+
+      // Hash Verification section
+      html += '<div>';
+      html += '<div class="proof-label">Hash Verification</div>';
+      if (proof.hashMatches === true) {
+        html += '<div class="proof-success"><strong>✓ Hashes Match</strong> — Local metadata matches on-chain record. Integrity verified.</div>';
+      } else if (proof.hashMatches === false) {
+        html += '<div class="proof-error"><strong>✗ Hash Mismatch</strong> — Local metadata DOES NOT match on-chain record. Data may have been tampered with.</div>';
+      } else {
+        html += '<div class="proof-value" style="color:#999;">Cannot verify — missing local or on-chain hash</div>';
+      }
+      html += '</div>';
+
+      content.innerHTML = html;
+      document.getElementById('proofModal').style.display = 'block';
+    }
+
+    async function checkBlockchainProof() {
+      const itemId = new URLSearchParams(window.location.search).get('id');
+      if (!itemId) return showToast('Item ID not provided', true);
+
+      try {
+        const resp = await apiRequest(`/items/${itemId}/proof`, 'GET');
+        if (!resp || !resp.success) return showToast('Unable to fetch proof', true);
+
+        const proof = resp.data;
+        
+        // Show detailed modal
+        showProofModal(proof);
+        
+        // Also show a brief toast for quick feedback
+        let msg = '';
+        if (proof.hashMatches === true) {
+          msg = '✓ Proof OK — Hashes match!';
+        } else if (proof.hashMatches === false) {
+          msg = '✗ Proof failed — Hash mismatch detected!';
+        } else if (proof.onChainRecord && proof.onChainRecord.error) {
+          if (proof.onChainRecord.notFound) {
+            msg = 'ℹ Item not yet verified on-chain (normal for pending items).';
+          } else {
+            msg = '⚠ RPC error — check contract configuration.';
+          }
+        } else {
+          msg = 'Proof report generated.';
+        }
+        showToast(msg);
+      } catch (err) {
+        console.error('Proof check error', err);
+        showToast('Error checking proof: ' + (err.message || err), true);
+      }
+    }
+
 
     document.querySelectorAll('.detail-thumb').forEach(t => {
       t.addEventListener('click', function () {
@@ -189,36 +322,92 @@
         this.classList.add('active');
       });
     });
+
+    async function loadItemDetail() {
+      const itemId = new URLSearchParams(window.location.search).get('id');
+      if (!itemId) {
+        showToast('Item ID not provided', true);
+        return;
+      }
+
+      try {
+        const item = await apiRequest(`/items/${itemId}`, 'GET', null, true);
+        console.log('Loaded item:', item);
+        
+        // Extract item data (handle nested structures)
+        const itemData = item.data || item;
+        
+        // Update page header
+        document.querySelector('.page-header-eyebrow').textContent = `Item Record · ${itemData._id || 'N/A'}`;
+        document.querySelector('.page-header h1').textContent = itemData.title || 'Untitled Item';
+        document.querySelector('.page-header p').textContent = `${itemData.verificationStatus || 'Pending'} · Submitted by: ${itemData.owner?.username || 'Unknown'} · Category: ${itemData.category || 'Unknown'}`;
+
+        // Update breadcrumb
+        document.querySelector('.breadcrumb span:nth-of-type(3)').textContent = itemData.title || 'Item';
+
+        // Update detail section
+        document.querySelector('.detail-category').textContent = `${itemData.category || 'Item'} · ${itemData.estimatedPeriod || 'Period unknown'}`;
+        document.querySelector('.detail-title').textContent = itemData.title || 'Untitled Item';
+        
+        const statusBadge = document.querySelector('.detail-status');
+        const statusText = itemData.verificationStatus || 'Pending';
+        statusBadge.innerHTML = statusText === 'verified' 
+          ? '<span class="badge badge-verified">✓ Verified Authentic</span>'
+          : `<span class="badge">${statusText}</span>`;
+
+        document.querySelector('.detail-desc').textContent = itemData.description || 'No description provided.';
+
+        // Update specs
+        const specs = document.querySelectorAll('.spec-item');
+        const specData = [
+          { label: 'Period', value: itemData.estimatedPeriod || itemData.estimatedYear || 'Not specified' },
+          { label: 'Category', value: itemData.category || 'Not specified' },
+          { label: 'Dimensions', value: itemData.dimensions?.length ? `${itemData.dimensions.length}×${itemData.dimensions.width}×${itemData.dimensions.height}${itemData.dimensions.unit || 'cm'}` : 'Not specified' },
+          { label: 'Material', value: itemData.material || 'Not specified' },
+          { label: 'Condition', value: itemData.condition || 'Not assessed' },
+          { label: 'Submitted By', value: itemData.owner?.username || 'Unknown' }
+        ];
+        
+        specs.forEach((spec, idx) => {
+          if (specData[idx]) {
+            spec.querySelector('.spec-value').textContent = specData[idx].value;
+          }
+        });
+
+        // Update tags
+        const tagsContainer = document.querySelector('[style*="margin-bottom:16px"]');
+        if (tagsContainer) {
+          tagsContainer.innerHTML = `<span class="tag">${itemData.category || 'Antique'}</span>
+            <span class="tag">${itemData.material || 'Item'}</span>
+            <span class="tag">${itemData.condition || 'Not assessed'}</span>`;
+        }
+
+        // Update blockchain card
+        const txHash = itemData.blockchainTransactionHash || 'Pending';
+        document.querySelector('.hash-display').textContent = txHash;
+
+        if (txHash !== 'Pending') {
+          const link = document.createElement('a');
+          link.href = `https://sepolia.etherscan.io/tx/${txHash}`;
+          link.target = '_blank';
+          link.textContent = 'View on Etherscan →';
+          link.style.cssText = `
+            display: block;
+            margin-top: 12px;
+            font-family: var(--font-ui);
+            font-size: 12px;
+            color: var(--sepia-light);
+            text-decoration: none;
+          `;
+          document.querySelector('.blockchain-card').appendChild(link);
+        }
+      } catch (error) {
+        console.error('Error loading item:', error);
+        showToast('Unable to load item details: ' + error.message, true);
+      }
+    }
+
+    loadItemDetail();
   </script>
-  <!-- Add this inside your blockchain card section -->
-<script>
-async function loadVerification() {
-  const itemId = new URLSearchParams(window.location.search).get('id');
-  if (!itemId) return;
-
-  const res  = await fetch(`http://localhost:5000/api/verifications/${itemId}`);
-  const data = await res.json();
-
-  // Show the transaction hash
-  document.querySelector('.hash-display').textContent = data.blockchainRef;
-
-  // Add a clickable Etherscan link
-  const link = document.createElement('a');
-  link.href   = `https://sepolia.etherscan.io/tx/${data.blockchainRef}`;
-  link.target = '_blank';
-  link.textContent = 'View on Etherscan →';
-  link.style.cssText = `
-    display: block;
-    margin-top: 12px;
-    font-family: var(--font-ui);
-    font-size: 12px;
-    color: var(--sepia-light);
-    text-decoration: none;
-  `;
-  document.querySelector('.blockchain-card').appendChild(link);
-}
-
-loadVerification();
-</script>
 </body>
 </html>

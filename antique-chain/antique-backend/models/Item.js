@@ -106,7 +106,6 @@ const itemSchema = new mongoose.Schema(
     blockchainHash: {
       type: String,
       default: null,
-      unique: true,
       sparse: true,
     },
     blockchainTransactionHash: {
@@ -134,13 +133,13 @@ itemSchema.index({ owner: 1, createdAt: -1 });
 itemSchema.index({ verificationStatus: 1 });
 
 // Pre-save hook to populate owner details if needed
-itemSchema.pre(/^find/, function (next) {
+itemSchema.pre(/^find/, function () {
   if (this.options._recursed) {
-    return next();
+    return;
   }
+
   this.populate('owner', 'username email');
   this.options._recursed = true;
-  next();
 });
 
 module.exports = mongoose.model('Item', itemSchema);

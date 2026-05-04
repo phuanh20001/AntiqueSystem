@@ -206,7 +206,13 @@ async function getVerificationFromChain(itemId) {
       throw new Error('Blockchain contract is not configured');
     }
 
+    console.log(`[blockchainService] Fetching record for itemId: ${itemId}`);
+    console.log(`[blockchainService] Contract address: ${await contract.getAddress()}`);
+
     const record = await contract.getRecord(itemId);
+    
+    console.log(`[blockchainService] Record retrieved successfully:`, record);
+    
     return {
       itemId: record.itemId,
       verifier: record.verifier,
@@ -217,7 +223,20 @@ async function getVerificationFromChain(itemId) {
       exists: record.exists
     };
   } catch (error) {
-    console.error('Error retrieving from chain:', error);
+    console.error('[blockchainService] Error retrieving from chain:', error);
+    
+    // Check if this is a "record not found" error (require() failed)
+    const isNotFound = error.message && (
+      error.message.includes('No record found') ||
+      error.message.includes('execution reverted') ||
+      error.reason === 'No record found for this item'
+    );
+    
+    if (isNotFound) {
+      console.log(`[blockchainService] Record not found for itemId: ${itemId}`);
+      throw new Error(`No verification record found on-chain for this item`);
+    }
+    
     throw new Error(`Failed to retrieve verification: ${error.message}`);
   }
 }

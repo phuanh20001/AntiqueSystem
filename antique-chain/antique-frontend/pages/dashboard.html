@@ -204,7 +204,7 @@
       ).length;
 
       const blockchainLinked = items.filter(item =>
-        item.transactionHash || item.certificateHash
+        item.blockchainHash || item.blockchainTransactionHash
       ).length;
 
       return `
@@ -246,8 +246,8 @@
         const origin = item.countryOfOrigin || item.country || 'Origin not provided';
         const period = item.estimatedPeriod || item.year || 'Period not provided';
         const status = item.verificationStatus || item.status || 'Pending';
-        const certificateHash = item.certificateHash || 'Pending';
-        const transactionHash = item.transactionHash || 'Pending';
+        const certificateHash = item.blockchainHash || 'Pending';
+        const transactionHash = item.blockchainTransactionHash || 'Pending';
 
         return `
           <tr>
@@ -260,7 +260,7 @@
             <td style="font-size:13px;color:var(--ink-light);">${escapeHtml(certificateHash)}</td>
             <td style="font-size:13px;color:var(--ink-light);">${escapeHtml(transactionHash)}</td>
             <td>
-              <button class="btn-sm btn-review" onclick="showToast('Item details view will be connected later.')">
+              <button class="btn-sm btn-review" onclick="window.location.href='detail.html?id=${item._id}'">
                 View
               </button>
             </td>
@@ -352,10 +352,9 @@
         const userResponse = await apiRequest('/auth/me', 'GET', null, true);
         console.log('loadDashboardData: /auth/me response:', userResponse);
 
-        console.log('loadDashboardData: fetching user items via /items?owner=');
-        const ownerId = (session && session._id) || (userResponse && (userResponse._id || userResponse.id));
-        const itemsResponse = await apiRequest(`/items?owner=${encodeURIComponent(ownerId)}`, 'GET', null, true);
-        console.log('loadDashboardData: /items?owner response:', itemsResponse);
+        console.log('loadDashboardData: fetching all items via /items');
+        const itemsResponse = await apiRequest(`/items`, 'GET', null, true);
+        console.log('loadDashboardData: /items response:', itemsResponse);
 
         console.log('loadDashboardData: fetching backend health');
         const healthResponse = await getBackendHealth();

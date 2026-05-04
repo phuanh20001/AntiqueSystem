@@ -4,6 +4,7 @@ const {
   createItem,
   getAllItems,
   getItemById,
+  getItemProof,
   getItemsByOwner,
   getMyItems,
   updateItem,
@@ -28,8 +29,10 @@ router.get('/my-items', protect, getMyItems);
 /**
  * Public routes with ID parameter
  */
-router.get('/:id', getItemById);
 router.get('/owner/:ownerId', getItemsByOwner);
+// Proof route (reads consolidated proof + optional on-chain read)
+router.get('/:id/proof', getItemProof);
+router.get('/:id', getItemById);
 
 /**
  * Protected routes for modification
