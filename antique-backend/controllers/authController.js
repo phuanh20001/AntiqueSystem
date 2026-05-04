@@ -6,10 +6,13 @@ const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
+// Token expiry duration
+const TOKEN_EXPIRY = '30d';
+
 // Generate JWT token
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET || 'fallback_secret', {
-    expiresIn: '30d',
+    expiresIn: TOKEN_EXPIRY,
   });
 };
 
