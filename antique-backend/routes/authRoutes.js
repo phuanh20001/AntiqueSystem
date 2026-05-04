@@ -12,8 +12,11 @@ const {
 } = require('../controllers/authController');
 const { protect } = require('../middleware/authMiddleware');
 
+// Public routes
 router.post('/register', registerUser);
 router.post('/login', loginUser);
+
+// Protected routes (require authentication)
 router.get('/me', protect, getMe);
 router.post('/logout', protect, logoutUser);
 
