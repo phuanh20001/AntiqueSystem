@@ -204,7 +204,12 @@
   <script src="../js/utils.js"></script>
   <script src="../js/api.js"></script>
   <script>
-    requirePageSession('detail.html');
+    // Allow public access to item detail pages (items are public resources).
+    // Previously required login via `requirePageSession('detail.html')` which
+    // prevented anonymous users from viewing item details. Use `getAuthSession`
+    // to optionally read the current user when available.
+    // requirePageSession('detail.html');
+    const session = getAuthSession();
 
     function closeProofModal() {
       document.getElementById('proofModal').style.display = 'none';
@@ -331,7 +336,8 @@
       }
 
       try {
-        const item = await apiRequest(`/items/${itemId}`, 'GET', null, true);
+        // Item detail is a public endpoint; no auth required for read.
+        const item = await apiRequest(`/items/${itemId}`, 'GET', null, false);
         console.log('Loaded item:', item);
         
         // Extract item data (handle nested structures)

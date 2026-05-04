@@ -333,6 +333,18 @@
 
       } catch (error) {
         console.error('Login error:', error);
+        const lowerMessage = String(error.message || '').toLowerCase();
+        if (lowerMessage.includes('pending admin approval')) {
+          const pendingPath = window.location.pathname.includes('/pages/')
+            ? 'pending-approval.html'
+            : 'pages/pending-approval.html';
+          const pendingParams = new URLSearchParams({
+            email: email,
+            role: document.getElementById('regRole')?.value || ''
+          });
+          window.location.href = pendingPath + '?' + pendingParams.toString();
+          return;
+        }
         showToast(error.message || 'Login failed. Please try again.', true);
         const signInButton = document.querySelector('#loginForm button[type="submit"]');
         if (signInButton) {
@@ -421,7 +433,7 @@
           password: password
         });
 
-        showToast('Account created — please sign in to continue.');
+        showToast('Account created. Wait for admin approval before signing in.');
 
         setTimeout(() => {
           // Clear form fields

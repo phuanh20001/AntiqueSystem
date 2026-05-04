@@ -1,6 +1,19 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
+const normalizeRole = (role) => {
+  if (!role) return 'collector';
+  const lower = String(role).toLowerCase().trim();
+  if (lower === 'user') return 'collector';
+  return lower;
+};
+
+const normalizeStatus = (status) => {
+  if (!status) return 'approved';
+  const lower = String(status).toLowerCase().trim();
+  return ['pending', 'approved', 'rejected'].includes(lower) ? lower : 'approved';
+};
+
 const protect = async (req, res, next) => {
   let token;
 
@@ -22,6 +35,17 @@ const protect = async (req, res, next) => {
         return res.status(401).json({ message: 'Not authorized, user not found' });
       }
 
+      req.user.role = normalizeRole(req.user.role);
+      req.user.status = normalizeStatus(req.user.status);
+
+      if (req.user.status === 'pending') {
+        return res.status(403).json({ message: 'Your account is pending admin approval.' });
+      }
+
+      if (req.user.status === 'rejected') {
+        return res.status(403).json({ message: 'Your account was rejected. Please contact an administrator.' });
+      }
+
       next();
     } catch (error) {
       console.error(error);
@@ -36,11 +60,22 @@ const protect = async (req, res, next) => {
 
 // Admin middleware
 const admin = (req, res, next) => {
-  if (req.user && req.user.role === 'admin') {
+  if (req.user && normalizeRole(req.user.role) === 'admin') {
     next();
   } else {
     res.status(403).json({ message: 'Not authorized as an admin' });
   }
 };
 
-module.exports = { protect, admin };
+const authorizeRoles = (...roles) => (req, res, next) => {
+  const normalizedAllowed = roles.map((role) => normalizeRole(role));
+  const userRole = normalizeRole(req.user && req.user.role);
+
+  if (!req.user || !normalizedAllowed.includes(userRole)) {
+    return res.status(403).json({ message: 'Not authorized for this action' });
+  }
+
+  next();
+};
+
+module.exports = { protect, admin, authorizeRoles };

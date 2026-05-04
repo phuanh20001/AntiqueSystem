@@ -12,6 +12,14 @@ const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
  */
 const createItem = async (req, res) => {
   try {
+    const normalizedRole = req.user?.role === 'user' ? 'collector' : req.user?.role;
+    if (normalizedRole !== 'collector') {
+      return res.status(403).json({
+        success: false,
+        message: 'Only collector accounts can submit new items',
+      });
+    }
+
     const { title, description, category, estimatedAge, estimatedYear, estimatedPeriod, material, dimensions, condition, provenance, estimatedValue, images, metadata } = req.body;
 
     if (!title || !description || !category || !(estimatedAge || estimatedYear || estimatedPeriod) || !material) {
@@ -252,6 +260,16 @@ const updateItem = async (req, res) => {
  */
 const updateVerificationStatus = async (req, res) => {
   try {
+    const allowedRoles = ['verifier', 'admin'];
+    const currentRole = req.user?.role === 'user' ? 'collector' : req.user?.role;
+
+    if (!allowedRoles.includes(currentRole)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Only verifier or admin accounts can approve or decline items',
+      });
+    }
+
     if (!isValidObjectId(req.params.id)) {
       return res.status(400).json({ success: false, message: 'Invalid item ID' });
     }

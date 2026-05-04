@@ -35,6 +35,8 @@
 
   <script>
     const session = requireDashboardSession();
+    let dashboardRefreshTimer = null;
+    let dashboardCurrentRole = null;
 
     function escapeHtml(value) {
       return String(value || '')
@@ -45,19 +47,21 @@
         .replaceAll("'", '&#39;');
     }
 
+    function normalizeRole(role) {
+      const raw = String(role || '').toLowerCase().trim();
+      if (raw === 'user' || raw === 'collector') return 'collector';
+      if (raw === 'verifier') return 'verifier';
+      if (raw === 'admin') return 'admin';
+      return 'collector';
+    }
+
     function getStatusBadge(status) {
       const safeStatus = status || 'Pending';
-      const lower = safeStatus.toLowerCase();
+      const lower = String(safeStatus).toLowerCase();
 
       let badgeClass = 'badge-pending';
-
-      if (lower.includes('verified') || lower.includes('approved')) {
-        badgeClass = 'badge-verified';
-      }
-
-      if (lower.includes('rejected')) {
-        badgeClass = 'badge-rejected';
-      }
+      if (lower.includes('verified') || lower.includes('approved')) badgeClass = 'badge-verified';
+      if (lower.includes('rejected')) badgeClass = 'badge-rejected';
 
       return `<span class="badge ${badgeClass}">${escapeHtml(safeStatus)}</span>`;
     }
@@ -77,94 +81,81 @@
     function showWelcomeBanner(user) {
       const banner = document.getElementById('welcome-banner');
       const title = document.getElementById('welcome-banner-title');
-
-      const name =
-        user.displayName ||
-        user.name ||
-        user.firstName ||
-        user.email ||
-        'user';
+      const name = user.username || user.displayName || user.firstName || user.email || 'user';
 
       title.textContent = 'Welcome, ' + name;
       banner.style.display = 'block';
-
-      requestAnimationFrame(function () {
-        banner.classList.add('show');
-      });
+      requestAnimationFrame(function () { banner.classList.add('show'); });
 
       setTimeout(function () {
         banner.classList.remove('show');
-        setTimeout(function () {
-          banner.style.display = 'none';
-        }, 350);
-      }, 4200);
+        setTimeout(function () { banner.style.display = 'none'; }, 350);
+      }, 3600);
     }
 
     function renderLoading() {
-      const root = document.getElementById('dashboard-root');
-
-      root.innerHTML = `
+      document.getElementById('dashboard-root').innerHTML = `
         <div class="dashboard-main" style="width:100%; padding:40px;">
-          <div class="dashboard-panel">
-            <div class="panel-body">
-              <p>Loading dashboard data...</p>
-            </div>
-          </div>
+          <div class="dashboard-panel"><div class="panel-body"><p>Loading dashboard data...</p></div></div>
         </div>
       `;
     }
 
     function renderError(message) {
-      const root = document.getElementById('dashboard-root');
-
-      root.innerHTML = `
+      document.getElementById('dashboard-root').innerHTML = `
         <div class="dashboard-main" style="width:100%; padding:40px;">
           <div class="dashboard-panel">
-            <div class="panel-head">
-              <div>
-                <h3>Unable to load dashboard</h3>
-                <p>${escapeHtml(message || 'Please try again later.')}</p>
-              </div>
-            </div>
-            <div class="panel-body">
-              <button class="btn-sm btn-review" onclick="loadDashboardData()">Retry</button>
-            </div>
+            <div class="panel-head"><div><h3>Unable to load dashboard</h3><p>${escapeHtml(message || 'Please try again later.')}</p></div></div>
+            <div class="panel-body"><button class="btn-sm btn-review" onclick="loadDashboardData()">Retry</button></div>
           </div>
         </div>
       `;
     }
 
-    function renderSidebar(user, items) {
-      const name =
-        user.displayName ||
-        user.name ||
-        `${user.firstName || ''} ${user.lastName || ''}`.trim() ||
-        'AntiqChain User';
+    function countByStatus(items, statuses) {
+      return items.filter((item) => {
+        const value = String(item.verificationStatus || item.status || '').toLowerCase();
+        return statuses.includes(value);
+      }).length;
+    }
 
-      const role = user.role || 'collector';
+    function normalizeItems(response) {
+      if (Array.isArray(response)) return response;
+      if (Array.isArray(response.items)) return response.items;
+      if (Array.isArray(response.data)) return response.data;
+      return [];
+    }
 
+    function normalizeUsers(response) {
+      if (Array.isArray(response)) return response;
+      if (Array.isArray(response.users)) return response.users;
+      if (Array.isArray(response.data)) return response.data;
+      return [];
+    }
+
+    function renderSidebar(user, items, pendingUsers) {
+      const role = normalizeRole(user.role);
       const totalItems = items.length;
-      const pendingItems = items.filter(item =>
-        String(item.verificationStatus || item.status || '').toLowerCase().includes('pending') ||
-        String(item.verificationStatus || item.status || '').toLowerCase().includes('review')
-      ).length;
+      const pendingItems = countByStatus(items, ['pending', 'in_progress']);
+      const verifiedItems = countByStatus(items, ['verified']);
 
-      const verifiedItems = items.filter(item =>
-        String(item.verificationStatus || item.status || '').toLowerCase().includes('verified') ||
-        String(item.verificationStatus || item.status || '').toLowerCase().includes('approved')
-      ).length;
+      const roleLabel = role === 'admin' ? 'Administrator' : role === 'verifier' ? 'Verifier' : 'Collector';
 
-      return `
-        <div class="dashboard-sidebar">
-          <div class="sidebar-profile">
-            <div class="sidebar-name">${escapeHtml(name)}</div>
-            <div class="sidebar-role">${escapeHtml(role)} account</div>
-          </div>
-
-          <div class="sidebar-section-label">Collection</div>
+      const roleSection = role === 'admin'
+        ? `
+          <div class="sidebar-section-label">Account Review</div>
           <div class="sidebar-section">
             <a class="sidebar-item active" href="#">
-              <span>📦</span> My Submissions
+              <span>🧾</span> Pending Users
+              <span class="sidebar-count rust">${pendingUsers.length}</span>
+            </a>
+          </div>
+        `
+        : `
+          <div class="sidebar-section-label">Submitted Items</div>
+          <div class="sidebar-section">
+            <a class="sidebar-item active" href="#">
+              <span>📦</span> All Submissions
               <span class="sidebar-count">${totalItems}</span>
             </a>
             <a class="sidebar-item" href="#">
@@ -176,213 +167,340 @@
               <span class="sidebar-count green">${verifiedItems}</span>
             </a>
           </div>
+        `;
 
+      return `
+        <div class="dashboard-sidebar">
+          <div class="sidebar-profile">
+            <div class="sidebar-name">${escapeHtml(user.username || user.email || 'AntiqChain User')}</div>
+            <div class="sidebar-role">${escapeHtml(roleLabel)} account</div>
+          </div>
+          ${roleSection}
           <div class="sidebar-section-label">Actions</div>
           <div class="sidebar-section">
-            <a class="sidebar-item" href="submit.html">
-              <span>➕</span> Submit New Item
-            </a>
-            <a class="sidebar-item" href="../index.html">
-              <span>🏠</span> Back to Home
-            </a>
+            <a class="sidebar-item" href="submit.html"><span>➕</span> Submit New Item</a>
+            <a class="sidebar-item" href="../index.html"><span>🏠</span> Back to Home</a>
           </div>
         </div>
       `;
     }
 
-    function renderStats(items) {
-      const total = items.length;
+    function renderStats(role, items, pendingUsers, approvedUsers) {
+      const pendingItems = countByStatus(items, ['pending', 'in_progress']);
+      const verifiedItems = countByStatus(items, ['verified']);
+      const rejectedItems = countByStatus(items, ['rejected']);
+      const blockchainLinked = items.filter((item) => item.blockchainHash || item.blockchainTransactionHash).length;
 
-      const pending = items.filter(item =>
-        String(item.verificationStatus || item.status || '').toLowerCase().includes('pending') ||
-        String(item.verificationStatus || item.status || '').toLowerCase().includes('review')
-      ).length;
+      if (role === 'admin') {
+        return `
+          <div class="dash-stats">
+            <div class="dash-stat"><div class="dash-stat-num rust">${pendingUsers.length}</div><div class="dash-stat-label">Pending Accounts</div></div>
+            <div class="dash-stat"><div class="dash-stat-num green">${approvedUsers.length}</div><div class="dash-stat-label">Approved Accounts</div></div>
+            <div class="dash-stat"><div class="dash-stat-num gold">${items.length}</div><div class="dash-stat-label">All Submitted Items</div></div>
+            <div class="dash-stat"><div class="dash-stat-num">${verifiedItems}</div><div class="dash-stat-label">Verified Items</div></div>
+          </div>
+        `;
+      }
 
-      const verified = items.filter(item =>
-        String(item.verificationStatus || item.status || '').toLowerCase().includes('verified') ||
-        String(item.verificationStatus || item.status || '').toLowerCase().includes('approved')
-      ).length;
-
-      const blockchainLinked = items.filter(item =>
-        item.blockchainHash || item.blockchainTransactionHash
-      ).length;
+      if (role === 'verifier') {
+        return `
+          <div class="dash-stats">
+            <div class="dash-stat"><div class="dash-stat-num gold">${items.length}</div><div class="dash-stat-label">All Submitted Items</div></div>
+            <div class="dash-stat"><div class="dash-stat-num rust">${pendingItems}</div><div class="dash-stat-label">Awaiting Decision</div></div>
+            <div class="dash-stat"><div class="dash-stat-num green">${verifiedItems}</div><div class="dash-stat-label">Approved Items</div></div>
+            <div class="dash-stat"><div class="dash-stat-num">${rejectedItems}</div><div class="dash-stat-label">Declined Items</div></div>
+          </div>
+        `;
+      }
 
       return `
         <div class="dash-stats">
-          <div class="dash-stat">
-            <div class="dash-stat-num gold">${total}</div>
-            <div class="dash-stat-label">My Submissions</div>
-          </div>
-          <div class="dash-stat">
-            <div class="dash-stat-num rust">${pending}</div>
-            <div class="dash-stat-label">In Review</div>
-          </div>
-          <div class="dash-stat">
-            <div class="dash-stat-num green">${verified}</div>
-            <div class="dash-stat-label">Verified</div>
-          </div>
-          <div class="dash-stat">
-            <div class="dash-stat-num">${blockchainLinked}</div>
-            <div class="dash-stat-label">Blockchain Proofs</div>
-          </div>
+          <div class="dash-stat"><div class="dash-stat-num gold">${items.length}</div><div class="dash-stat-label">All Submitted Items</div></div>
+          <div class="dash-stat"><div class="dash-stat-num rust">${pendingItems}</div><div class="dash-stat-label">In Review</div></div>
+          <div class="dash-stat"><div class="dash-stat-num green">${verifiedItems}</div><div class="dash-stat-label">Verified</div></div>
+          <div class="dash-stat"><div class="dash-stat-num">${blockchainLinked}</div><div class="dash-stat-label">Blockchain Proofs</div></div>
         </div>
       `;
     }
 
-    function renderItemRows(items) {
+    function renderItemRows(items, role) {
       if (!items.length) {
         return `
           <tr>
-            <td colspan="6" style="text-align:center; padding:30px; color:var(--ink-light);">
-              No submitted items found. Submit your first antique item to begin verification.
+            <td colspan="7" style="text-align:center; padding:30px; color:var(--ink-light);">
+              No submitted items found.
             </td>
           </tr>
         `;
       }
 
-      return items.map(item => {
+      return items.map((item) => {
         const title = item.title || item.itemName || item.name || 'Untitled Item';
         const category = item.category || 'Antique Item';
-        const origin = item.countryOfOrigin || item.country || 'Origin not provided';
         const period = item.estimatedPeriod || item.year || 'Period not provided';
-        const status = item.verificationStatus || item.status || 'Pending';
+        const status = item.verificationStatus || item.status || 'pending';
         const certificateHash = item.blockchainHash || 'Pending';
-        const transactionHash = item.blockchainTransactionHash || 'Pending';
+        const txHash = item.blockchainTransactionHash || 'Pending';
+        const ownerName = item.owner?.username || item.owner?.email || 'Unknown owner';
+        const canDecide = role === 'verifier' && ['pending', 'in_progress'].includes(String(status).toLowerCase());
+
+        const verifierActions = canDecide
+          ? `
+            <div class="table-actions">
+              <button class="btn-sm btn-approve" onclick="changeItemStatus('${item._id}', 'verified')">Approve</button>
+              <button class="btn-sm btn-decline" onclick="changeItemStatus('${item._id}', 'rejected')">Decline</button>
+            </div>
+          `
+          : `<button class="btn-sm btn-review" onclick="window.location.href='detail.html?id=${item._id}'">View</button>`;
 
         return `
           <tr>
             <td class="item-row-thumb">🏺</td>
             <td>
               <div class="item-row-title">${escapeHtml(title)}</div>
-              <div class="item-row-sub">${escapeHtml(category)} · ${escapeHtml(period)} · ${escapeHtml(origin)}</div>
+              <div class="item-row-sub">${escapeHtml(category)} · ${escapeHtml(period)}</div>
+              <div class="item-row-sub">Owner: ${escapeHtml(ownerName)}</div>
             </td>
             <td>${getStatusBadge(status)}</td>
             <td style="font-size:13px;color:var(--ink-light);">${escapeHtml(certificateHash)}</td>
-            <td style="font-size:13px;color:var(--ink-light);">${escapeHtml(transactionHash)}</td>
+            <td style="font-size:13px;color:var(--ink-light);">${escapeHtml(txHash)}</td>
+            <td>${verifierActions}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function renderPendingUsersRows(pendingUsers) {
+      if (!pendingUsers.length) {
+        return `
+          <tr>
+            <td colspan="5" style="text-align:center; padding:30px; color:var(--ink-light);">No accounts are waiting for approval.</td>
+          </tr>
+        `;
+      }
+
+      return pendingUsers.map((account) => {
+        const role = normalizeRole(account.role);
+        return `
+          <tr>
+            <td>${escapeHtml(account.username || 'Unknown')}</td>
+            <td>${escapeHtml(account.email || '')}</td>
+            <td>${escapeHtml(role)}</td>
+            <td>${getStatusBadge(account.status || 'pending')}</td>
             <td>
-              <button class="btn-sm btn-review" onclick="window.location.href='detail.html?id=${item._id}'">
-                View
-              </button>
+              <div class="table-actions">
+                <button class="btn-sm btn-approve" onclick="approveAccount('${account._id}')">Approve</button>
+                <button class="btn-sm btn-decline" onclick="rejectAccount('${account._id}')">Reject</button>
+              </div>
             </td>
           </tr>
         `;
       }).join('');
     }
 
-    function renderDashboard(user, items, health) {
-      const root = document.getElementById('dashboard-root');
-
-      const name =
-        user.displayName ||
-        user.name ||
-        user.firstName ||
-        user.email ||
-        'User';
-
-      root.innerHTML = `
-        ${renderSidebar(user, items)}
-
-        <div class="dashboard-main">
-          <div class="dash-topbar">
-            <div>
-              <h2>Collection Dashboard</h2>
-              <p>Track submitted antiques, verification progress, and blockchain proof references.</p>
-            </div>
-            <div class="dash-topbar-actions">
-              ${getHealthBadge(health)}
-              <a class="btn-primary" style="font-size:13px;padding:10px 20px;" href="submit.html">
-                Submit New Item
-              </a>
-            </div>
-          </div>
-
-          ${renderStats(items)}
-
+    function renderRolePanel(role, items, pendingUsers) {
+      if (role === 'admin') {
+        return `
           <div class="dash-content dashboard-grid dashboard-grid-single">
             <section class="dashboard-panel dashboard-panel-wide">
               <div class="panel-head">
                 <div>
-                  <h3>My Submitted Items</h3>
-                  <p>These records are loaded from the backend API when available.</p>
+                  <h3>Account Approval Queue</h3>
+                  <p>Approve or reject new account registrations before they become active.</p>
                 </div>
                 <button class="btn-sm btn-review" onclick="loadDashboardData()">Refresh</button>
               </div>
-
               <div class="panel-body">
                 <table class="review-table">
                   <thead>
                     <tr>
-                      <th></th>
-                      <th>Item</th>
+                      <th>Username</th>
+                      <th>Email</th>
+                      <th>Requested Role</th>
                       <th>Status</th>
-                      <th>Certificate Hash</th>
-                      <th>Transaction Hash</th>
                       <th>Action</th>
                     </tr>
                   </thead>
-                  <tbody>
-                    ${renderItemRows(items)}
-                  </tbody>
+                  <tbody>${renderPendingUsersRows(pendingUsers)}</tbody>
                 </table>
               </div>
             </section>
           </div>
+        `;
+      }
+
+      const title = role === 'verifier' ? 'Submitted Items + Decision Actions' : 'All Submitted Items';
+      const subtitle = role === 'verifier'
+        ? 'Review each submission and approve or decline pending items.'
+        : 'Collector view shows every submitted item and its verification progress.';
+
+      return `
+        <div class="dash-content dashboard-grid dashboard-grid-single">
+          <section class="dashboard-panel dashboard-panel-wide">
+            <div class="panel-head">
+              <div>
+                <h3>${title}</h3>
+                <p>${subtitle}</p>
+              </div>
+              <button class="btn-sm btn-review" onclick="loadDashboardData()">Refresh</button>
+            </div>
+            <div class="panel-body">
+              <table class="review-table">
+                <thead>
+                  <tr>
+                    <th></th>
+                    <th>Item</th>
+                    <th>Status</th>
+                    <th>Certificate Hash</th>
+                    <th>Transaction Hash</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>${renderItemRows(items, role)}</tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+      `;
+    }
+
+    function renderDashboard(user, items, health, pendingUsers, approvedUsers) {
+      const root = document.getElementById('dashboard-root');
+      const role = normalizeRole(user.role);
+      dashboardCurrentRole = role;
+
+      const heading = role === 'admin'
+        ? 'Admin Dashboard'
+        : role === 'verifier'
+          ? 'Verifier Dashboard'
+          : 'Collector Dashboard';
+
+      const subheading = role === 'admin'
+        ? 'Manage account approvals and monitor system activity.'
+        : role === 'verifier'
+          ? 'Review submitted items and record approval decisions.'
+          : 'Browse all submitted antiques and track their verification status.';
+
+      root.innerHTML = `
+        ${renderSidebar(user, items, pendingUsers)}
+        <div class="dashboard-main">
+          <div class="dash-topbar">
+            <div>
+              <h2>${heading}</h2>
+              <p>${subheading}</p>
+            </div>
+            <div class="dash-topbar-actions">
+              ${getHealthBadge(health)}
+              <a class="btn-primary" style="font-size:13px;padding:10px 20px;" href="submit.html">Submit New Item</a>
+            </div>
+          </div>
+          ${renderStats(role, items, pendingUsers, approvedUsers)}
+          ${renderRolePanel(role, items, pendingUsers)}
         </div>
       `;
 
       showWelcomeBanner(user);
     }
 
-    function normalizeItems(response) {
-      if (Array.isArray(response)) return response;
-      if (Array.isArray(response.items)) return response.items;
-      if (Array.isArray(response.data)) return response.data;
-      return [];
+    function stopDashboardAutoRefresh() {
+      if (dashboardRefreshTimer) {
+        clearInterval(dashboardRefreshTimer);
+        dashboardRefreshTimer = null;
+      }
+    }
+
+    function startDashboardAutoRefresh() {
+      stopDashboardAutoRefresh();
+
+      if (!session || dashboardCurrentRole !== 'admin') {
+        return;
+      }
+
+      dashboardRefreshTimer = setInterval(() => {
+        if (document.visibilityState === 'visible') {
+          loadDashboardData();
+        }
+      }, 15000);
+    }
+
+    async function changeItemStatus(itemId, verificationStatus) {
+      try {
+        await apiRequest(`/items/${itemId}/verification-status`, 'PUT', { verificationStatus }, true);
+        showToast(`Item ${verificationStatus === 'verified' ? 'approved' : 'declined'} successfully.`);
+        loadDashboardData();
+      } catch (error) {
+        showToast(error.message || 'Unable to update item status.', true);
+      }
+    }
+
+    async function approveAccount(userId) {
+      try {
+        await apiRequest(`/auth/approve-user/${userId}`, 'PUT', null, true);
+        showToast('User account approved.');
+        loadDashboardData();
+      } catch (error) {
+        showToast(error.message || 'Unable to approve account.', true);
+      }
+    }
+
+    async function rejectAccount(userId) {
+      try {
+        await apiRequest(`/auth/reject-user/${userId}`, 'PUT', null, true);
+        showToast('User account rejected.');
+        loadDashboardData();
+      } catch (error) {
+        showToast(error.message || 'Unable to reject account.', true);
+      }
     }
 
     async function loadDashboardData() {
       if (!session) return;
-
       renderLoading();
 
-      console.log('loadDashboardData: session present:', !!session);
-
       try {
-        console.log('loadDashboardData: fetching /auth/me');
         const userResponse = await apiRequest('/auth/me', 'GET', null, true);
-        console.log('loadDashboardData: /auth/me response:', userResponse);
-
-        console.log('loadDashboardData: fetching all items via /items');
-        const itemsResponse = await apiRequest(`/items`, 'GET', null, true);
-        console.log('loadDashboardData: /items response:', itemsResponse);
-
-        console.log('loadDashboardData: fetching backend health');
-        const healthResponse = await getBackendHealth();
-        console.log('loadDashboardData: health response:', healthResponse);
-
         const user = userResponse.user || userResponse.data || userResponse || session;
-        const items = normalizeItems(itemsResponse);
-        const health = healthResponse || null;
+        user.role = normalizeRole(user.role);
 
-        console.log('loadDashboardData: rendering dashboard with', items.length, 'items');
-        renderDashboard(user, items, health);
+        const itemsResponse = await apiRequest('/items', 'GET', null, true);
+        const healthResponse = await getBackendHealth();
 
-      } catch (error) {
-        console.error('loadDashboardData: error', error);
-        renderError(error.message || 'Unable to load dashboard data.');
-        if (typeof showToast === 'function') {
-          showToast(error.message || 'Unable to load dashboard data.', true);
-        } else {
-          alert(error.message || 'Unable to load dashboard data.');
+        let pendingUsers = [];
+        let approvedUsers = [];
+
+        if (user.role === 'admin') {
+          const pendingResponse = await apiRequest('/auth/pending-users', 'GET', null, true);
+          const approvedResponse = await apiRequest('/auth/approved-users', 'GET', null, true);
+          pendingUsers = normalizeUsers(pendingResponse);
+          approvedUsers = normalizeUsers(approvedResponse);
         }
+
+        renderDashboard(
+          user,
+          normalizeItems(itemsResponse),
+          healthResponse || null,
+          pendingUsers,
+          approvedUsers
+        );
+
+        startDashboardAutoRefresh();
+      } catch (error) {
+        renderError(error.message || 'Unable to load dashboard data.');
+        showToast(error.message || 'Unable to load dashboard data.', true);
       }
     }
 
     document.addEventListener('DOMContentLoaded', function () {
-      if (session) {
+      if (session) loadDashboardData();
+    });
+
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'visible' && session && dashboardCurrentRole === 'admin') {
         loadDashboardData();
       }
     });
+
+    window.addEventListener('beforeunload', stopDashboardAutoRefresh);
   </script>
 
 </body>
