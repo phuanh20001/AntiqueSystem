@@ -37,8 +37,10 @@ async function apiRequest(endpoint, method = "GET", data = null, requiresAuth = 
     options.body = JSON.stringify(data);
   }
 
-  console.log(`apiRequest: ${method} ${API_BASE_URL}${endpoint}`);
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, options);
+  const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+
+  console.log(`apiRequest: ${method} ${API_BASE_URL}${normalizedEndpoint}`);
+  const response = await fetch(`${API_BASE_URL}${normalizedEndpoint}`, options);
   console.log(`apiRequest: Response status ${response.status}`);
 
   let result = {};
