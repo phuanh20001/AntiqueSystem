@@ -1,3 +1,7 @@
+/**
+ * User Model
+ * Defines the schema for user accounts in the AntiqChain system
+ */
 const mongoose = require("mongoose");
 
 const userSchema = new mongoose.Schema({
