@@ -50,6 +50,7 @@ const registerUser = async (req, res) => {
     });
 
     if (user) {
+      console.log(`New user registered: ${user.email}`);
       res.status(201).json({
         _id: user.id,
         username: user.username,
