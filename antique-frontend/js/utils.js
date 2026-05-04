@@ -52,9 +52,7 @@ function getAuthSession() {
 }
 
 function setAuthSession(user, token, rememberPreference = true) {
-  console.log('setAuthSession: Starting, user:', user, 'token present:', !!token);
   if (!user || !token) {
-    console.log('setAuthSession: No user or token, returning');
     return null;
   }
 
@@ -63,17 +61,13 @@ function setAuthSession(user, token, rememberPreference = true) {
     signedInAt: new Date().toISOString()
   };
 
-  console.log('setAuthSession: Session data created:', sessionData);
-
   try {
     // Clear old auth data first
-    console.log('setAuthSession: Clearing old auth data');
     localStorage.removeItem(TOKEN_STORAGE_KEY);
     localStorage.removeItem(USER_STORAGE_KEY);
     sessionStorage.removeItem(TOKEN_SESSION_KEY);
     sessionStorage.removeItem(USER_SESSION_KEY);
 
-    console.log('setAuthSession: Old data cleared, saving new data, rememberPreference:', rememberPreference);
     if (rememberPreference === false) {
       sessionStorage.setItem(TOKEN_SESSION_KEY, token);
       sessionStorage.setItem(USER_SESSION_KEY, JSON.stringify(sessionData));
@@ -81,15 +75,12 @@ function setAuthSession(user, token, rememberPreference = true) {
       localStorage.setItem(TOKEN_STORAGE_KEY, token);
       localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(sessionData));
     }
-    console.log('setAuthSession: Data saved to storage');
   } catch (error) {
     console.error('setAuthSession: Storage error:', error);
     // Storage is best-effort
   }
 
-  console.log('setAuthSession: Calling updateAuthUI');
   updateAuthUI();
-  console.log('setAuthSession: updateAuthUI completed');
   
   return {
     token,
