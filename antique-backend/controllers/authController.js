@@ -110,7 +110,10 @@ const getMe = async (req, res) => {
 // @access  Private
 const logoutUser = (req, res) => {
   // Client is responsible for deleting the token
-  res.status(200).json({ message: 'Logged out successfully' });
+  res.status(200).json({
+    message: 'Logged out successfully',
+    timestamp: new Date().toISOString()
+  });
 };
 
 module.exports = {
