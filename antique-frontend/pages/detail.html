@@ -9,7 +9,6 @@
 </head>
 <body>
 
-  <!-- ── NAVIGATION ── -->
   <nav>
     <a class="nav-logo" href="../index.html">AntiqChain <span>— Verified Heritage</span></a>
     <div class="nav-links">
@@ -21,16 +20,13 @@
     </div>
   </nav>
 
-  <!-- ── PAGE HEADER ── -->
   <div class="page-header">
     <div class="page-header-eyebrow">Item Record · CERT-2025-00142</div>
     <h1>Ming Dynasty Blue & White Porcelain Vase</h1>
     <p>Verified · Submitted by: J. Morrison · Verified by: Dr. A. Chen, PhD</p>
   </div>
 
-  <!-- ── CONTENT ── -->
   <div class="page-content">
-
     <div class="breadcrumb">
       <a href="../index.html">Home</a>
       <span class="sep">›</span>
@@ -40,8 +36,6 @@
     </div>
 
     <div class="detail-grid">
-
-      <!-- LEFT: IMAGE + INFO -->
       <div>
         <div class="detail-image">🏺</div>
         <div class="detail-thumbs">
@@ -100,7 +94,6 @@
         </div>
       </div>
 
-      <!-- RIGHT: CERT + BLOCKCHAIN -->
       <div>
         <div class="cert-card">
           <div class="cert-seal">🏛️</div>
@@ -143,16 +136,12 @@
             <span class="chain-label">Status</span>
             <span class="chain-val ok">✓ Chain Intact</span>
           </div>
-          <button class="chain-verify-btn" onclick="showToast('Chain integrity verified — all hashes match')">
-            Verify Chain Integrity
-          </button>
+          <button class="chain-verify-btn" onclick="checkBlockchainProof()">Verify Chain Integrity</button>
         </div>
       </div>
-
     </div>
   </div>
 
-  <!-- ── FOOTER ── -->
   <footer>
     <div>
       <div class="footer-brand">AntiqChain</div>
@@ -179,53 +168,108 @@
   <div class="footer-bottom">© 2025 AntiqChain — Blockchain Antique Verification System. All rights reserved.</div>
 
   <div class="toast" id="toast"></div>
-  <script src="../js/api.js"></script>
-  <script src="../js/utils.js"></script>
-  <script>
-    requirePageSession('detail.html');
 
-    document.querySelectorAll('.detail-thumb').forEach(t => {
-      t.addEventListener('click', function () {
-        document.querySelectorAll('.detail-thumb').forEach(x => x.classList.remove('active'));
+  <script src="../js/utils.js"></script>
+  <script src="../js/api.js"></script>
+  <script>
+    const session = getAuthSession();
+
+    document.querySelectorAll('.detail-thumb').forEach((thumb) => {
+      thumb.addEventListener('click', function () {
+        document.querySelectorAll('.detail-thumb').forEach((item) => item.classList.remove('active'));
         this.classList.add('active');
       });
     });
-  </script>
-  <!-- Add this inside your blockchain card section -->
-<script>
-async function loadVerification() {
-  const itemId = new URLSearchParams(window.location.search).get('id');
-  if (!itemId) return;
 
-  try {
-    const data = await apiRequest(`/verifications/${itemId}`, 'GET');
-    
-    // Show the transaction hash
-    const txHash = data.blockchainDetails?.transactionHash || 'Pending';
-    document.querySelector('.hash-display').textContent = txHash;
+    async function checkBlockchainProof() {
+      const itemId = new URLSearchParams(window.location.search).get('id');
+      if (!itemId) return showToast('Item ID not provided', true);
 
-    // Add a clickable Etherscan link
-    if (txHash !== 'Pending') {
-      const link = document.createElement('a');
-      link.href   = `https://sepolia.etherscan.io/tx/${txHash}`;
-      link.target = '_blank';
-      link.textContent = 'View on Etherscan →';
-      link.style.cssText = `
-        display: block;
-        margin-top: 12px;
-        font-family: var(--font-ui);
-        font-size: 12px;
-        color: var(--sepia-light);
-        text-decoration: none;
-      `;
-      document.querySelector('.blockchain-card').appendChild(link);
+      try {
+        const resp = await apiRequest(`/items/${itemId}/proof`, 'GET', null, false);
+        if (!resp || !resp.success) {
+          showToast('Unable to fetch proof', true);
+          return;
+        }
+
+        const proof = resp.data;
+        if (proof.hashMatches === true) {
+          showToast('✓ Proof OK — hashes match');
+        } else if (proof.hashMatches === false) {
+          showToast('✗ Proof failed — hash mismatch detected', true);
+        } else if (proof.onChainRecord && proof.onChainRecord.error) {
+          showToast('⚠ Proof check returned an RPC error', true);
+        } else {
+          showToast('Proof report generated.');
+        }
+      } catch (error) {
+        showToast('Error checking proof: ' + (error.message || error), true);
+      }
     }
-  } catch (err) {
-    console.error("Failed to load verification", err);
-  }
-}
 
-loadVerification();
-</script>
+    async function loadItemDetail() {
+      const itemId = new URLSearchParams(window.location.search).get('id');
+      if (!itemId) {
+        showToast('Item ID not provided', true);
+        return;
+      }
+
+      try {
+        const response = await apiRequest(`/items/${itemId}`, 'GET', null, false);
+        const item = response.data || response;
+
+        document.querySelector('.page-header-eyebrow').textContent = `Item Record · ${item._id || 'N/A'}`;
+        document.querySelector('.page-header h1').textContent = item.title || 'Untitled Item';
+        document.querySelector('.page-header p').textContent = `${item.verificationStatus || 'Pending'} · Submitted by: ${item.owner?.username || 'Unknown'} · Category: ${item.category || 'Unknown'}`;
+        document.querySelector('.breadcrumb span:nth-of-type(3)').textContent = item.title || 'Item';
+        document.querySelector('.detail-category').textContent = `${item.category || 'Item'} · ${item.estimatedPeriod || 'Period unknown'}`;
+        document.querySelector('.detail-title').textContent = item.title || 'Untitled Item';
+
+        document.querySelector('.detail-status').innerHTML = item.verificationStatus === 'verified'
+          ? '<span class="badge badge-verified">✓ Verified Authentic</span>'
+          : `<span class="badge">${item.verificationStatus || 'Pending'}</span>`;
+
+        document.querySelector('.detail-desc').textContent = item.description || 'No description provided.';
+
+        const specs = document.querySelectorAll('.spec-item');
+        const specValues = [
+          item.estimatedPeriod || item.estimatedYear || 'Not specified',
+          item.category || 'Not specified',
+          item.dimensions?.length ? `${item.dimensions.length}×${item.dimensions.width}×${item.dimensions.height}${item.dimensions.unit || 'cm'}` : 'Not specified',
+          item.material || 'Not specified',
+          item.condition || 'Not assessed',
+          item.owner?.username || 'Unknown'
+        ];
+
+        specs.forEach((spec, index) => {
+          const valueNode = spec.querySelector('.spec-value');
+          if (valueNode && specValues[index] !== undefined) {
+            valueNode.textContent = specValues[index];
+          }
+        });
+
+        const tagsContainer = document.querySelector('[style*="margin-bottom:16px"]');
+        if (tagsContainer) {
+          tagsContainer.innerHTML = `<span class="tag">${item.category || 'Antique'}</span><span class="tag">${item.material || 'Item'}</span><span class="tag">${item.condition || 'Not assessed'}</span>`;
+        }
+
+        const txHash = item.blockchainTransactionHash || 'Pending';
+        document.querySelector('.hash-display').textContent = txHash;
+
+        if (txHash !== 'Pending') {
+          const link = document.createElement('a');
+          link.href = `https://sepolia.etherscan.io/tx/${txHash}`;
+          link.target = '_blank';
+          link.textContent = 'View on Etherscan →';
+          link.style.cssText = 'display:block;margin-top:12px;font-family:var(--font-ui);font-size:12px;color:var(--sepia-light);text-decoration:none;';
+          document.querySelector('.blockchain-card').appendChild(link);
+        }
+      } catch (error) {
+        showToast('Unable to load item details: ' + error.message, true);
+      }
+    }
+
+    loadItemDetail();
+  </script>
 </body>
 </html>
