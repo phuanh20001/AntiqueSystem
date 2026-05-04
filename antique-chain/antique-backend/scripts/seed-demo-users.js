@@ -13,19 +13,22 @@ const DEMO_USERS = [
     username: 'collector_demo',
     email: 'collector@example.com',
     password: 'demo123456',
-    role: 'user'
+    role: 'collector',
+    status: 'approved'
   },
   {
     username: 'verifier_demo',
     email: 'verifier@example.com',
     password: 'demo123456',
-    role: 'user'
+    role: 'verifier',
+    status: 'approved'
   },
   {
     username: 'admin_demo',
     email: 'admin@example.com',
     password: 'demo123456',
-    role: 'admin'
+    role: 'admin',
+    status: 'approved'
   }
 ];
 
@@ -67,6 +70,7 @@ const seedDemoUsers = async () => {
       console.log(`  📧 Email: ${user.email}`);
       console.log(`  🔑 Password: demo123456`);
       console.log(`  👤 Role: ${user.role}`);
+      console.log(`  ✅ Status: ${user.status}`);
       console.log('');
     });
 

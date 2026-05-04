@@ -7,7 +7,8 @@
     "start": "node server.js",
     "compile": "hardhat compile",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "deploy:antique": "npm run compile && node scripts/deploy.js"
+    "deploy:antique": "npm run compile && node scripts/deploy.js",
+    "seed:users": "node scripts/seed-demo-users.js"
   },
   "keywords": [],
   "author": "",

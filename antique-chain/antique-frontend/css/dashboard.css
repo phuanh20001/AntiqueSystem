@@ -320,6 +320,26 @@
 }
 .table-actions { display: flex; gap: 6px; }
 
+.btn-approve {
+  background: rgba(125, 165, 111, 0.15);
+  border: 1px solid rgba(125, 165, 111, 0.45);
+  color: var(--sage);
+}
+
+.btn-approve:hover {
+  background: rgba(125, 165, 111, 0.28);
+}
+
+.btn-decline {
+  background: rgba(202, 111, 77, 0.14);
+  border: 1px solid rgba(202, 111, 77, 0.45);
+  color: var(--rust);
+}
+
+.btn-decline:hover {
+  background: rgba(202, 111, 77, 0.24);
+}
+
 /* ── REVIEW MODAL ── */
 .modal-overlay {
   display: none;

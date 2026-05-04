@@ -168,6 +168,14 @@
   <script>
     const currentSession = requirePageSession('submit.html');
 
+    function normalizeRole(role) {
+      const lower = String(role || '').toLowerCase().trim();
+      if (lower === 'collector' || lower === 'user') return 'collector';
+      if (lower === 'verifier') return 'verifier';
+      if (lower === 'admin') return 'admin';
+      return 'collector';
+    }
+
     function clearFormErrors(form) {
       form.querySelectorAll('.error-message').forEach(error => {
         error.textContent = '';
@@ -221,6 +229,17 @@
     }
 
     document.addEventListener('DOMContentLoaded', function () {
+      if (currentSession) {
+        const role = normalizeRole(currentSession.role);
+        if (role !== 'collector') {
+          showToast('Only collector accounts can submit new items.', true);
+          setTimeout(() => {
+            window.location.href = 'dashboard.html';
+          }, 900);
+          return;
+        }
+      }
+
       const form = document.getElementById('antiqueForm');
       const submitButton = document.getElementById('submitItemBtn');
 
