@@ -1,3 +1,7 @@
+/**
+ * Auth Routes
+ * Defines endpoints for user registration, login, logout
+ */
 const express = require('express');
 const router = express.Router();
 const {
