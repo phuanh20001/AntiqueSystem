@@ -1,3 +1,7 @@
+/**
+ * Database Configuration
+ * MongoDB connection and disconnection utilities
+ */
 const mongoose = require('mongoose');
 
 /**
