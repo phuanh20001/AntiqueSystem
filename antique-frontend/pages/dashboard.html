@@ -371,6 +371,14 @@
 
       } catch (error) {
         console.error('loadDashboardData: error', error);
+        
+        if (error.message && (error.message.toLowerCase().includes('unauthorized') || error.message.toLowerCase().includes('token'))) {
+          if (typeof signOutAndRedirect === 'function') {
+            signOutAndRedirect();
+            return;
+          }
+        }
+
         renderError(error.message || 'Unable to load dashboard data.');
         if (typeof showToast === 'function') {
           showToast(error.message || 'Unable to load dashboard data.', true);
