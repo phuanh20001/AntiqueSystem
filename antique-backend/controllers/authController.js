@@ -76,8 +76,9 @@ const loginUser = async (req, res) => {
       return res.status(400).json({ message: 'Please add email and password' });
     }
 
-    // Check for user email
-    const user = await User.findOne({ email }).select('+password');
+    // Normalize email and check for user
+    const normalizedEmail = email.toLowerCase().trim();
+    const user = await User.findOne({ email: normalizedEmail }).select('+password');
 
     if (user && (await bcrypt.compare(password, user.password))) {
       res.json({
