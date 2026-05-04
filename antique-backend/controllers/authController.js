@@ -9,6 +9,9 @@ const jwt = require('jsonwebtoken');
 // Token expiry duration
 const TOKEN_EXPIRY = '30d';
 
+// Bcrypt salt rounds
+const SALT_ROUNDS = 10;
+
 // Generate JWT token
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET || 'fallback_secret', {
