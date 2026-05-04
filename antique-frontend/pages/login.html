@@ -233,7 +233,6 @@
       }
 
       try {
-        console.log('handleLogin: Starting login process');
         const email = document.getElementById('email').value.trim();
         const password = document.getElementById('password').value.trim();
         const emailError = document.getElementById('emailError');
@@ -242,8 +241,6 @@
         const passwordInput = document.getElementById('password');
         const rememberMe = document.getElementById('rememberMe').checked;
         const signInButton = document.querySelector('#loginForm button[type="submit"]');
-
-        console.log('handleLogin: Email:', email, 'Password length:', password.length);
 
         emailError.textContent = '';
         passwordError.textContent = '';
@@ -265,19 +262,16 @@
         }
 
         if (!valid) {
-          console.log('handleLogin: Validation failed');
           return;
         }
 
         signInButton.disabled = true;
         signInButton.textContent = 'Signing in...';
 
-        console.log('handleLogin: Making API request...');
         const result = await apiRequest('/auth/login', 'POST', {
           email: email,
           password: password
         });
-        console.log('handleLogin: API response received:', result);
 
         // Extract user data and token from the response
         const userData = {
@@ -287,12 +281,8 @@
           role: result.role
         };
 
-        console.log('handleLogin: User data extracted:', userData);
-        console.log('handleLogin: Token:', result.token ? 'Present' : 'Missing');
-
         if (typeof setAuthSession === 'function') {
           setAuthSession(userData, result.token, rememberMe);
-          console.log('handleLogin: Auth session set via setAuthSession');
         } else {
           // Fallback: store token and user directly if utils.js failed to load
           try {
@@ -305,7 +295,6 @@
               localStorage.setItem('antiqchain-user', JSON.stringify(sessionData));
             }
             if (typeof updateAuthUI === 'function') updateAuthUI();
-            console.warn('handleLogin: setAuthSession not available; token stored directly');
           } catch (e) {
             console.error('handleLogin: Fallback storage error', e);
           }
