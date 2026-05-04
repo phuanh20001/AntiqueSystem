@@ -152,18 +152,12 @@ function requirePageSession(returnToPage) {
 }
 
 function updateAuthUI() {
-  console.log('updateAuthUI: Starting');
   const session = getAuthSession();
-  console.log('updateAuthUI: Session retrieved:', !!session);
-  
   const navLinks = document.querySelectorAll('.nav-links a');
-  console.log('updateAuthUI: Found', navLinks.length, 'nav links');
 
   navLinks.forEach((link, index) => {
-    console.log('updateAuthUI: Processing link', index);
     const href = link.getAttribute('href');
     if (!href) {
-      console.log('updateAuthUI: Link', index, 'has no href, skipping');
       return;
     }
 
@@ -175,7 +169,6 @@ function updateAuthUI() {
       link.href = session
         ? getDashboardPath()
         : getLoginPath() + '?returnTo=' + encodeURIComponent('dashboard.html');
-      console.log('updateAuthUI: Updated dashboard link');
     }
 
     if (isLoginLink) {
@@ -183,24 +176,20 @@ function updateAuthUI() {
         link.textContent = 'Sign Out';
         link.href = '#';
         link.dataset.authAction = 'logout';
-        console.log('updateAuthUI: Updated login link to Sign Out');
       } else {
         link.textContent = 'Sign In';
         link.href = getLoginPath();
         delete link.dataset.authAction;
-        console.log('updateAuthUI: Updated login link to Sign In');
       }
     }
   });
 
-  console.log('updateAuthUI: Setting up logout handlers');
   document.querySelectorAll('[data-auth-action="logout"]').forEach(link => {
     link.onclick = event => {
       event.preventDefault();
       signOutAndRedirect();
     };
   });
-  console.log('updateAuthUI: Completed');
 }
 
 // ── ACTIVE NAV LINK ──
