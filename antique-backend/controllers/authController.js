@@ -1,3 +1,7 @@
+/**
+ * Auth Controller
+ * Handles user registration, login, logout and profile
+ */
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
