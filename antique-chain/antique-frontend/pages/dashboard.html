@@ -37,6 +37,14 @@
     const session = requireDashboardSession();
     let dashboardRefreshTimer = null;
     let dashboardCurrentRole = null;
+    const dashboardState = {
+      user: null,
+      items: [],
+      pendingUsers: [],
+      approvedUsers: [],
+      activeView: null,
+      welcomeShown: false,
+    };
 
     function escapeHtml(value) {
       return String(value || '')
@@ -133,38 +141,214 @@
       return [];
     }
 
-    function renderSidebar(user, items, pendingUsers) {
+    function buildAdminAnalytics(items, pendingUsers, approvedUsers) {
+      const pendingItems = countByStatus(items, ['pending', 'in_progress']);
+      const verifiedItems = countByStatus(items, ['verified']);
+      const rejectedItems = countByStatus(items, ['rejected']);
+
+      return [
+        { label: 'Active Users', value: approvedUsers.length, tone: 'green' },
+        { label: 'Pending Accounts', value: pendingUsers.length, tone: 'rust' },
+        { label: 'Items Approved', value: verifiedItems, tone: 'gold' },
+        { label: 'Items Pending', value: pendingItems, tone: 'rust' },
+        { label: 'Items Rejected', value: rejectedItems, tone: 'muted' },
+      ];
+    }
+
+    function renderAnalyticsGraph(data) {
+      const maxValue = Math.max(...data.map((entry) => entry.value), 1);
+
+      return `
+        <div class="sidebar-analytics-chart" aria-label="Administrative analytics chart">
+          ${data.map((entry) => {
+            const width = entry.value === 0 ? 0 : Math.max(8, Math.round((entry.value / maxValue) * 100));
+            return `
+              <div class="analytics-bar-row">
+                <div class="analytics-bar-head">
+                  <span class="analytics-bar-label">${escapeHtml(entry.label)}</span>
+                  <span class="analytics-bar-value">${entry.value}</span>
+                </div>
+                <div class="analytics-bar-track">
+                  <div class="analytics-bar-fill ${entry.tone}" style="width:${width}%;"></div>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      `;
+    }
+
+    function defaultViewForRole(role) {
+      const normalized = normalizeRole(role);
+      if (normalized === 'admin') return 'admin-pending';
+      if (normalized === 'verifier') return 'verifier-pending';
+      return 'collector-all';
+    }
+
+    function isViewAllowed(role, view) {
+      const normalized = normalizeRole(role);
+      const allowedByRole = {
+        admin: ['admin-all', 'admin-pending', 'admin-approved', 'admin-rejected', 'pending-users', 'approved-users'],
+        verifier: ['verifier-all', 'verifier-pending', 'verifier-verified', 'verifier-rejected'],
+        collector: ['collector-all', 'collector-pending', 'collector-verified', 'collector-rejected'],
+      };
+
+      return (allowedByRole[normalized] || []).includes(view);
+    }
+
+    function setDashboardView(view) {
+      if (!dashboardState.user) return;
+      if (!isViewAllowed(dashboardState.user.role, view)) return;
+
+      dashboardState.activeView = view;
+      renderDashboard(
+        dashboardState.user,
+        dashboardState.items,
+        dashboardState.health,
+        dashboardState.pendingUsers,
+        dashboardState.approvedUsers,
+        false
+      );
+    }
+
+    function filterItemsByView(items, role, view) {
+      const normalizedRole = normalizeRole(role);
+
+      if (normalizedRole === 'admin') {
+        if (view === 'admin-pending') return items.filter((item) => ['pending', 'in_progress'].includes(String(item.verificationStatus || item.status || '').toLowerCase()));
+        if (view === 'admin-approved') return items.filter((item) => String(item.verificationStatus || item.status || '').toLowerCase() === 'verified');
+        if (view === 'admin-rejected') return items.filter((item) => String(item.verificationStatus || item.status || '').toLowerCase() === 'rejected');
+        return items;
+      }
+
+      if (normalizedRole === 'verifier') {
+        if (view === 'verifier-pending') return items.filter((item) => ['pending', 'in_progress'].includes(String(item.verificationStatus || item.status || '').toLowerCase()));
+        if (view === 'verifier-verified') return items.filter((item) => String(item.verificationStatus || item.status || '').toLowerCase() === 'verified');
+        if (view === 'verifier-rejected') return items.filter((item) => String(item.verificationStatus || item.status || '').toLowerCase() === 'rejected');
+        return items;
+      }
+
+      if (normalizedRole === 'collector') {
+        if (view === 'collector-pending') return items.filter((item) => ['pending', 'in_progress'].includes(String(item.verificationStatus || item.status || '').toLowerCase()));
+        if (view === 'collector-verified') return items.filter((item) => String(item.verificationStatus || item.status || '').toLowerCase() === 'verified');
+        if (view === 'collector-rejected') return items.filter((item) => String(item.verificationStatus || item.status || '').toLowerCase() === 'rejected');
+        return items;
+      }
+
+      return items;
+    }
+
+    function renderSidebar(user, items, pendingUsers, approvedUsers) {
       const role = normalizeRole(user.role);
       const totalItems = items.length;
       const pendingItems = countByStatus(items, ['pending', 'in_progress']);
       const verifiedItems = countByStatus(items, ['verified']);
+      const rejectedItems = countByStatus(items, ['rejected']);
+      const activeUsers = approvedUsers.length;
+      const totalApprovedItems = verifiedItems;
+      const totalPendingItems = pendingItems;
+      const totalRejectedItems = rejectedItems;
+      const adminAnalytics = buildAdminAnalytics(items, pendingUsers, approvedUsers);
 
       const roleLabel = role === 'admin' ? 'Administrator' : role === 'verifier' ? 'Verifier' : 'Collector';
+      const activeView = dashboardState.activeView;
+      const activeClass = (view) => activeView === view ? ' active' : '';
 
       const roleSection = role === 'admin'
         ? `
-          <div class="sidebar-section-label">Account Review</div>
+          <div class="sidebar-section-label">Items</div>
           <div class="sidebar-section">
-            <a class="sidebar-item active" href="#">
-              <span>🧾</span> Pending Users
-              <span class="sidebar-count rust">${pendingUsers.length}</span>
+            <a class="sidebar-item${activeClass('admin-all')}" href="#" onclick="setDashboardView('admin-all'); return false;">
+              <span>📦</span> All Items
+              <span class="sidebar-count">${totalItems}</span>
+            </a>
+            <a class="sidebar-item${activeClass('admin-pending')}" href="#" onclick="setDashboardView('admin-pending'); return false;">
+              <span>🟡</span> Pending
+              <span class="sidebar-count rust">${pendingItems}</span>
+            </a>
+            <a class="sidebar-item${activeClass('admin-approved')}" href="#" onclick="setDashboardView('admin-approved'); return false;">
+              <span>✅</span> Approved
+              <span class="sidebar-count green">${verifiedItems}</span>
+            </a>
+            <a class="sidebar-item${activeClass('admin-rejected')}" href="#" onclick="setDashboardView('admin-rejected'); return false;">
+              <span>❌</span> Rejected
+              <span class="sidebar-count">${rejectedItems}</span>
             </a>
           </div>
+          <div class="sidebar-section-label">Accounts</div>
+          <div class="sidebar-section">
+            <a class="sidebar-item${activeClass('pending-users')}" href="#" onclick="setDashboardView('pending-users'); return false;">
+              <span>🧾</span> Pending Accounts
+              <span class="sidebar-count rust">${pendingUsers.length}</span>
+            </a>
+            <a class="sidebar-item${activeClass('approved-users')}" href="#" onclick="setDashboardView('approved-users'); return false;">
+              <span>✅</span> Approved Accounts
+              <span class="sidebar-count green">${approvedUsers.length}</span>
+            </a>
+          </div>
+          <div class="sidebar-section-label">Analytics</div>
+          <div class="sidebar-section">
+            <div class="sidebar-analytics-card">
+              <div class="sidebar-analytics-title">Platform Summary</div>
+              <div class="sidebar-analytics-subtitle">Live overview of users and item review status.</div>
+              ${renderAnalyticsGraph(adminAnalytics)}
+            </div>
+            <div class="sidebar-item sidebar-item-static">
+              <span>👥</span> Active Users
+              <span class="sidebar-count green">${activeUsers}</span>
+            </div>
+            <div class="sidebar-item sidebar-item-static">
+              <span>✅</span> Items Approved
+              <span class="sidebar-count green">${totalApprovedItems}</span>
+            </div>
+            <div class="sidebar-item sidebar-item-static">
+              <span>⏳</span> Items Pending
+              <span class="sidebar-count rust">${totalPendingItems}</span>
+            </div>
+            <div class="sidebar-item sidebar-item-static">
+              <span>❌</span> Items Rejected
+              <span class="sidebar-count">${totalRejectedItems}</span>
+            </div>
+          </div>
         `
-        : `
+        : role === 'verifier' ? `
           <div class="sidebar-section-label">Submitted Items</div>
           <div class="sidebar-section">
-            <a class="sidebar-item active" href="#">
+            <a class="sidebar-item${activeClass('verifier-all')}" href="#" onclick="setDashboardView('verifier-all'); return false;">
               <span>📦</span> All Submissions
               <span class="sidebar-count">${totalItems}</span>
             </a>
-            <a class="sidebar-item" href="#">
+            <a class="sidebar-item${activeClass('verifier-pending')}" href="#" onclick="setDashboardView('verifier-pending'); return false;">
+              <span>🟡</span> Awaiting Decision
+              <span class="sidebar-count rust">${pendingItems}</span>
+            </a>
+            <a class="sidebar-item${activeClass('verifier-verified')}" href="#" onclick="setDashboardView('verifier-verified'); return false;">
+              <span>📜</span> Verified
+              <span class="sidebar-count green">${verifiedItems}</span>
+            </a>
+            <a class="sidebar-item${activeClass('verifier-rejected')}" href="#" onclick="setDashboardView('verifier-rejected'); return false;">
+              <span>❌</span> Declined
+              <span class="sidebar-count">${rejectedItems}</span>
+            </a>
+          </div>
+        ` : `
+          <div class="sidebar-section-label">My Items</div>
+          <div class="sidebar-section">
+            <a class="sidebar-item${activeClass('collector-all')}" href="#" onclick="setDashboardView('collector-all'); return false;">
+              <span>📦</span> My Submissions
+              <span class="sidebar-count">${totalItems}</span>
+            </a>
+            <a class="sidebar-item${activeClass('collector-pending')}" href="#" onclick="setDashboardView('collector-pending'); return false;">
               <span>🟡</span> In Review
               <span class="sidebar-count rust">${pendingItems}</span>
             </a>
-            <a class="sidebar-item" href="#">
+            <a class="sidebar-item${activeClass('collector-verified')}" href="#" onclick="setDashboardView('collector-verified'); return false;">
               <span>📜</span> Verified
               <span class="sidebar-count green">${verifiedItems}</span>
+            </a>
+            <a class="sidebar-item${activeClass('collector-rejected')}" href="#" onclick="setDashboardView('collector-rejected'); return false;">
+              <span>❌</span> Rejected
+              <span class="sidebar-count">${rejectedItems}</span>
             </a>
           </div>
         `;
@@ -190,14 +374,15 @@
       const verifiedItems = countByStatus(items, ['verified']);
       const rejectedItems = countByStatus(items, ['rejected']);
       const blockchainLinked = items.filter((item) => item.blockchainHash || item.blockchainTransactionHash).length;
+      const activeUsers = approvedUsers.length;
 
       if (role === 'admin') {
         return `
           <div class="dash-stats">
+            <div class="dash-stat"><div class="dash-stat-num green">${activeUsers}</div><div class="dash-stat-label">Active Users</div></div>
             <div class="dash-stat"><div class="dash-stat-num rust">${pendingUsers.length}</div><div class="dash-stat-label">Pending Accounts</div></div>
-            <div class="dash-stat"><div class="dash-stat-num green">${approvedUsers.length}</div><div class="dash-stat-label">Approved Accounts</div></div>
-            <div class="dash-stat"><div class="dash-stat-num gold">${items.length}</div><div class="dash-stat-label">All Submitted Items</div></div>
-            <div class="dash-stat"><div class="dash-stat-num">${verifiedItems}</div><div class="dash-stat-label">Verified Items</div></div>
+            <div class="dash-stat"><div class="dash-stat-num gold">${verifiedItems}</div><div class="dash-stat-label">Items Approved</div></div>
+            <div class="dash-stat"><div class="dash-stat-num">${rejectedItems}</div><div class="dash-stat-label">Items Rejected</div></div>
           </div>
         `;
       }
@@ -242,7 +427,8 @@
         const certificateHash = item.blockchainHash || 'Pending';
         const txHash = item.blockchainTransactionHash || 'Pending';
         const ownerName = item.owner?.username || item.owner?.email || 'Unknown owner';
-        const canDecide = role === 'verifier' && ['pending', 'in_progress'].includes(String(status).toLowerCase());
+        const normalizedRole = normalizeRole(role);
+        const canDecide = normalizedRole === 'verifier' && ['pending', 'in_progress'].includes(String(status).toLowerCase());
 
         const verifierActions = canDecide
           ? `
@@ -265,6 +451,28 @@
             <td style="font-size:13px;color:var(--ink-light);">${escapeHtml(certificateHash)}</td>
             <td style="font-size:13px;color:var(--ink-light);">${escapeHtml(txHash)}</td>
             <td>${verifierActions}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function renderApprovedUsersRows(approvedUsers) {
+      if (!approvedUsers.length) {
+        return `
+          <tr>
+            <td colspan="4" style="text-align:center; padding:30px; color:var(--ink-light);">No approved accounts found.</td>
+          </tr>
+        `;
+      }
+
+      return approvedUsers.map((account) => {
+        const role = normalizeRole(account.role);
+        return `
+          <tr>
+            <td>${escapeHtml(account.username || 'Unknown')}</td>
+            <td>${escapeHtml(account.email || '')}</td>
+            <td>${escapeHtml(role)}</td>
+            <td>${getStatusBadge(account.status || 'approved')}</td>
           </tr>
         `;
       }).join('');
@@ -300,13 +508,61 @@
 
     function renderRolePanel(role, items, pendingUsers) {
       if (role === 'admin') {
+        const showAccountReview = dashboardState.activeView === 'pending-users' || dashboardState.activeView === 'approved-users';
+
+        if (showAccountReview) {
+          const showApproved = dashboardState.activeView === 'approved-users';
+          const title = showApproved ? 'Approved Accounts' : 'Account Approval Queue';
+          const subtitle = showApproved
+            ? 'These accounts are active and can sign in.'
+            : 'Approve or reject new account registrations before they become active.';
+
+          return `
+            <div class="dash-content dashboard-grid dashboard-grid-single">
+              <section class="dashboard-panel dashboard-panel-wide">
+                <div class="panel-head">
+                  <div>
+                    <h3>${title}</h3>
+                    <p>${subtitle}</p>
+                  </div>
+                  <button class="btn-sm btn-review" onclick="loadDashboardData()">Refresh</button>
+                </div>
+                <div class="panel-body">
+                  <table class="review-table">
+                    <thead>
+                      <tr>
+                        <th>Username</th>
+                        <th>Email</th>
+                        <th>Requested Role</th>
+                        <th>Status</th>
+                        ${showApproved ? '' : '<th>Action</th>'}
+                      </tr>
+                    </thead>
+                    <tbody>${showApproved ? renderApprovedUsersRows(dashboardState.approvedUsers) : renderPendingUsersRows(pendingUsers)}</tbody>
+                  </table>
+                </div>
+              </section>
+            </div>
+          `;
+        }
+
+        const filteredItems = filterItemsByView(items, role, dashboardState.activeView);
+        const title = dashboardState.activeView === 'admin-rejected'
+          ? 'Rejected Items'
+          : dashboardState.activeView === 'admin-approved'
+            ? 'Approved Items'
+            : dashboardState.activeView === 'admin-pending'
+              ? 'Pending Items'
+              : 'All Items';
+        const subtitle = 'Admin item view is read-only. Use the sidebar to review item status without approving or rejecting items directly.';
+
         return `
           <div class="dash-content dashboard-grid dashboard-grid-single">
             <section class="dashboard-panel dashboard-panel-wide">
               <div class="panel-head">
                 <div>
-                  <h3>Account Approval Queue</h3>
-                  <p>Approve or reject new account registrations before they become active.</p>
+                  <h3>${title}</h3>
+                  <p>${subtitle}</p>
                 </div>
                 <button class="btn-sm btn-review" onclick="loadDashboardData()">Refresh</button>
               </div>
@@ -314,14 +570,15 @@
                 <table class="review-table">
                   <thead>
                     <tr>
-                      <th>Username</th>
-                      <th>Email</th>
-                      <th>Requested Role</th>
+                      <th></th>
+                      <th>Item</th>
                       <th>Status</th>
+                      <th>Certificate Hash</th>
+                      <th>Transaction Hash</th>
                       <th>Action</th>
                     </tr>
                   </thead>
-                  <tbody>${renderPendingUsersRows(pendingUsers)}</tbody>
+                  <tbody>${renderItemRows(filteredItems, 'admin')}</tbody>
                 </table>
               </div>
             </section>
@@ -329,10 +586,11 @@
         `;
       }
 
+      const filteredItems = filterItemsByView(items, role, dashboardState.activeView);
       const title = role === 'verifier' ? 'Submitted Items + Decision Actions' : 'All Submitted Items';
       const subtitle = role === 'verifier'
         ? 'Review each submission and approve or decline pending items.'
-        : 'Collector view shows every submitted item and its verification progress.';
+        : 'Collector view shows only your submitted items and their verification progress.';
 
       return `
         <div class="dash-content dashboard-grid dashboard-grid-single">
@@ -356,7 +614,7 @@
                     <th>Action</th>
                   </tr>
                 </thead>
-                <tbody>${renderItemRows(items, role)}</tbody>
+                <tbody>${renderItemRows(filteredItems, role)}</tbody>
               </table>
             </div>
           </section>
@@ -364,7 +622,7 @@
       `;
     }
 
-    function renderDashboard(user, items, health, pendingUsers, approvedUsers) {
+    function renderDashboard(user, items, health, pendingUsers, approvedUsers, showWelcome = false) {
       const root = document.getElementById('dashboard-root');
       const role = normalizeRole(user.role);
       dashboardCurrentRole = role;
@@ -382,7 +640,7 @@
           : 'Browse all submitted antiques and track their verification status.';
 
       root.innerHTML = `
-        ${renderSidebar(user, items, pendingUsers)}
+        ${renderSidebar(user, items, pendingUsers, approvedUsers)}
         <div class="dashboard-main">
           <div class="dash-topbar">
             <div>
@@ -399,7 +657,9 @@
         </div>
       `;
 
-      showWelcomeBanner(user);
+      if (showWelcome) {
+        showWelcomeBanner(user);
+      }
     }
 
     function stopDashboardAutoRefresh() {
@@ -418,7 +678,7 @@
 
       dashboardRefreshTimer = setInterval(() => {
         if (document.visibilityState === 'visible') {
-          loadDashboardData();
+          loadDashboardData({ silent: true });
         }
       }, 15000);
     }
@@ -453,16 +713,21 @@
       }
     }
 
-    async function loadDashboardData() {
+    async function loadDashboardData(options = {}) {
+      const silent = options.silent === true;
       if (!session) return;
-      renderLoading();
+
+      if (!silent) {
+        renderLoading();
+      }
 
       try {
         const userResponse = await apiRequest('/auth/me', 'GET', null, true);
         const user = userResponse.user || userResponse.data || userResponse || session;
         user.role = normalizeRole(user.role);
 
-        const itemsResponse = await apiRequest('/items', 'GET', null, true);
+        const itemsEndpoint = user.role === 'collector' ? '/items/my-items' : '/items';
+        const itemsResponse = await apiRequest(itemsEndpoint, 'GET', null, true);
         const healthResponse = await getBackendHealth();
 
         let pendingUsers = [];
@@ -475,17 +740,33 @@
           approvedUsers = normalizeUsers(approvedResponse);
         }
 
+        const normalizedItems = normalizeItems(itemsResponse);
+        dashboardState.user = user;
+        dashboardState.items = normalizedItems;
+        dashboardState.pendingUsers = pendingUsers;
+        dashboardState.approvedUsers = approvedUsers;
+        dashboardState.health = healthResponse || null;
+
+        if (!dashboardState.activeView || !isViewAllowed(user.role, dashboardState.activeView)) {
+          dashboardState.activeView = defaultViewForRole(user.role);
+        }
+
         renderDashboard(
           user,
-          normalizeItems(itemsResponse),
+          normalizedItems,
           healthResponse || null,
           pendingUsers,
-          approvedUsers
+          approvedUsers,
+          !dashboardState.welcomeShown
         );
+
+        dashboardState.welcomeShown = true;
 
         startDashboardAutoRefresh();
       } catch (error) {
-        renderError(error.message || 'Unable to load dashboard data.');
+        if (!silent) {
+          renderError(error.message || 'Unable to load dashboard data.');
+        }
         showToast(error.message || 'Unable to load dashboard data.', true);
       }
     }
@@ -496,7 +777,7 @@
 
     document.addEventListener('visibilitychange', function () {
       if (document.visibilityState === 'visible' && session && dashboardCurrentRole === 'admin') {
-        loadDashboardData();
+        loadDashboardData({ silent: true });
       }
     });
 
