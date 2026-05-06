@@ -13,6 +13,7 @@
     <a class="nav-logo" href="../index.html">AntiqChain <span>— Verified Heritage</span></a>
     <div class="nav-links">
       <a href="../index.html">Home</a>
+      <a href="products.html">Products</a>
       <a href="about.html">About</a>
       <a href="submit.html">Submit Item</a>
       <a href="dashboard.html">Dashboard</a>
@@ -30,7 +31,7 @@
     <div class="breadcrumb">
       <a href="../index.html">Home</a>
       <span class="sep">›</span>
-      <a href="../index.html">Browse Items</a>
+      <a href="products.html">Browse Items</a>
       <span class="sep">›</span>
       <span>Ming Dynasty Porcelain Vase</span>
     </div>
@@ -225,9 +226,13 @@
         document.querySelector('.detail-category').textContent = `${item.category || 'Item'} · ${item.estimatedPeriod || 'Period unknown'}`;
         document.querySelector('.detail-title').textContent = item.title || 'Untitled Item';
 
-        document.querySelector('.detail-status').innerHTML = item.verificationStatus === 'verified'
+        const verificationBadge = item.verificationStatus === 'verified'
           ? '<span class="badge badge-verified">✓ Verified Authentic</span>'
           : `<span class="badge">${item.verificationStatus || 'Pending'}</span>`;
+        const saleBadge = item.isSold
+          ? '<span class="badge badge-rejected" style="margin-left:8px;">Sold</span>'
+          : '<span class="badge badge-verified" style="margin-left:8px;">Available</span>';
+        document.querySelector('.detail-status').innerHTML = verificationBadge + saleBadge;
 
         document.querySelector('.detail-desc').textContent = item.description || 'No description provided.';
 

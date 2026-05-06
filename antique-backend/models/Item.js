@@ -80,6 +80,41 @@ const itemSchema = new mongoose.Schema(
       type: Number,
       default: null,
     },
+    previousOwner: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+    },
+    isSold: {
+      type: Boolean,
+      default: false,
+    },
+    soldAt: {
+      type: Date,
+      default: null,
+    },
+    purchaseHistory: [
+      {
+        buyer: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'User',
+          required: true,
+        },
+        seller: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'User',
+          required: true,
+        },
+        purchasedAt: {
+          type: Date,
+          default: Date.now,
+        },
+        amount: {
+          type: Number,
+          default: null,
+        },
+      },
+    ],
     images: [
       {
         url: {
@@ -133,14 +168,13 @@ const itemSchema = new mongoose.Schema(
 itemSchema.index({ owner: 1, createdAt: -1 });
 itemSchema.index({ verificationStatus: 1 });
 
-// Pre-save hook to populate owner details if needed
-itemSchema.pre(/^find/, function (next) {
+// Auto-populate owner details on find queries
+itemSchema.pre(/^find/, function () {
   if (this.options._recursed) {
-    return next();
+    return;
   }
   this.populate('owner', 'username email');
   this.options._recursed = true;
-  next();
 });
 
 module.exports = mongoose.model('Item', itemSchema);

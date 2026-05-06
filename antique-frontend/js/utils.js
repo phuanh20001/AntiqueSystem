@@ -126,6 +126,14 @@ function getCurrentPageName() {
   return window.location.pathname.split('/').pop() || '';
 }
 
+function normalizeUserRole(role) {
+  const raw = String(role || '').toLowerCase().trim();
+  if (raw === 'user' || raw === 'collector') return 'collector';
+  if (raw === 'verifier') return 'verifier';
+  if (raw === 'admin') return 'admin';
+  return 'collector';
+}
+
 function signOutAndRedirect() {
   clearAuthSession();
   window.location.href = getHomePath();
@@ -164,6 +172,7 @@ function updateAuthUI() {
     const pathOnly = href.split('?')[0];
     const isDashboardLink = pathOnly.endsWith('dashboard.html');
     const isLoginLink = pathOnly.endsWith('login.html');
+    const isSubmitLink = pathOnly.endsWith('submit.html');
 
     if (isDashboardLink) {
       link.href = session
@@ -180,6 +189,21 @@ function updateAuthUI() {
         link.textContent = 'Sign In';
         link.href = getLoginPath();
         delete link.dataset.authAction;
+      }
+    }
+
+    if (isSubmitLink) {
+      if (!session) {
+        link.href = getLoginPath() + '?returnTo=' + encodeURIComponent('submit.html');
+      } else {
+        const role = normalizeUserRole(session.role);
+        if (role !== 'collector') {
+          link.href = getDashboardPath();
+          link.style.display = 'none';
+        } else {
+          link.href = getPagePath('submit.html');
+          link.style.display = '';
+        }
       }
     }
   });

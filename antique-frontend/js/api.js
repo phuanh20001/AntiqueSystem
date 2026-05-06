@@ -53,8 +53,9 @@ async function apiRequest(endpoint, method = "GET", data = null, requiresAuth = 
   }
 
   if (!response.ok) {
-    console.error(`apiRequest: Response not ok, throwing error:`, result.message);
-    throw new Error(result.message || "Request failed");
+    const errorMessage = result.message || result.error || `Request failed (${response.status})`;
+    console.error(`apiRequest: Response not ok, throwing error:`, errorMessage);
+    throw new Error(errorMessage);
   }
 
   console.log(`apiRequest: Returning result`);

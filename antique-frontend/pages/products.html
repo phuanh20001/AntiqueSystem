@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Products — AntiqChain</title>
+  <link rel="stylesheet" href="../css/global.css">
+  <link rel="stylesheet" href="../css/products.css">
+</head>
+<body>
+  <nav>
+    <a class="nav-logo" href="../index.html">AntiqChain <span>— Verified Heritage</span></a>
+    <div class="nav-links">
+      <a href="../index.html">Home</a>
+      <a href="products.html" class="active">Products</a>
+      <a href="about.html">About</a>
+      <a href="submit.html">Submit Item</a>
+      <a href="dashboard.html">Dashboard</a>
+      <a href="login.html" class="nav-cta">Sign In</a>
+    </div>
+  </nav>
+
+  <div class="page-header">
+    <div class="page-header-eyebrow">Marketplace</div>
+    <h1>Verified Products</h1>
+    <p>Browse items approved by verifiers only.</p>
+  </div>
+
+  <div class="page-content">
+    <div class="products-controls">
+      <input id="search-input" class="form-input" type="text" placeholder="Search by title, description, material...">
+      <select id="category-select" class="form-select">
+        <option value="">All categories</option>
+        <option value="furniture">Furniture</option>
+        <option value="artwork">Artwork</option>
+        <option value="jewelry">Jewelry</option>
+        <option value="collectibles">Collectibles</option>
+        <option value="ceramics">Ceramics</option>
+        <option value="textiles">Textiles</option>
+        <option value="metalware">Metalware</option>
+        <option value="timepieces">Timepieces</option>
+        <option value="books">Books</option>
+        <option value="other">Other</option>
+      </select>
+    </div>
+
+    <div id="products-root" class="products-grid"></div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+  <script src="../js/utils.js"></script>
+  <script src="../js/api.js"></script>
+  <script>
+    const currentSession = requirePageSession('products.html');
+    const currentRole = String(currentSession?.role || '').toLowerCase();
+    const normalizedRole = currentRole === 'user' ? 'collector' : currentRole;
+    const canBuyProducts = normalizedRole === 'collector';
+
+    let approvedItems = [];
+
+    function escapeHtml(value) {
+      return String(value || '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+    }
+
+    function getFilteredItems() {
+      const searchText = document.getElementById('search-input').value.trim().toLowerCase();
+      const category = document.getElementById('category-select').value;
+
+      return approvedItems.filter((item) => {
+        if (item.isSold) return false;
+        if (category && item.category !== category) return false;
+
+        if (!searchText) return true;
+        const haystack = [
+          item.title,
+          item.description,
+          item.material,
+          item.estimatedPeriod,
+          item.owner?.username
+        ].join(' ').toLowerCase();
+
+        return haystack.includes(searchText);
+      });
+    }
+
+    function renderProducts() {
+      const root = document.getElementById('products-root');
+      const filtered = getFilteredItems();
+
+      if (!filtered.length) {
+        root.className = 'products-empty';
+        root.innerHTML = 'No approved products match your search.';
+        return;
+      }
+
+      root.className = 'products-grid';
+      root.innerHTML = filtered.map((item) => `
+        <div class="product-card">
+          <div class="product-thumb">🏺</div>
+          <div class="product-body">
+            <a class="product-title" href="detail.html?id=${item._id}">${escapeHtml(item.title || 'Untitled Item')}</a>
+            <div class="product-meta">${escapeHtml(item.category || 'Uncategorized')} · ${escapeHtml(item.estimatedPeriod || item.estimatedYear || 'Period not specified')}</div>
+            <div class="product-meta">Owner: ${escapeHtml(item.owner?.username || 'Unknown')}</div>
+            <div class="product-meta">Price: ${item.estimatedValue ? '$' + escapeHtml(item.estimatedValue) : 'N/A'}</div>
+            <div style="margin-top:8px;">${item.isSold ? '<span class="badge badge-rejected">Sold</span>' : '<span class="badge badge-verified">Available</span>'}</div>
+            <div style="margin-top:12px;">
+              ${
+                canBuyProducts
+                  ? `<button class="btn-sm btn-approve" onclick="buyProduct('${item._id}')">Buy Product</button>`
+                  : `<button class="btn-sm btn-review" disabled title="Only collector accounts can buy products">View Only</button>`
+              }
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function buyProduct(itemId) {
+      if (!canBuyProducts) {
+        showToast('Only collector accounts can buy products.', true);
+        return;
+      }
+      apiRequest(`/items/${itemId}/purchase`, 'POST', null, true)
+        .then(() => {
+          showToast('Purchase completed successfully.');
+          loadApprovedItems();
+        })
+        .catch((error) => {
+          showToast(error.message || 'Unable to complete purchase.', true);
+        });
+    }
+
+    async function loadApprovedItems() {
+      const root = document.getElementById('products-root');
+      root.className = 'products-empty';
+      root.textContent = 'Loading approved products...';
+
+      try {
+        const response = await apiRequest('/items?verificationStatus=verified&isSold=false&limit=200', 'GET', null, false);
+        approvedItems = Array.isArray(response?.data) ? response.data : [];
+        renderProducts();
+      } catch (error) {
+        root.className = 'products-empty';
+        root.textContent = 'Unable to load products right now.';
+        showToast(error.message || 'Failed to load products', true);
+      }
+    }
+
+    document.getElementById('search-input').addEventListener('input', renderProducts);
+    document.getElementById('category-select').addEventListener('change', renderProducts);
+
+    loadApprovedItems();
+  </script>
+</body>
+</html>

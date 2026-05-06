@@ -13,6 +13,7 @@
     <a class="nav-logo" href="../index.html">AntiqChain <span>— Verified Heritage</span></a>
     <div class="nav-links">
       <a href="../index.html">Home</a>
+      <a href="products.html">Products</a>
       <a href="about.html">About</a>
       <a href="submit.html" class="active">Submit Item</a>
       <a href="dashboard.html">Dashboard</a>
@@ -168,6 +169,12 @@
 
   <script>
     const currentSession = requirePageSession('submit.html');
+    const currentRole = String(currentSession?.role || '').toLowerCase();
+    const isCollector = currentRole === 'user' || currentRole === 'collector';
+
+    if (!isCollector) {
+      window.location.replace('dashboard.html');
+    }
 
     function clearFormErrors(form) {
       form.querySelectorAll('.error-message').forEach(error => {
