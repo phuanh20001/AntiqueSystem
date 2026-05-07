@@ -13,6 +13,7 @@
     <a class="nav-logo" href="../index.html">AntiqChain <span>— Verified Heritage</span></a>
     <div class="nav-links">
       <a href="../index.html">Home</a>
+      <a href="products.html">Products</a>
       <a href="about.html">About</a>
       <a href="submit.html">Submit Item</a>
       <a href="dashboard.html" class="active">Dashboard</a>
@@ -35,364 +36,286 @@
 
   <script>
     const session = requireDashboardSession();
+    let dashboardRefreshTimer = null;
+    let dashboardCurrentRole = null;
+    let dashboardItemView = 'all';
+    let dashboardAdminView = 'analytics';
+    let dashboardPurchaseHistory = [];
 
     function escapeHtml(value) {
-      return String(value || '')
-        .replaceAll('&', '&amp;')
-        .replaceAll('<', '&lt;')
-        .replaceAll('>', '&gt;')
-        .replaceAll('"', '&quot;')
-        .replaceAll("'", '&#39;');
+      return String(value || '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#39;');
     }
-
+    function normalizeRole(role) {
+      const raw = String(role || '').toLowerCase().trim();
+      if (raw === 'user' || raw === 'collector') return 'collector';
+      if (raw === 'verifier') return 'verifier';
+      if (raw === 'admin') return 'admin';
+      return 'collector';
+    }
+    function normalizeItems(r) { if (Array.isArray(r)) return r; if (Array.isArray(r?.items)) return r.items; if (Array.isArray(r?.data)) return r.data; return []; }
+    function normalizeUsers(r) { if (Array.isArray(r)) return r; if (Array.isArray(r?.users)) return r.users; if (Array.isArray(r?.data)) return r.data; return []; }
+    function countByStatus(items, statuses) { return items.filter((i) => statuses.includes(String(i.verificationStatus || i.status || '').toLowerCase())).length; }
     function getStatusBadge(status) {
-      const safeStatus = status || 'Pending';
-      const lower = safeStatus.toLowerCase();
-
-      let badgeClass = 'badge-pending';
-
-      if (lower.includes('verified') || lower.includes('approved')) {
-        badgeClass = 'badge-verified';
-      }
-
-      if (lower.includes('rejected')) {
-        badgeClass = 'badge-rejected';
-      }
-
-      return `<span class="badge ${badgeClass}">${escapeHtml(safeStatus)}</span>`;
+      const safe = status || 'Pending';
+      const low = safe.toLowerCase();
+      let cls = 'badge-pending';
+      if (low.includes('verified') || low.includes('approved')) cls = 'badge-verified';
+      if (low.includes('rejected')) cls = 'badge-rejected';
+      return `<span class="badge ${cls}">${escapeHtml(safe)}</span>`;
     }
-
     function getHealthBadge(health) {
-      if (!health) {
-        return '<span class="backend-health-pill backend-health-unknown">Checking backend...</span>';
-      }
-
-      if (health.status === 'ok') {
-        return `<span class="backend-health-pill backend-health-ok">Live · ${escapeHtml(health.mongo)} · ${escapeHtml(health.blockchain)}</span>`;
-      }
-
+      if (!health) return '<span class="backend-health-pill backend-health-unknown">Checking backend...</span>';
+      if (health.status === 'ok') return `<span class="backend-health-pill backend-health-ok">Live · ${escapeHtml(health.mongo)} · ${escapeHtml(health.blockchain)}</span>`;
       return `<span class="backend-health-pill backend-health-degraded">Degraded · ${escapeHtml(health.mongo)} · ${escapeHtml(health.blockchain)}</span>`;
     }
-
     function showWelcomeBanner(user) {
       const banner = document.getElementById('welcome-banner');
       const title = document.getElementById('welcome-banner-title');
-
-      const name =
-        user.displayName ||
-        user.name ||
-        user.firstName ||
-        user.email ||
-        'user';
-
-      title.textContent = 'Welcome, ' + name;
+      title.textContent = 'Welcome, ' + (user.displayName || user.name || user.firstName || user.email || 'user');
       banner.style.display = 'block';
-
-      requestAnimationFrame(function () {
-        banner.classList.add('show');
-      });
-
-      setTimeout(function () {
-        banner.classList.remove('show');
-        setTimeout(function () {
-          banner.style.display = 'none';
-        }, 350);
-      }, 4200);
+      requestAnimationFrame(() => banner.classList.add('show'));
+      setTimeout(() => { banner.classList.remove('show'); setTimeout(() => banner.style.display = 'none', 350); }, 4200);
     }
 
-    function renderLoading() {
-      const root = document.getElementById('dashboard-root');
-
-      root.innerHTML = `
-        <div class="dashboard-main" style="width:100%; padding:40px;">
-          <div class="dashboard-panel">
-            <div class="panel-body" style="text-align: center; padding: 60px 20px;">
-              <div style="font-size: 24px; margin-bottom: 16px;">⏳</div>
-              <p style="color: var(--ink-light); font-weight: 500;">Loading dashboard data...</p>
-            </div>
-          </div>
-        </div>
-      `;
+    function getFilteredItems(role, items) {
+      if (dashboardItemView === 'all') return items;
+      if (dashboardItemView === 'owned') return items;
+      if (dashboardItemView === 'pending') return items.filter((i) => ['pending', 'in_progress'].includes(String(i.verificationStatus || '').toLowerCase()));
+      if (dashboardItemView === 'verified') return items.filter((i) => String(i.verificationStatus || '').toLowerCase() === 'verified');
+      if (dashboardItemView === 'rejected') return items.filter((i) => String(i.verificationStatus || '').toLowerCase() === 'rejected');
+      return items;
     }
 
-    function renderError(message) {
-      const root = document.getElementById('dashboard-root');
+    function setItemView(event, view) { if (event) event.preventDefault(); dashboardItemView = view; loadDashboardData(); }
+    function setAdminView(event, view) { if (event) event.preventDefault(); dashboardAdminView = view; loadDashboardData(); }
 
-      root.innerHTML = `
-        <div class="dashboard-main" style="width:100%; padding:40px;">
-          <div class="dashboard-panel">
-            <div class="panel-head">
-              <div>
-                <h3>Unable to load dashboard</h3>
-                <p>${escapeHtml(message || 'Please try again later.')}</p>
-              </div>
-            </div>
-            <div class="panel-body">
-              <button class="btn-sm btn-review" onclick="loadDashboardData()">Retry</button>
-            </div>
-          </div>
-        </div>
-      `;
+    function renderSidebar(user, items, pendingUsers, approvedUsers, rejectedUsers, allUsers) {
+      const role = normalizeRole(user.role);
+      const pendingItems = countByStatus(items, ['pending', 'in_progress']);
+      const verifiedItems = countByStatus(items, ['verified']);
+      const rejectedItems = countByStatus(items, ['rejected']);
+      const roleLabel = role === 'admin' ? 'Administrator' : role === 'verifier' ? 'Verifier' : 'Collector';
+      const name = user.username || user.displayName || user.name || 'AntiqChain User';
+      const roleSection = role === 'admin'
+        ? `<div class="sidebar-section-label">Admin Views</div><div class="sidebar-section">
+            <a class="sidebar-item ${dashboardAdminView === 'analytics' ? 'active' : ''}" href="#" onclick="setAdminView(event,'analytics')"><span>📊</span> Analytics <span class="sidebar-count">${items.length}</span></a>
+            <a class="sidebar-item ${dashboardAdminView === 'pending' ? 'active' : ''}" href="#" onclick="setAdminView(event,'pending')"><span>🧾</span> Pending Accounts <span class="sidebar-count rust">${pendingUsers.length}</span></a>
+            <a class="sidebar-item ${dashboardAdminView === 'approved' ? 'active' : ''}" href="#" onclick="setAdminView(event,'approved')"><span>✅</span> Approved Accounts <span class="sidebar-count green">${approvedUsers.length}</span></a>
+            <a class="sidebar-item ${dashboardAdminView === 'rejected' ? 'active' : ''}" href="#" onclick="setAdminView(event,'rejected')"><span>⛔</span> Rejected Accounts <span class="sidebar-count rust">${rejectedUsers.length}</span></a>
+            <a class="sidebar-item ${dashboardAdminView === 'accounts' ? 'active' : ''}" href="#" onclick="setAdminView(event,'accounts')"><span>👥</span> All Accounts <span class="sidebar-count">${allUsers.length}</span></a>
+          </div>`
+        : `<div class="sidebar-section-label">Submitted Items</div><div class="sidebar-section">
+            <a class="sidebar-item ${dashboardItemView === 'all' ? 'active' : ''}" href="#" onclick="setItemView(event,'all')"><span>📦</span> All Submissions <span class="sidebar-count">${items.length}</span></a>
+            ${role === 'collector' ? `<a class="sidebar-item ${dashboardItemView === 'owned' ? 'active' : ''}" href="#" onclick="setItemView(event,'owned')"><span>🛍️</span> My Antique <span class="sidebar-count green">${items.length}</span></a>` : ''}
+            <a class="sidebar-item ${dashboardItemView === 'pending' ? 'active' : ''}" href="#" onclick="setItemView(event,'pending')"><span>🟡</span> In Review <span class="sidebar-count rust">${pendingItems}</span></a>
+            <a class="sidebar-item ${dashboardItemView === 'verified' ? 'active' : ''}" href="#" onclick="setItemView(event,'verified')"><span>📜</span> Verified <span class="sidebar-count green">${verifiedItems}</span></a>
+            <a class="sidebar-item ${dashboardItemView === 'rejected' ? 'active' : ''}" href="#" onclick="setItemView(event,'rejected')"><span>⛔</span> Rejected <span class="sidebar-count rust">${rejectedItems}</span></a>
+          </div>`;
+      return `<div class="dashboard-sidebar"><div class="sidebar-profile"><div class="sidebar-name">${escapeHtml(name)}</div><div class="sidebar-role">${escapeHtml(roleLabel)} account</div></div>${roleSection}
+        <div class="sidebar-section-label">Actions</div><div class="sidebar-section">
+          ${role === 'collector' ? `<a class="sidebar-item" href="submit.html"><span>➕</span> Submit New Item</a>` : ''}
+          <a class="sidebar-item" href="../index.html"><span>🏠</span> Back to Home</a>
+        </div></div>`;
     }
 
-    function renderSidebar(user, items) {
-      const name =
-        user.displayName ||
-        user.name ||
-        `${user.firstName || ''} ${user.lastName || ''}`.trim() ||
-        'AntiqChain User';
-
-      const role = user.role || 'collector';
-
-      const totalItems = items.length;
-      const pendingItems = items.filter(item =>
-        String(item.verificationStatus || item.status || '').toLowerCase().includes('pending') ||
-        String(item.verificationStatus || item.status || '').toLowerCase().includes('review')
-      ).length;
-
-      const verifiedItems = items.filter(item =>
-        String(item.verificationStatus || item.status || '').toLowerCase().includes('verified') ||
-        String(item.verificationStatus || item.status || '').toLowerCase().includes('approved')
-      ).length;
-
-      return `
-        <div class="dashboard-sidebar">
-          <div class="sidebar-profile">
-            <div class="sidebar-name">${escapeHtml(name)}</div>
-            <div class="sidebar-role">${escapeHtml(role)} account</div>
-          </div>
-
-          <div class="sidebar-section-label">Collection</div>
-          <div class="sidebar-section">
-            <a class="sidebar-item active" href="#">
-              <span>📦</span> My Submissions
-              <span class="sidebar-count">${totalItems}</span>
-            </a>
-            <a class="sidebar-item" href="#">
-              <span>🟡</span> In Review
-              <span class="sidebar-count rust">${pendingItems}</span>
-            </a>
-            <a class="sidebar-item" href="#">
-              <span>📜</span> Verified
-              <span class="sidebar-count green">${verifiedItems}</span>
-            </a>
-          </div>
-
-          <div class="sidebar-section-label">Actions</div>
-          <div class="sidebar-section">
-            <a class="sidebar-item" href="submit.html">
-              <span>➕</span> Submit New Item
-            </a>
-            <a class="sidebar-item" href="../index.html">
-              <span>🏠</span> Back to Home
-            </a>
-          </div>
-        </div>
-      `;
+    function renderStats(role, items, pendingUsers, approvedUsers, rejectedUsers) {
+      const pendingItems = countByStatus(items, ['pending', 'in_progress']);
+      const verifiedItems = countByStatus(items, ['verified']);
+      const rejectedItems = countByStatus(items, ['rejected']);
+      if (role === 'admin') return `<div class="dash-stats">
+        <div class="dash-stat"><div class="dash-stat-num rust">${pendingUsers.length}</div><div class="dash-stat-label">Pending Accounts</div></div>
+        <div class="dash-stat"><div class="dash-stat-num green">${approvedUsers.length}</div><div class="dash-stat-label">Approved Accounts</div></div>
+        <div class="dash-stat"><div class="dash-stat-num">${rejectedUsers.length}</div><div class="dash-stat-label">Rejected Accounts</div></div>
+        <div class="dash-stat"><div class="dash-stat-num gold">${items.length}</div><div class="dash-stat-label">Submitted Items</div></div></div>`;
+      return `<div class="dash-stats">
+        <div class="dash-stat"><div class="dash-stat-num gold">${items.length}</div><div class="dash-stat-label">All Submitted Items</div></div>
+        <div class="dash-stat"><div class="dash-stat-num rust">${pendingItems}</div><div class="dash-stat-label">In Review</div></div>
+        <div class="dash-stat"><div class="dash-stat-num green">${verifiedItems}</div><div class="dash-stat-label">Verified</div></div>
+        <div class="dash-stat"><div class="dash-stat-num">${rejectedItems}</div><div class="dash-stat-label">Rejected</div></div></div>`;
     }
 
-    function renderStats(items) {
-      const total = items.length;
-
-      const pending = items.filter(item =>
-        String(item.verificationStatus || item.status || '').toLowerCase().includes('pending') ||
-        String(item.verificationStatus || item.status || '').toLowerCase().includes('review')
-      ).length;
-
-      const verified = items.filter(item =>
-        String(item.verificationStatus || item.status || '').toLowerCase().includes('verified') ||
-        String(item.verificationStatus || item.status || '').toLowerCase().includes('approved')
-      ).length;
-
-      const blockchainLinked = items.filter(item =>
-        item.blockchainHash || item.blockchainTransactionHash
-      ).length;
-
-      return `
-        <div class="dash-stats">
-          <div class="dash-stat">
-            <div class="dash-stat-num gold">${total}</div>
-            <div class="dash-stat-label">My Submissions</div>
-          </div>
-          <div class="dash-stat">
-            <div class="dash-stat-num rust">${pending}</div>
-            <div class="dash-stat-label">In Review</div>
-          </div>
-          <div class="dash-stat">
-            <div class="dash-stat-num green">${verified}</div>
-            <div class="dash-stat-label">Verified</div>
-          </div>
-          <div class="dash-stat">
-            <div class="dash-stat-num">${blockchainLinked}</div>
-            <div class="dash-stat-label">Blockchain Proofs</div>
-          </div>
-        </div>
-      `;
-    }
-
-    function renderItemRows(items) {
-      if (!items.length) {
-        return `
-          <tr>
-            <td colspan="6" style="text-align:center; padding:30px; color:var(--ink-light);">
-              No submitted items found. Submit your first antique item to begin verification.
-            </td>
-          </tr>
-        `;
-      }
-
-      return items.map(item => {
-        const title = item.title || item.itemName || item.name || 'Untitled Item';
-        const category = item.category || 'Antique Item';
-        const origin = item.countryOfOrigin || item.country || 'Origin not provided';
-        const period = item.estimatedPeriod || item.year || 'Period not provided';
-        const status = item.verificationStatus || item.status || 'Pending';
-        const certificateHash = item.blockchainHash || 'Pending';
-        const transactionHash = item.blockchainTransactionHash || 'Pending';
-
-        return `
-          <tr>
-            <td class="item-row-thumb">🏺</td>
-            <td>
-              <div class="item-row-title">${escapeHtml(title)}</div>
-              <div class="item-row-sub">${escapeHtml(category)} · ${escapeHtml(period)} · ${escapeHtml(origin)}</div>
-            </td>
-            <td>${getStatusBadge(status)}</td>
-            <td style="font-size:13px;color:var(--ink-light);">${escapeHtml(certificateHash)}</td>
-            <td style="font-size:13px;color:var(--ink-light);">${escapeHtml(transactionHash)}</td>
-            <td>
-              <button class="btn-sm btn-review" onclick="showToast('Item details view will be connected later.')">
-                View
-              </button>
-            </td>
-          </tr>
-        `;
+    function renderItemRows(items, role) {
+      if (!items.length) return `<tr><td colspan="6" style="text-align:center; padding:30px; color:var(--ink-light);">No submitted items found.</td></tr>`;
+      return items.map((item) => {
+        const status = item.verificationStatus || item.status || 'pending';
+        const canDecide = role === 'verifier' && ['pending', 'in_progress'].includes(String(status).toLowerCase());
+        const canRelist = role === 'collector' && item.verificationStatus === 'verified';
+        const relistLabel = item.isSold ? 'Sell Back' : 'List In Products';
+        const actionMarkup = canDecide
+          ? `<div class="table-actions"><button class="btn-sm btn-approve" onclick="changeItemStatus('${item._id}','verified')">Approve</button><button class="btn-sm btn-decline" onclick="changeItemStatus('${item._id}','rejected')">Decline</button></div>`
+          : canRelist
+            ? `<div class="table-actions"><button class="btn-sm btn-approve" onclick="sellBackItem('${item._id}')">${relistLabel}</button><button class="btn-sm btn-review" onclick="window.location.href='detail.html?id=${item._id}'">View</button></div>`
+            : `<button class="btn-sm btn-review" onclick="window.location.href='detail.html?id=${item._id}'">View</button>`;
+        return `<tr><td class="item-row-thumb">🏺</td><td><div class="item-row-title">${escapeHtml(item.title || 'Untitled Item')}</div>
+          <div class="item-row-sub">${escapeHtml(item.category || 'Antique Item')} · ${escapeHtml(item.estimatedPeriod || item.year || 'Period not provided')}</div>
+          <div class="item-row-sub">Owner: ${escapeHtml(item.owner?.username || item.owner?.email || 'Unknown owner')}</div></td>
+          <td>${getStatusBadge(status)}</td><td style="font-size:13px;color:var(--ink-light);">${escapeHtml(item.blockchainHash || 'Pending')}</td>
+          <td style="font-size:13px;color:var(--ink-light);">${escapeHtml(item.blockchainTransactionHash || 'Pending')}</td>
+          <td>${actionMarkup}</td></tr>`;
       }).join('');
     }
 
-    function renderDashboard(user, items, health) {
+    function renderPurchaseHistoryRows(items) {
+      if (!items.length) {
+        return `<tr><td colspan="5" style="text-align:center; padding:24px; color:var(--ink-light);">No purchase history yet.</td></tr>`;
+      }
+
+      return items.map((item) => `
+        <tr>
+          <td>${escapeHtml(item.title || 'Untitled Item')}</td>
+          <td>${escapeHtml(item.category || 'N/A')}</td>
+          <td>${escapeHtml(item.purchasedAt ? new Date(item.purchasedAt).toLocaleString() : 'N/A')}</td>
+          <td>${item.purchaseAmount ? '$' + escapeHtml(item.purchaseAmount) : 'N/A'}</td>
+          <td><button class="btn-sm btn-review" onclick="window.location.href='detail.html?id=${item._id}'">View</button></td>
+        </tr>
+      `).join('');
+    }
+
+    function renderAccountRows(accounts, state, allowDelete) {
+      if (!accounts.length) return `<tr><td colspan="6" style="text-align:center; padding:30px; color:var(--ink-light);">No accounts found.</td></tr>`;
+      return accounts.map((a) => `<tr><td>${escapeHtml(a.username || 'Unknown')}</td><td>${escapeHtml(a.email || '')}</td><td>${escapeHtml(normalizeRole(a.requestedRole || a.role))}</td>
+        <td>${getStatusBadge(a.status || 'approved')}</td><td>${escapeHtml(a.role || 'user')}</td><td>${state === 'pending' ? `<div class="table-actions"><button class="btn-sm btn-approve" onclick="approveAccount('${a._id}')">Approve</button><button class="btn-sm btn-decline" onclick="rejectAccount('${a._id}')">Reject</button></div>` : allowDelete ? `<button class="btn-sm btn-decline" onclick="deleteAccount('${a._id}')">Delete</button>` : `<span style="color:var(--ink-light);font-size:13px;">No action</span>`}</td></tr>`).join('');
+    }
+
+    function renderRolePanel(role, items, pendingUsers, approvedUsers, rejectedUsers, allUsers) {
+      if (role === 'admin') {
+        if (dashboardAdminView === 'analytics') {
+          return `<div class="dash-content dashboard-grid dashboard-grid-single"><section class="dashboard-panel dashboard-panel-wide"><div class="panel-head"><div><h3>Admin Analytics</h3><p>Track account approvals and item verification trends.</p></div><button class="btn-sm btn-review" onclick="loadDashboardData()">Refresh</button></div><div class="panel-body"><table class="review-table"><thead><tr><th>Metric</th><th>Count</th></tr></thead><tbody><tr><td>Pending Accounts</td><td>${pendingUsers.length}</td></tr><tr><td>Approved Accounts</td><td>${approvedUsers.length}</td></tr><tr><td>Rejected Accounts</td><td>${rejectedUsers.length}</td></tr><tr><td>Total Accounts</td><td>${allUsers.length}</td></tr><tr><td>Submitted Items</td><td>${items.length}</td></tr></tbody></table></div></section></div>`;
+        }
+        const cfg = dashboardAdminView === 'approved' ? { h: 'Approved Accounts', s: 'approved', data: approvedUsers, del: true } : dashboardAdminView === 'rejected' ? { h: 'Rejected Accounts', s: 'rejected', data: rejectedUsers, del: true } : dashboardAdminView === 'accounts' ? { h: 'All Accounts', s: 'all', data: allUsers, del: true } : { h: 'Pending Accounts', s: 'pending', data: pendingUsers, del: false };
+        const createAccountPanel = cfg.s === 'all'
+          ? `<div style="margin-bottom:16px;padding:14px;border:1px solid var(--line);border-radius:10px;">
+              <div style="font-weight:600;margin-bottom:10px;">Create Account</div>
+              <form onsubmit="createAccount(event)" style="display:flex;gap:8px;flex-wrap:wrap;">
+                <input id="new-username" placeholder="Username" required style="padding:8px 10px;border:1px solid var(--line);border-radius:8px;min-width:150px;">
+                <input id="new-email" type="email" placeholder="Email" required style="padding:8px 10px;border:1px solid var(--line);border-radius:8px;min-width:220px;">
+                <input id="new-password" type="password" placeholder="Password" required style="padding:8px 10px;border:1px solid var(--line);border-radius:8px;min-width:150px;">
+                <select id="new-role" style="padding:8px 10px;border:1px solid var(--line);border-radius:8px;">
+                  <option value="user">Collector</option>
+                  <option value="verifier">Verifier</option>
+                  <option value="admin">Admin</option>
+                </select>
+                <button class="btn-sm btn-approve" type="submit">Create</button>
+              </form>
+            </div>`
+          : '';
+        return `<div class="dash-content dashboard-grid dashboard-grid-single"><section class="dashboard-panel dashboard-panel-wide"><div class="panel-head"><div><h3>${cfg.h}</h3><p>Admin can review and manage user accounts.</p></div><button class="btn-sm btn-review" onclick="loadDashboardData()">Refresh</button></div><div class="panel-body">${createAccountPanel}<table class="review-table"><thead><tr><th>Username</th><th>Email</th><th>Requested Role</th><th>Status</th><th>Current Role</th><th>Action</th></tr></thead><tbody>${renderAccountRows(cfg.data, cfg.s, cfg.del)}</tbody></table></div></section></div>`;
+      }
+      const filteredItems = getFilteredItems(role, items);
+      const title = role === 'verifier' ? 'Verifier Item Queue' : dashboardItemView === 'owned' ? 'My Antique' : 'Your Submitted Items';
+      const purchasesSection = role === 'collector' && dashboardItemView === 'owned'
+        ? `<section class="dashboard-panel dashboard-panel-wide" style="margin-top:18px;">
+            <div class="panel-head">
+              <div>
+                <h3>Purchase History</h3>
+                <p>All products purchased by this collector account.</p>
+              </div>
+            </div>
+            <div class="panel-body">
+              <table class="review-table">
+                <thead>
+                  <tr><th>Item</th><th>Category</th><th>Purchased At</th><th>Amount</th><th>Action</th></tr>
+                </thead>
+                <tbody>${renderPurchaseHistoryRows(dashboardPurchaseHistory)}</tbody>
+              </table>
+            </div>
+          </section>`
+        : '';
+      return `<div class="dash-content dashboard-grid dashboard-grid-single"><section class="dashboard-panel dashboard-panel-wide"><div class="panel-head"><div><h3>${title}</h3><p>Use sidebar filters to switch views.</p></div><button class="btn-sm btn-review" onclick="loadDashboardData()">Refresh</button></div><div class="panel-body"><table class="review-table"><thead><tr><th></th><th>Item</th><th>Status</th><th>Certificate Hash</th><th>Transaction Hash</th><th>Action</th></tr></thead><tbody>${renderItemRows(filteredItems, role)}</tbody></table></div></section>${purchasesSection}</div>`;
+    }
+
+    function renderDashboard(user, items, health, pendingUsers, approvedUsers, rejectedUsers, allUsers) {
       const root = document.getElementById('dashboard-root');
-
-      const name =
-        user.displayName ||
-        user.name ||
-        user.firstName ||
-        user.email ||
-        'User';
-
-      root.innerHTML = `
-        ${renderSidebar(user, items)}
-
-        <div class="dashboard-main">
-          <div class="dash-topbar">
-            <div>
-              <h2>Collection Dashboard</h2>
-              <p>Track submitted antiques, verification progress, and blockchain proof references.</p>
-            </div>
-            <div class="dash-topbar-actions">
-              ${getHealthBadge(health)}
-              <a class="btn-primary" style="font-size:13px;padding:10px 20px;" href="submit.html">
-                Submit New Item
-              </a>
-            </div>
-          </div>
-
-          ${renderStats(items)}
-
-          <div class="dash-content dashboard-grid dashboard-grid-single">
-            <section class="dashboard-panel dashboard-panel-wide">
-              <div class="panel-head">
-                <div>
-                  <h3>My Submitted Items</h3>
-                  <p>These records are loaded from the backend API when available.</p>
-                </div>
-                <button class="btn-sm btn-review" onclick="loadDashboardData()">Refresh</button>
-              </div>
-
-              <div class="panel-body">
-                <table class="review-table">
-                  <thead>
-                    <tr>
-                      <th></th>
-                      <th>Item</th>
-                      <th>Status</th>
-                      <th>Certificate Hash</th>
-                      <th>Transaction Hash</th>
-                      <th>Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    ${renderItemRows(items)}
-                  </tbody>
-                </table>
-              </div>
-            </section>
-          </div>
-        </div>
-      `;
-
+      const role = normalizeRole(user.role);
+      dashboardCurrentRole = role;
+      const heading = role === 'admin' ? 'Admin Dashboard' : role === 'verifier' ? 'Verifier Dashboard' : 'Collector Dashboard';
+      const subheading = role === 'admin' ? 'Manage users, approvals, and analytics.' : role === 'verifier' ? 'Review submissions and verification decisions.' : 'View only your own submitted antiques and statuses.';
+      root.innerHTML = `${renderSidebar(user, items, pendingUsers, approvedUsers, rejectedUsers, allUsers)}<div class="dashboard-main"><div class="dash-topbar"><div><h2>${heading}</h2><p>${subheading}</p></div><div class="dash-topbar-actions">${getHealthBadge(health)}${role === 'collector' ? '<a class="btn-primary" style="font-size:13px;padding:10px 20px;" href="submit.html">Submit New Item</a>' : ''}</div></div>${renderStats(role, items, pendingUsers, approvedUsers, rejectedUsers)}${renderRolePanel(role, items, pendingUsers, approvedUsers, rejectedUsers, allUsers)}</div>`;
       showWelcomeBanner(user);
     }
 
-    function normalizeItems(response) {
-      if (Array.isArray(response)) return response;
-      if (Array.isArray(response.items)) return response.items;
-      if (Array.isArray(response.data)) return response.data;
-      return [];
+    function renderLoading() { document.getElementById('dashboard-root').innerHTML = `<div class="dashboard-main" style="width:100%; padding:40px;"><div class="dashboard-panel"><div class="panel-body" style="text-align: center; padding: 60px 20px;"><div style="font-size: 24px; margin-bottom: 16px;">⏳</div><p style="color: var(--ink-light); font-weight: 500;">Loading dashboard data...</p></div></div></div>`; }
+    function renderError(message) { document.getElementById('dashboard-root').innerHTML = `<div class="dashboard-main" style="width:100%; padding:40px;"><div class="dashboard-panel"><div class="panel-head"><div><h3>Unable to load dashboard</h3><p>${escapeHtml(message || 'Please try again later.')}</p></div></div><div class="panel-body"><button class="btn-sm btn-review" onclick="loadDashboardData()">Retry</button></div></div></div>`; }
+    function stopDashboardAutoRefresh() { if (dashboardRefreshTimer) { clearInterval(dashboardRefreshTimer); dashboardRefreshTimer = null; } }
+    function startDashboardAutoRefresh() { stopDashboardAutoRefresh(); }
+
+    async function changeItemStatus(itemId, verificationStatus) { try { await apiRequest(`/items/${itemId}/verification-status`, 'PUT', { verificationStatus }, true); showToast(`Item ${verificationStatus === 'verified' ? 'approved' : 'declined'} successfully.`); loadDashboardData(); } catch (error) { showToast(error.message || 'Unable to update item status.', true); } }
+    async function approveAccount(userId) { try { await apiRequest(`/auth/approve-user/${userId}`, 'PUT', null, true); showToast('User account approved.'); loadDashboardData(); } catch (error) { showToast(error.message || 'Unable to approve account.', true); } }
+    async function rejectAccount(userId) { try { await apiRequest(`/auth/reject-user/${userId}`, 'PUT', null, true); showToast('User account rejected.'); loadDashboardData(); } catch (error) { showToast(error.message || 'Unable to reject account.', true); } }
+    async function deleteAccount(userId) {
+      if (!confirm('Delete this account permanently?')) return;
+      try { await apiRequest(`/auth/users/${userId}`, 'DELETE', null, true); showToast('User account deleted.'); loadDashboardData(); }
+      catch (error) { showToast(error.message || 'Unable to delete account.', true); }
+    }
+    async function sellBackItem(itemId) {
+      try {
+        await apiRequest(`/items/${itemId}/relist`, 'PUT', null, true);
+        showToast('Item relisted to products page.');
+        loadDashboardData();
+      } catch (error) {
+        showToast(error.message || 'Unable to relist item.', true);
+      }
+    }
+    async function createAccount(event) {
+      event.preventDefault();
+      const username = document.getElementById('new-username')?.value?.trim();
+      const email = document.getElementById('new-email')?.value?.trim();
+      const password = document.getElementById('new-password')?.value;
+      const role = document.getElementById('new-role')?.value || 'user';
+      try {
+        await apiRequest('/auth/users', 'POST', { username, email, password, role }, true);
+        showToast(`Account created as ${role}.`);
+        loadDashboardData();
+      } catch (error) {
+        showToast(error.message || 'Unable to create account.', true);
+      }
     }
 
     async function loadDashboardData() {
       if (!session) return;
-
       renderLoading();
-
-      console.log('loadDashboardData: session present:', !!session);
-
       try {
-        console.log('loadDashboardData: fetching /auth/me');
         const userResponse = await apiRequest('/auth/me', 'GET', null, true);
-        console.log('loadDashboardData: /auth/me response:', userResponse);
-
-        console.log('loadDashboardData: fetching user items via /items?owner=');
-        const ownerId = (session && session._id) || (userResponse && (userResponse._id || userResponse.id));
-        const itemsResponse = await apiRequest(`/items?owner=${encodeURIComponent(ownerId)}`, 'GET', null, true);
-        console.log('loadDashboardData: /items?owner response:', itemsResponse);
-
-        console.log('loadDashboardData: fetching backend health');
-        const healthResponse = await getBackendHealth();
-        console.log('loadDashboardData: health response:', healthResponse);
-
         const user = userResponse.user || userResponse.data || userResponse || session;
-        const items = normalizeItems(itemsResponse);
-        const health = healthResponse || null;
+        user.role = normalizeRole(user.role);
 
-        console.log('loadDashboardData: rendering dashboard with', items.length, 'items');
-        renderDashboard(user, items, health);
+        let itemsResponse = { data: [] };
+        try {
+          const itemEndpoint = user.role === 'collector' ? '/items/my-items' : '/items';
+          itemsResponse = await apiRequest(itemEndpoint, 'GET', null, true);
+        } catch (itemsError) {
+          console.error('Dashboard items fetch failed:', itemsError);
+        }
 
+        const healthResponse = await getBackendHealth();
+        let pendingUsers = []; let approvedUsers = []; let rejectedUsers = []; let allUsers = [];
+        dashboardPurchaseHistory = [];
+        if (user.role === 'collector') {
+          const purchasesResponse = await apiRequest('/items/my-purchases', 'GET', null, true);
+          dashboardPurchaseHistory = normalizeItems(purchasesResponse);
+        }
+        if (user.role === 'admin') {
+          const pendingResponse = await apiRequest('/auth/pending-users', 'GET', null, true);
+          const approvedResponse = await apiRequest('/auth/approved-users', 'GET', null, true);
+          const rejectedResponse = await apiRequest('/auth/rejected-users', 'GET', null, true);
+          const usersResponse = await apiRequest('/auth/users', 'GET', null, true);
+          pendingUsers = normalizeUsers(pendingResponse);
+          approvedUsers = normalizeUsers(approvedResponse);
+          rejectedUsers = normalizeUsers(rejectedResponse);
+          allUsers = normalizeUsers(usersResponse);
+        }
+
+        renderDashboard(user, normalizeItems(itemsResponse), healthResponse || null, pendingUsers, approvedUsers, rejectedUsers, allUsers);
+        startDashboardAutoRefresh();
       } catch (error) {
-        console.error('loadDashboardData: error', error);
-        
-        if (error.message && (error.message.toLowerCase().includes('unauthorized') || error.message.toLowerCase().includes('token'))) {
-          if (typeof signOutAndRedirect === 'function') {
-            signOutAndRedirect();
-            return;
-          }
-        }
-
         renderError(error.message || 'Unable to load dashboard data.');
-        if (typeof showToast === 'function') {
-          showToast(error.message || 'Unable to load dashboard data.', true);
-        } else {
-          alert(error.message || 'Unable to load dashboard data.');
-        }
+        if (typeof showToast === 'function') showToast(error.message || 'Unable to load dashboard data.', true);
       }
     }
 
-    document.addEventListener('DOMContentLoaded', function () {
-      if (session) {
-        loadDashboardData();
-      }
-    });
+    document.addEventListener('DOMContentLoaded', () => { if (session) loadDashboardData(); });
+    document.addEventListener('visibilitychange', () => {});
+    window.addEventListener('beforeunload', stopDashboardAutoRefresh);
   </script>
 
 </body>

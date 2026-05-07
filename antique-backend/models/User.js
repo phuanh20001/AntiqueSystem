@@ -32,8 +32,18 @@ const userSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['user', 'admin'],
+    enum: ['user', 'verifier', 'admin'],
     default: 'user'
+  },
+  status: {
+    type: String,
+    enum: ['pending', 'approved', 'rejected'],
+    default: 'approved'
+  },
+  requestedRole: {
+    type: String,
+    enum: ['user', 'verifier', 'admin'],
+    default: null
   }
 }, { timestamps: true });
 

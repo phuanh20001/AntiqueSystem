@@ -7,7 +7,9 @@
     "start": "node server.js",
     "compile": "hardhat compile",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "deploy:antique": "npm run compile && node scripts/deploy.js"
+    "deploy:antique": "npm run compile && node scripts/deploy.js",
+    "test:db": "node test-db-connection.js",
+    "seed:products": "node scripts/seed-example-products.js"
   },
   "keywords": [],
   "author": "",

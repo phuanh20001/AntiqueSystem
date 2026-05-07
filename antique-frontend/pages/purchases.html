@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Purchases — AntiqChain</title>
+  <link rel="stylesheet" href="../css/global.css">
+</head>
+<body>
+  <nav>
+    <a class="nav-logo" href="../index.html">AntiqChain <span>— Verified Heritage</span></a>
+    <div class="nav-links">
+      <a href="../index.html">Home</a>
+      <a href="products.html">Products</a>
+      <a href="about.html">About</a>
+      <a href="submit.html">Submit Item</a>
+      <a href="dashboard.html">Dashboard</a>
+      <a href="login.html" class="nav-cta">Sign In</a>
+    </div>
+  </nav>
+
+  <div class="page-header">
+    <div class="page-header-eyebrow">Collector</div>
+    <h1>My Purchase History</h1>
+    <p>View all items you purchased from verified products.</p>
+  </div>
+
+  <div class="page-content">
+    <div class="dashboard-panel">
+      <div class="panel-body">
+        <table class="review-table" style="width:100%;">
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th>Category</th>
+              <th>Purchased At</th>
+              <th>Amount</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="purchases-body">
+            <tr><td colspan="5" style="padding:20px; text-align:center;">Loading purchases...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+  <script src="../js/utils.js"></script>
+  <script src="../js/api.js"></script>
+  <script>
+    const session = requirePageSession('purchases.html');
+    const role = String(session?.role || '').toLowerCase();
+    if (!['user', 'collector'].includes(role)) {
+      window.location.replace('dashboard.html');
+    }
+
+    function escapeHtml(value) {
+      return String(value || '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+    }
+
+    async function loadPurchases() {
+      const body = document.getElementById('purchases-body');
+
+      try {
+        const response = await apiRequest('/items/my-purchases', 'GET', null, true);
+        const items = Array.isArray(response?.data) ? response.data : [];
+
+        if (!items.length) {
+          body.innerHTML = '<tr><td colspan="5" style="padding:20px; text-align:center;">No purchases found.</td></tr>';
+          return;
+        }
+
+        body.innerHTML = items.map((item) => `
+          <tr>
+            <td>${escapeHtml(item.title || 'Untitled Item')}</td>
+            <td>${escapeHtml(item.category || 'N/A')}</td>
+            <td>${escapeHtml(item.purchasedAt ? new Date(item.purchasedAt).toLocaleString() : 'N/A')}</td>
+            <td>${item.purchaseAmount ? '$' + escapeHtml(item.purchaseAmount) : 'N/A'}</td>
+            <td><a class="btn-sm btn-review" href="detail.html?id=${item._id}">View</a></td>
+          </tr>
+        `).join('');
+      } catch (error) {
+        body.innerHTML = '<tr><td colspan="5" style="padding:20px; text-align:center;">Unable to load purchase history.</td></tr>';
+        showToast(error.message || 'Unable to load purchases', true);
+      }
+    }
+
+    loadPurchases();
+  </script>
+</body>
+</html>
