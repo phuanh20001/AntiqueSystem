@@ -107,6 +107,61 @@
   margin-bottom: 6px;
 }
 
+/* ── PURCHASE CARD ── */
+.purchase-card {
+  background: var(--parchment);
+  border: 2px solid var(--sepia);
+  border-radius: 8px;
+  padding: 24px;
+  margin-bottom: 20px;
+  text-align: center;
+}
+.purchase-eyebrow {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--sepia);
+  margin-bottom: 8px;
+}
+.purchase-title {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 10px;
+  line-height: 1.2;
+}
+.purchase-price {
+  font-family: var(--font-display);
+  font-size: 30px;
+  font-weight: 700;
+  color: var(--sepia);
+  margin-bottom: 12px;
+}
+.purchase-status {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  color: var(--ink-light);
+  margin-bottom: 16px;
+  line-height: 1.45;
+}
+.btn-full.purchase-btn {
+  background: var(--sepia);
+  color: var(--ink);
+  font-weight: 500;
+  margin-top: 0;
+}
+.btn-full.purchase-btn:hover:not(:disabled) {
+  background: var(--sepia-light);
+}
+.btn-full.purchase-btn:disabled {
+  background: var(--border-light);
+  color: var(--ink-light);
+  cursor: not-allowed;
+}
+
 /* ── CERTIFICATE CARD ── */
 .cert-card {
   background: var(--parchment);
@@ -174,13 +229,55 @@
   align-items: center;
   gap: 8px;
 }
+.blockchain-title {
+  /* Default state colour for the status dot — overridden by bc-state-* classes. */
+  --bc-state-color: var(--sage-light);
+}
 .blockchain-title::before {
   content: '';
   display: inline-block;
   width: 8px; height: 8px;
   border-radius: 50%;
-  background: var(--sage-light);
-  box-shadow: 0 0 6px var(--sage-light);
+  background: var(--bc-state-color);
+  box-shadow: 0 0 6px var(--bc-state-color);
+  flex-shrink: 0;
+}
+.blockchain-title.bc-state-ok      { --bc-state-color: var(--sage-light); }
+.blockchain-title.bc-state-pending { --bc-state-color: var(--sepia-light); }
+.blockchain-title.bc-state-error   { --bc-state-color: var(--rust-light); }
+.blockchain-title.bc-state-missing { --bc-state-color: rgba(245,239,224,0.35); }
+
+/* Status pill on the right of the card title */
+.bc-status-pill {
+  margin-left: auto;
+  font-family: var(--font-ui);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 3px 9px;
+  border-radius: 20px;
+  background: rgba(245,239,224,0.06);
+  color: var(--parchment2);
+  border: 1px solid rgba(245,239,224,0.15);
+  white-space: nowrap;
+}
+.bc-status-pill.ok      { color: var(--sage-light);  border-color: rgba(122,158,114,0.45); background: rgba(74,103,65,0.18); }
+.bc-status-pill.pending { color: var(--sepia-light); border-color: rgba(200,169,74,0.45); background: rgba(200,169,74,0.12); }
+.bc-status-pill.error   { color: var(--rust-light);  border-color: rgba(196,96,58,0.45);  background: rgba(196,96,58,0.15); }
+.bc-status-pill.missing { color: rgba(245,239,224,0.55); }
+
+/* Empty / error placeholder shown when no on-chain data exists */
+.bc-empty {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  color: rgba(245,239,224,0.65);
+  background: rgba(200,169,74,0.05);
+  border: 1px dashed rgba(200,169,74,0.25);
+  border-radius: 4px;
+  padding: 14px;
+  text-align: center;
+  line-height: 1.5;
 }
 .hash-label {
   font-family: var(--font-ui);
@@ -241,3 +338,165 @@
   transition: all 0.2s;
 }
 .chain-verify-btn:hover { border-color: var(--sepia-light); color: var(--sepia-light); }
+
+/* Etherscan "open proof" button — solid sepia so it stands out as the primary action. */
+.chain-verify-btn.bc-etherscan-btn {
+  display: block;
+  text-align: center;
+  text-decoration: none;
+  background: var(--sepia);
+  color: var(--ink);
+  border-color: var(--sepia);
+  font-weight: 500;
+  margin-top: 14px;
+}
+.chain-verify-btn.bc-etherscan-btn:hover {
+  background: var(--sepia-light);
+  border-color: var(--sepia-light);
+  color: var(--ink);
+}
+
+/* ── BLOCKCHAIN PROOF MODAL ── */
+.bc-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(20,15,8,0.7);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 500;
+  padding: 20px;
+  backdrop-filter: blur(2px);
+}
+.bc-modal.show {
+  display: flex;
+  animation: fadeIn 0.2s ease;
+}
+.bc-modal-card {
+  background: var(--cream);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 32px;
+  max-width: 560px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+  box-shadow: 0 24px 80px rgba(0,0,0,0.4);
+}
+.bc-modal-close {
+  position: absolute;
+  top: 10px;
+  right: 16px;
+  background: none;
+  border: none;
+  font-size: 28px;
+  color: var(--ink-light);
+  cursor: pointer;
+  line-height: 1;
+  padding: 4px 10px;
+}
+.bc-modal-close:hover { color: var(--ink); }
+.bc-modal-title {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 16px;
+  padding-right: 32px;
+}
+.bc-modal-status {
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 500;
+  padding: 12px 14px;
+  border-radius: 4px;
+  background: var(--parchment2);
+  color: var(--ink);
+  border-left: 3px solid var(--ink-light);
+  margin-bottom: 18px;
+  line-height: 1.4;
+}
+.bc-modal-status.ok      { background: #E8F0E6; color: var(--sage); border-left-color: var(--sage); }
+.bc-modal-status.error   { background: #F0E4DF; color: var(--rust); border-left-color: var(--rust); }
+.bc-modal-status.pending { background: #F5EDD6; color: var(--sepia); border-left-color: var(--sepia); }
+.bc-modal-section { margin-bottom: 16px; }
+.bc-modal-label {
+  font-family: var(--font-ui);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-light);
+  margin-bottom: 4px;
+}
+.bc-modal-hash {
+  font-family: monospace;
+  font-size: 11px;
+  background: var(--parchment2);
+  border: 1px solid var(--border-light);
+  border-radius: 4px;
+  padding: 9px 11px;
+  word-break: break-all;
+  margin-bottom: 12px;
+  color: var(--ink);
+  line-height: 1.5;
+}
+.bc-modal-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 18px;
+  margin-bottom: 18px;
+}
+.bc-modal-val {
+  font-family: monospace;
+  font-size: 12px;
+  color: var(--ink);
+  word-break: break-all;
+  line-height: 1.5;
+}
+.bc-modal-error {
+  background: #F0E4DF;
+  color: var(--rust);
+  border: 1px solid #D4B0A0;
+  border-radius: 4px;
+  padding: 10px 14px;
+  font-family: monospace;
+  font-size: 12px;
+  margin-bottom: 18px;
+  word-break: break-all;
+  line-height: 1.5;
+}
+.bc-modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+.bc-modal-btn {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 10px 18px;
+  border: 1px solid var(--border);
+  background: var(--cream);
+  color: var(--ink);
+  border-radius: 3px;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+  transition: all 0.2s;
+}
+.bc-modal-btn:hover { border-color: var(--ink); }
+.bc-modal-btn.primary {
+  background: var(--ink);
+  color: var(--parchment);
+  border-color: var(--ink);
+}
+.bc-modal-btn.primary:hover {
+  background: var(--sepia);
+  color: var(--ink);
+  border-color: var(--sepia);
+}

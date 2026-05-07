@@ -50,6 +50,13 @@
   font-size: 15px;
 }
 
+.product-actions {
+  margin-top: 12px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .products-empty {
   padding: 34px;
   border: 1px dashed var(--border);

@@ -99,7 +99,12 @@
       }
 
       root.className = 'products-grid';
-      root.innerHTML = filtered.map((item) => `
+      root.innerHTML = filtered.map((item) => {
+        const viewBtn = `<button class="btn-sm btn-review" onclick="viewProduct('${item._id}')">View Details</button>`;
+        const buyBtn = canBuyProducts
+          ? `<button class="btn-sm btn-approve" onclick="buyProduct('${item._id}')">Buy Product</button>`
+          : '';
+        return `
         <div class="product-card">
           <div class="product-thumb">🏺</div>
           <div class="product-body">
@@ -108,16 +113,17 @@
             <div class="product-meta">Owner: ${escapeHtml(item.owner?.username || 'Unknown')}</div>
             <div class="product-meta">Price: ${item.estimatedValue ? '$' + escapeHtml(item.estimatedValue) : 'N/A'}</div>
             <div style="margin-top:8px;">${item.isSold ? '<span class="badge badge-rejected">Sold</span>' : '<span class="badge badge-verified">Available</span>'}</div>
-            <div style="margin-top:12px;">
-              ${
-                canBuyProducts
-                  ? `<button class="btn-sm btn-approve" onclick="buyProduct('${item._id}')">Buy Product</button>`
-                  : `<button class="btn-sm btn-review" disabled title="Only collector accounts can buy products">View Only</button>`
-              }
+            <div class="product-actions">
+              ${viewBtn}
+              ${buyBtn}
             </div>
           </div>
-        </div>
-      `).join('');
+        </div>`;
+      }).join('');
+    }
+
+    function viewProduct(itemId) {
+      window.location.href = `detail.html?id=${itemId}`;
     }
 
     function buyProduct(itemId) {

@@ -96,6 +96,14 @@
       </div>
 
       <div>
+        <div class="purchase-card" id="purchaseCard" style="display:none;">
+          <div class="purchase-eyebrow">Marketplace</div>
+          <div class="purchase-title" id="purchaseTitle">Purchase This Item</div>
+          <div class="purchase-price" id="purchasePrice">—</div>
+          <div class="purchase-status" id="purchaseStatus"></div>
+          <button class="btn-full purchase-btn" id="purchaseBtn" type="button">Buy Now</button>
+        </div>
+
         <div class="cert-card">
           <div class="cert-seal">🏛️</div>
           <div class="cert-title">Certificate of Authenticity</div>
@@ -113,31 +121,96 @@
           </button>
         </div>
 
-        <div class="blockchain-card">
-          <div class="blockchain-title">Blockchain Record</div>
-          <div class="hash-label">Block Hash (SHA-256)</div>
-          <div class="hash-display">a3f9c2e17b84d5610f2a8c3e9b7d4f1a2c5e8b0d3f6a9c2e5b8d1f4a7c0e3b6d9f2a5c8e1b4d7f0a3c6</div>
-          <div class="chain-row">
-            <span class="chain-label">Block Index</span>
-            <span class="chain-val">4,821</span>
+        <div class="blockchain-card" id="blockchainCard">
+          <div class="blockchain-title" id="blockchainTitle">
+            <span>Blockchain Record</span>
+            <span class="bc-status-pill" id="bcStatusPill">Loading…</span>
           </div>
-          <div class="chain-row">
-            <span class="chain-label">Previous Hash</span>
-            <span class="chain-val hash">b2e8d1f4a7c0e3b6d9f2a5c8…</span>
+
+          <div class="bc-empty" id="bcEmpty" style="display:none;">
+            This item has not been recorded on the blockchain yet.
           </div>
-          <div class="chain-row">
-            <span class="chain-label">Timestamp</span>
-            <span class="chain-val">2025-03-14 09:42:17 UTC</span>
+
+          <div class="bc-body" id="bcBody" style="display:none;">
+            <div class="hash-label">Metadata Hash (SHA-256)</div>
+            <div class="hash-display" id="bcMetadataHash">—</div>
+
+            <div class="chain-row">
+              <span class="chain-label">Network</span>
+              <span class="chain-val" id="bcNetwork">—</span>
+            </div>
+            <div class="chain-row">
+              <span class="chain-label">Contract</span>
+              <span class="chain-val hash" id="bcContract" title="">—</span>
+            </div>
+            <div class="chain-row">
+              <span class="chain-label">Tx Hash</span>
+              <span class="chain-val hash" id="bcTxHash" title="">—</span>
+            </div>
+            <div class="chain-row">
+              <span class="chain-label">Verifier</span>
+              <span class="chain-val hash" id="bcVerifier" title="">—</span>
+            </div>
+            <div class="chain-row">
+              <span class="chain-label">Decision</span>
+              <span class="chain-val" id="bcDecision">—</span>
+            </div>
+            <div class="chain-row">
+              <span class="chain-label">Recorded</span>
+              <span class="chain-val" id="bcTimestamp">—</span>
+            </div>
+
+            <a class="chain-verify-btn bc-etherscan-btn" id="bcEtherscanBtn" href="#" target="_blank" rel="noopener">
+              View Proof on Etherscan ↗
+            </a>
+            <button class="chain-verify-btn" onclick="checkBlockchainProof()">Verify Chain Integrity</button>
           </div>
-          <div class="chain-row">
-            <span class="chain-label">Verifier ID</span>
-            <span class="chain-val">VRF-009</span>
+        </div>
+
+        <!-- Blockchain Proof Modal -->
+        <div class="bc-modal" id="bcProofModal" role="dialog" aria-modal="true" aria-labelledby="bcProofTitle">
+          <div class="bc-modal-card">
+            <button class="bc-modal-close" onclick="closeProofModal()" aria-label="Close">×</button>
+            <div class="bc-modal-title" id="bcProofTitle">Blockchain Integrity Report</div>
+            <div class="bc-modal-status" id="bcProofStatus">Checking…</div>
+
+            <div class="bc-modal-section">
+              <div class="bc-modal-label">On-chain hash (Sepolia)</div>
+              <div class="bc-modal-hash" id="bcProofOnHash">—</div>
+
+              <div class="bc-modal-label">Off-chain stored hash (MongoDB cache)</div>
+              <div class="bc-modal-hash" id="bcProofOffHash">—</div>
+
+              <div class="bc-modal-label">Recomputed from current item data</div>
+              <div class="bc-modal-hash" id="bcProofRecomputedHash">—</div>
+            </div>
+
+            <div class="bc-modal-grid">
+              <div>
+                <div class="bc-modal-label">Decision</div>
+                <div class="bc-modal-val" id="bcProofDecision">—</div>
+              </div>
+              <div>
+                <div class="bc-modal-label">Recorded</div>
+                <div class="bc-modal-val" id="bcProofTimestamp">—</div>
+              </div>
+              <div>
+                <div class="bc-modal-label">Verifier wallet</div>
+                <div class="bc-modal-val" id="bcProofVerifier">—</div>
+              </div>
+              <div>
+                <div class="bc-modal-label">Contract</div>
+                <div class="bc-modal-val" id="bcProofContract">—</div>
+              </div>
+            </div>
+
+            <div class="bc-modal-error" id="bcProofError" style="display:none;"></div>
+
+            <div class="bc-modal-actions">
+              <a class="bc-modal-btn primary" id="bcProofEtherscanBtn" href="#" target="_blank" rel="noopener">Open on Etherscan ↗</a>
+              <button class="bc-modal-btn" onclick="closeProofModal()">Close</button>
+            </div>
           </div>
-          <div class="chain-row">
-            <span class="chain-label">Status</span>
-            <span class="chain-val ok">✓ Chain Intact</span>
-          </div>
-          <button class="chain-verify-btn" onclick="checkBlockchainProof()">Verify Chain Integrity</button>
         </div>
       </div>
     </div>
@@ -182,31 +255,245 @@
       });
     });
 
+    // Truncate long hashes/addresses to "0x1234abcd…ef901234" for compact display.
+    function shortenHash(value, head = 10, tail = 8) {
+      if (!value) return '—';
+      const s = String(value);
+      if (s.length <= head + tail + 1) return s;
+      return s.slice(0, head) + '…' + s.slice(-tail);
+    }
+
+    function formatNetworkName(net) {
+      if (!net) return 'Unknown';
+      return net.charAt(0).toUpperCase() + net.slice(1);
+    }
+
+    // The status pill / dot color reflects whether on-chain data is present.
+    function setBlockchainStatus(state) {
+      const title = document.getElementById('blockchainTitle');
+      const pill = document.getElementById('bcStatusPill');
+      if (!title || !pill) return;
+
+      ['bc-state-ok', 'bc-state-pending', 'bc-state-error', 'bc-state-missing']
+        .forEach((cls) => title.classList.remove(cls));
+      ['ok', 'pending', 'error', 'missing']
+        .forEach((cls) => pill.classList.remove(cls));
+
+      const labels = {
+        ok: '✓ On Chain',
+        pending: '⏳ Awaiting Confirmation',
+        error: '⚠ Error',
+        missing: 'Not Recorded',
+      };
+
+      title.classList.add(`bc-state-${state}`);
+      pill.classList.add(state);
+      pill.textContent = labels[state] || '—';
+    }
+
+    async function loadBlockchainCard(itemId) {
+      try {
+        const resp = await apiRequest(`/items/${itemId}/proof`, 'GET', null, false);
+        const proof = (resp && resp.data) || {};
+
+        const rec = proof.onChainRecord || null;
+        const hasOnChain = !!rec && rec.exists !== false && proof.onChainStatus === 'present';
+        const hasTxHash = !!proof.txHash;
+
+        // Decide which card state to render.
+        if (!hasOnChain && !hasTxHash && !proof.onChainError) {
+          setBlockchainStatus('missing');
+          document.getElementById('bcEmpty').style.display = 'block';
+          document.getElementById('bcEmpty').textContent =
+            'This item has not been recorded on the blockchain yet.';
+          document.getElementById('bcBody').style.display = 'none';
+          return;
+        }
+
+        if (proof.onChainError && !hasOnChain && !hasTxHash) {
+          setBlockchainStatus('error');
+          document.getElementById('bcEmpty').style.display = 'block';
+          document.getElementById('bcEmpty').textContent =
+            'On-chain lookup failed: ' + proof.onChainError;
+          document.getElementById('bcBody').style.display = 'none';
+          return;
+        }
+
+        if (hasOnChain) {
+          setBlockchainStatus('ok');
+        } else if (hasTxHash) {
+          setBlockchainStatus('pending');
+        } else {
+          setBlockchainStatus('error');
+        }
+
+        document.getElementById('bcEmpty').style.display = 'none';
+        document.getElementById('bcBody').style.display = '';
+
+        const metadataHash =
+          (rec && rec.metadataHash) || proof.offChainHash || 'Not available';
+        document.getElementById('bcMetadataHash').textContent = metadataHash;
+
+        document.getElementById('bcNetwork').textContent = formatNetworkName(proof.network);
+
+        const contractEl = document.getElementById('bcContract');
+        contractEl.textContent = shortenHash(proof.contractAddress, 8, 6);
+        contractEl.title = proof.contractAddress || '';
+
+        const txEl = document.getElementById('bcTxHash');
+        txEl.textContent = shortenHash(proof.txHash, 10, 8);
+        txEl.title = proof.txHash || '';
+
+        const verifierEl = document.getElementById('bcVerifier');
+        verifierEl.textContent = shortenHash(rec && rec.verifier, 8, 6);
+        verifierEl.title = (rec && rec.verifier) || '';
+
+        const decisionEl = document.getElementById('bcDecision');
+        if (rec && rec.exists !== false) {
+          decisionEl.textContent = rec.isAuthentic ? '✓ Authentic' : '✗ Rejected';
+          decisionEl.classList.toggle('ok', !!rec.isAuthentic);
+        } else {
+          decisionEl.textContent = '—';
+        }
+
+        document.getElementById('bcTimestamp').textContent =
+          rec && rec.timestamp ? new Date(rec.timestamp).toLocaleString() : '—';
+
+        // The Etherscan button is the "open proof" button. Prefer the
+        // transaction page (proves THIS item was written), fall back to the
+        // contract page if no tx hash is cached locally.
+        const etherscanBtn = document.getElementById('bcEtherscanBtn');
+        const proofUrl = proof.etherscanTxUrl || proof.etherscanContractUrl;
+        if (proofUrl) {
+          etherscanBtn.href = proofUrl;
+          etherscanBtn.style.display = '';
+          etherscanBtn.textContent = proof.etherscanTxUrl
+            ? 'View Proof on Etherscan ↗'
+            : 'View Contract on Etherscan ↗';
+        } else {
+          etherscanBtn.style.display = 'none';
+        }
+      } catch (err) {
+        setBlockchainStatus('error');
+        document.getElementById('bcEmpty').style.display = 'block';
+        document.getElementById('bcEmpty').textContent =
+          'Could not load on-chain data: ' + (err.message || err);
+        document.getElementById('bcBody').style.display = 'none';
+      }
+    }
+
+    function openProofModal(loadingText) {
+      const modal = document.getElementById('bcProofModal');
+      modal.classList.add('show');
+      document.body.style.overflow = 'hidden';
+
+      const status = document.getElementById('bcProofStatus');
+      status.textContent = loadingText || 'Checking…';
+      status.className = 'bc-modal-status';
+      document.getElementById('bcProofError').style.display = 'none';
+    }
+
+    function closeProofModal() {
+      document.getElementById('bcProofModal').classList.remove('show');
+      document.body.style.overflow = '';
+    }
+
+    function renderProofModal(proof) {
+      const status = document.getElementById('bcProofStatus');
+      const errorBox = document.getElementById('bcProofError');
+      const rec = (proof && proof.onChainRecord) || null;
+      const onChainAbsent = !rec || proof.onChainStatus === 'absent';
+
+      // Decide overall status message. We have three different hashes that
+      // should all agree, and each mismatch reveals a different tampering mode.
+      if (proof && proof.onChainError) {
+        status.textContent = '⚠ Could not read from blockchain';
+        status.className = 'bc-modal-status error';
+        errorBox.textContent = proof.onChainError;
+        errorBox.style.display = 'block';
+      } else if (onChainAbsent) {
+        status.textContent = 'No verification record found on chain for this item.';
+        status.className = 'bc-modal-status pending';
+      } else if (proof.hashMatches === true && proof.recomputedMatches === true) {
+        status.textContent = '✓ Chain Intact — on-chain, cached, and recomputed hashes all match';
+        status.className = 'bc-modal-status ok';
+      } else if (proof.recomputedMatches === false && proof.hashMatches === true) {
+        status.textContent =
+          '✗ Item data tampered — current item fields no longer match the on-chain hash';
+        status.className = 'bc-modal-status error';
+      } else if (proof.hashMatches === false && proof.recomputedMatches === true) {
+        status.textContent =
+          '✗ Cached hash tampered — the MongoDB hash field was edited but the item itself is intact';
+        status.className = 'bc-modal-status error';
+      } else if (proof.hashMatches === false || proof.recomputedMatches === false) {
+        status.textContent = '✗ Hash mismatch detected — possible tampering';
+        status.className = 'bc-modal-status error';
+      } else if (proof.onChainStatus === 'present' && !proof.offChainHash) {
+        status.textContent =
+          'On-chain record found, but no cached hash in MongoDB. Recomputed hash ' +
+          (proof.recomputedMatches ? 'matches the chain.' : 'does NOT match the chain.');
+        status.className = proof.recomputedMatches ? 'bc-modal-status ok' : 'bc-modal-status error';
+      } else {
+        status.textContent = 'Proof report generated.';
+        status.className = 'bc-modal-status';
+      }
+
+      document.getElementById('bcProofOnHash').textContent =
+        (proof && proof.onChainHash) || 'Not on chain';
+      document.getElementById('bcProofOffHash').textContent =
+        (proof && proof.offChainHash) || 'Not stored';
+      document.getElementById('bcProofRecomputedHash').textContent =
+        (proof && proof.recomputedHash) || '—';
+
+      const decisionEl = document.getElementById('bcProofDecision');
+      if (rec && rec.exists !== false) {
+        decisionEl.textContent = rec.isAuthentic ? '✓ Authentic' : '✗ Rejected';
+      } else {
+        decisionEl.textContent = '—';
+      }
+
+      document.getElementById('bcProofVerifier').textContent =
+        (rec && rec.verifier) || '—';
+      document.getElementById('bcProofTimestamp').textContent =
+        rec && rec.timestamp ? new Date(rec.timestamp).toLocaleString() : '—';
+      document.getElementById('bcProofContract').textContent =
+        (proof && proof.contractAddress) || '—';
+
+      const btn = document.getElementById('bcProofEtherscanBtn');
+      const url = (proof && proof.etherscanTxUrl) || (proof && proof.etherscanContractUrl);
+      if (url) {
+        btn.href = url;
+        btn.style.display = '';
+        btn.textContent = proof.etherscanTxUrl
+          ? 'Open Transaction on Etherscan ↗'
+          : 'Open Contract on Etherscan ↗';
+      } else {
+        btn.style.display = 'none';
+      }
+    }
+
     async function checkBlockchainProof() {
       const itemId = new URLSearchParams(window.location.search).get('id');
       if (!itemId) return showToast('Item ID not provided', true);
 
+      openProofModal('Checking blockchain integrity…');
+
       try {
         const resp = await apiRequest(`/items/${itemId}/proof`, 'GET', null, false);
-        if (!resp || !resp.success) {
-          showToast('Unable to fetch proof', true);
-          return;
-        }
-
-        const proof = resp.data;
-        if (proof.hashMatches === true) {
-          showToast('✓ Proof OK — hashes match');
-        } else if (proof.hashMatches === false) {
-          showToast('✗ Proof failed — hash mismatch detected', true);
-        } else if (proof.onChainRecord && proof.onChainRecord.error) {
-          showToast('⚠ Proof check returned an RPC error', true);
-        } else {
-          showToast('Proof report generated.');
-        }
-      } catch (error) {
-        showToast('Error checking proof: ' + (error.message || error), true);
+        const proof = (resp && resp.data) || {};
+        renderProofModal(proof);
+      } catch (err) {
+        renderProofModal({ onChainError: err.message || String(err) });
       }
     }
+
+    // Close modal on backdrop click + Escape key.
+    document.getElementById('bcProofModal').addEventListener('click', (event) => {
+      if (event.target.id === 'bcProofModal') closeProofModal();
+    });
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') closeProofModal();
+    });
 
     async function loadItemDetail() {
       const itemId = new URLSearchParams(window.location.search).get('id');
@@ -258,19 +545,109 @@
           tagsContainer.innerHTML = `<span class="tag">${item.category || 'Antique'}</span><span class="tag">${item.material || 'Item'}</span><span class="tag">${item.condition || 'Not assessed'}</span>`;
         }
 
-        const txHash = item.blockchainTransactionHash || 'Pending';
-        document.querySelector('.hash-display').textContent = txHash;
+        // Fetch real on-chain data + integrity proof in a separate request
+        // so a slow/missing RPC never blocks the rest of the detail page.
+        loadBlockchainCard(item._id);
 
-        if (txHash !== 'Pending') {
-          const link = document.createElement('a');
-          link.href = `https://sepolia.etherscan.io/tx/${txHash}`;
-          link.target = '_blank';
-          link.textContent = 'View on Etherscan →';
-          link.style.cssText = 'display:block;margin-top:12px;font-family:var(--font-ui);font-size:12px;color:var(--sepia-light);text-decoration:none;';
-          document.querySelector('.blockchain-card').appendChild(link);
-        }
+        // Render the contextual purchase CTA last so the rest of the page
+        // never depends on auth/role lookup completing first.
+        renderPurchaseCard(item);
       } catch (error) {
         showToast('Unable to load item details: ' + error.message, true);
+      }
+    }
+
+    // Map every (auth, role, ownership, status, sold) combo to a clear CTA.
+    // The backend ultimately re-validates everything in /items/:id/purchase,
+    // so this is purely UX — refusing to show the button doesn't bypass auth.
+    function renderPurchaseCard(item) {
+      const card = document.getElementById('purchaseCard');
+      const title = document.getElementById('purchaseTitle');
+      const price = document.getElementById('purchasePrice');
+      const status = document.getElementById('purchaseStatus');
+      const btn = document.getElementById('purchaseBtn');
+      if (!card || !item) return;
+
+      card.style.display = 'block';
+      price.textContent = item.estimatedValue ? `$${item.estimatedValue}` : 'Price on request';
+
+      const role = String(session?.role || '').toLowerCase();
+      const normalizedRole = role === 'user' ? 'collector' : role;
+      const itemOwnerId = item.owner?._id || item.owner;
+      const isOwn = session && itemOwnerId && String(itemOwnerId) === String(session._id);
+      const isVerified = String(item.verificationStatus || '').toLowerCase() === 'verified';
+
+      btn.style.display = '';
+      btn.disabled = false;
+      btn.onclick = null;
+
+      if (!session) {
+        title.textContent = 'Sign in to Purchase';
+        status.textContent = 'Create a collector account to buy verified antiques.';
+        btn.textContent = 'Sign In';
+        btn.onclick = () => {
+          const returnTo = encodeURIComponent('detail.html?id=' + item._id);
+          window.location.href = `login.html?returnTo=${returnTo}`;
+        };
+        return;
+      }
+
+      if (isOwn) {
+        title.textContent = 'You Own This Item';
+        status.textContent = 'This antique is in your collection.';
+        btn.style.display = 'none';
+        return;
+      }
+
+      if (item.isSold) {
+        title.textContent = 'No Longer Available';
+        status.textContent = 'This item has already been sold.';
+        btn.textContent = 'Sold';
+        btn.disabled = true;
+        return;
+      }
+
+      if (!isVerified) {
+        title.textContent = 'Awaiting Verification';
+        status.textContent = 'Items can only be purchased once a verifier has approved them.';
+        btn.style.display = 'none';
+        return;
+      }
+
+      if (normalizedRole !== 'collector') {
+        title.textContent = 'Marketplace';
+        status.textContent = 'Only collector accounts can purchase items.';
+        btn.style.display = 'none';
+        return;
+      }
+
+      // Happy path: a signed-in collector viewing a verified, unsold item they
+      // don't own. Show the buy CTA.
+      title.textContent = 'Purchase This Item';
+      status.textContent = 'Ownership transfers immediately on purchase.';
+      btn.textContent = 'Buy Now';
+      btn.onclick = () => purchaseCurrentItem(item);
+    }
+
+    async function purchaseCurrentItem(item) {
+      if (!confirm(`Purchase "${item.title || 'this item'}" for ${item.estimatedValue ? '$' + item.estimatedValue : 'the listed price'}?`)) {
+        return;
+      }
+
+      const btn = document.getElementById('purchaseBtn');
+      btn.disabled = true;
+      const originalLabel = btn.textContent;
+      btn.textContent = 'Processing…';
+
+      try {
+        await apiRequest(`/items/${item._id}/purchase`, 'POST', null, true);
+        showToast('Purchase complete. Item added to your collection.');
+        // Reload so ownership/banner/buttons refresh from the server's truth.
+        setTimeout(() => loadItemDetail(), 500);
+      } catch (error) {
+        showToast(error.message || 'Unable to complete purchase.', true);
+        btn.disabled = false;
+        btn.textContent = originalLabel;
       }
     }
 

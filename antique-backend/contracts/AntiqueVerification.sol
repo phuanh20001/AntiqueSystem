@@ -34,6 +34,13 @@ contract AntiqueVerification {
     event VerifierAdded(address indexed verifier);
     event VerifierRemoved(address indexed verifier);
 
+    // Emitted when the contract owner clears an item record (undo wrong decision).
+    event VerificationRevoked(
+        string  indexed itemId,
+        address indexed revokedBy,
+        uint256 timestamp
+    );
+
     // Runs once when the contract is first deployed
     constructor() {
         owner = msg.sender;
@@ -99,5 +106,13 @@ contract AntiqueVerification {
     // Check if an item has already been verified
     function isVerified(string memory itemId) public view returns (bool) {
         return records[itemId].exists;
+    }
+
+    // Owner-only: clears the active on-chain record so verifyItem can be called again.
+    // Past ItemVerified events remain visible on Etherscan forever; this only resets storage.
+    function revokeVerification(string memory itemId) public onlyOwner {
+        require(records[itemId].exists, "No record to revoke");
+        delete records[itemId];
+        emit VerificationRevoked(itemId, msg.sender, block.timestamp);
     }
 }
