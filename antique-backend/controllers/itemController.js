@@ -1,9 +1,14 @@
 const mongoose = require('mongoose');
 const Item = require('../models/Item');
 const User = require('../models/User');
+const blockchainService = require('../services/blockchainService');
 
 const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
 const isCollectorRole = (role) => ['user', 'collector'].includes(String(role || '').toLowerCase());
+
+// "No record found" is a normal contract revert when an item has not been verified yet —
+// we treat it as an absent record rather than a hard failure.
+const isAbsentRecordError = (message) => /no\s+record/i.test(String(message || ''));
 
 /**
  * @desc    Create a new antique item
@@ -252,6 +257,11 @@ const updateItem = async (req, res) => {
  * @desc    Update item verification status
  * @route   PUT /api/items/:id/verification-status
  * @access  Private (Admin/Verifier only)
+ *
+ * For terminal decisions ('verified' or 'rejected') this endpoint also
+ * commits the verdict to the Ethereum (Sepolia) smart contract. We refuse
+ * to set the off-chain status if the on-chain transaction fails — that
+ * way a "verified" badge always implies a publicly auditable chain record.
  */
 const updateVerificationStatus = async (req, res) => {
   try {
@@ -268,26 +278,75 @@ const updateVerificationStatus = async (req, res) => {
       });
     }
 
-    const item = await Item.findByIdAndUpdate(
-      req.params.id,
-      {
-        verificationStatus,
-        verificationRecord: verificationRecord || undefined,
-      },
-      { new: true, runValidators: true }
-    ).populate('owner', 'username email');
-
+    const item = await Item.findById(req.params.id);
     if (!item) {
-      return res.status(404).json({
-        success: false,
-        message: 'Item not found',
-      });
+      return res.status(404).json({ success: false, message: 'Item not found' });
     }
+
+    let blockchainResult = null;
+    const isTerminalDecision =
+      verificationStatus === 'verified' || verificationStatus === 'rejected';
+
+    if (isTerminalDecision && blockchainService.contract) {
+      const isAuthentic = verificationStatus === 'verified';
+      const canonical = blockchainService.buildItemCanonicalData(item);
+      const metadataHash = blockchainService.generateMetadataHash(canonical);
+
+      try {
+        // The contract reverts on duplicate verification, so check first.
+        const alreadyOnChain = await blockchainService
+          .isItemVerifiedOnChain(req.params.id)
+          .catch(() => false);
+
+        if (alreadyOnChain) {
+          blockchainResult = { alreadyOnChain: true };
+        } else {
+          console.log(
+            `[itemController] Submitting verification to chain — item=${req.params.id}, decision=${verificationStatus}`
+          );
+          const submission = await blockchainService.submitVerificationToBlockchain(
+            req.params.id,
+            isAuthentic,
+            metadataHash
+          );
+
+          item.blockchainHash = metadataHash;
+          item.blockchainTransactionHash = submission.txHash;
+          item.blockchainContractAddress = process.env.CONTRACT_ADDRESS || null;
+          item.blockchainNetwork = process.env.ALCHEMY_SEPOLIA_URL ? 'sepolia' : null;
+
+          blockchainResult = {
+            txHash: submission.txHash,
+            metadataHash,
+            etherscanUrl: blockchainService.getEtherscanUrl(submission.txHash),
+            contractAddress: process.env.CONTRACT_ADDRESS || null,
+            network: 'sepolia',
+          };
+        }
+      } catch (err) {
+        console.error('[itemController] Blockchain submission failed:', err);
+        // Refuse the off-chain status update if the on-chain commit failed —
+        // we don't want to silently produce a "verified" item with no chain proof.
+        return res.status(502).json({
+          success: false,
+          message: `Blockchain submission failed: ${err.message || err}`,
+        });
+      }
+    }
+
+    item.verificationStatus = verificationStatus;
+    if (verificationRecord) {
+      item.verificationRecord = verificationRecord;
+    }
+
+    await item.save();
+    await item.populate('owner', 'username email');
 
     res.status(200).json({
       success: true,
       message: 'Verification status updated successfully',
       data: item,
+      blockchain: blockchainResult,
     });
   } catch (error) {
     console.error('Update Verification Status Error:', error);
@@ -345,6 +404,116 @@ const saveBlockchainDetails = async (req, res) => {
     res.status(500).json({
       success: false,
       message: error.message || 'Error saving blockchain details',
+    });
+  }
+};
+
+/**
+ * @desc    Get full blockchain proof for an item
+ * @route   GET /api/items/:id/proof
+ * @access  Public
+ *
+ * Compares the metadata hash stored off-chain (MongoDB) with the metadata
+ * hash currently on-chain. If they differ, something has been tampered
+ * with on either side. The response also bundles Etherscan deep-links so
+ * the client can show a "view on chain" proof in one click.
+ */
+const getItemBlockchainProof = async (req, res) => {
+  try {
+    if (!isValidObjectId(req.params.id)) {
+      return res.status(400).json({ success: false, message: 'Invalid item ID' });
+    }
+
+    const item = await Item.findById(req.params.id)
+      .populate('owner', 'username email')
+      .populate('verificationRecord');
+
+    if (!item) {
+      return res.status(404).json({ success: false, message: 'Item not found' });
+    }
+
+    let onChainRecord = null;
+    let onChainError = null;
+    let onChainStatus = 'error';
+
+    if (!blockchainService.contract) {
+      onChainError = 'Blockchain contract is not configured on the server';
+    } else {
+      try {
+        onChainRecord = await blockchainService.getVerificationFromChain(req.params.id);
+        onChainStatus = onChainRecord && onChainRecord.exists ? 'present' : 'absent';
+      } catch (err) {
+        const msg = err.message || 'Failed to read from blockchain';
+        if (isAbsentRecordError(msg)) {
+          onChainStatus = 'absent';
+        } else {
+          onChainError = msg;
+        }
+      }
+    }
+
+    const offChainHash = item.blockchainHash || null;
+    const onChainHash = onChainRecord ? onChainRecord.metadataHash : null;
+
+    // Recompute the hash from the CURRENT item snapshot. If this differs
+    // from what's on-chain, the off-chain Item document has been tampered
+    // with after verification (someone edited title/description/etc.).
+    const recomputedCanonical = blockchainService.buildItemCanonicalData(item);
+    const recomputedHash = blockchainService.generateMetadataHash(recomputedCanonical);
+
+    let hashMatches = null;
+    if (offChainHash && onChainHash) {
+      hashMatches = offChainHash === onChainHash;
+    }
+
+    let recomputedMatches = null;
+    if (recomputedHash && onChainHash) {
+      recomputedMatches = recomputedHash === onChainHash;
+    }
+
+    const contractAddress =
+      process.env.CONTRACT_ADDRESS || item.blockchainContractAddress || null;
+    const network =
+      item.blockchainNetwork || (process.env.ALCHEMY_SEPOLIA_URL ? 'sepolia' : null);
+    const txHash = item.blockchainTransactionHash || null;
+    const etherscanTxUrl = txHash
+      ? `https://sepolia.etherscan.io/tx/${txHash}`
+      : null;
+    const etherscanContractUrl = contractAddress
+      ? `https://sepolia.etherscan.io/address/${contractAddress}`
+      : null;
+
+    res.status(200).json({
+      success: true,
+      data: {
+        item: {
+          _id: item._id,
+          title: item.title,
+          verificationStatus: item.verificationStatus,
+          owner: item.owner
+            ? { username: item.owner.username, email: item.owner.email }
+            : null,
+        },
+        onChainStatus,
+        onChainRecord,
+        onChainError,
+        offChainHash,
+        onChainHash,
+        recomputedHash,
+        hashMatches,
+        recomputedMatches,
+        contractAddress,
+        network,
+        txHash,
+        etherscanTxUrl,
+        etherscanContractUrl,
+      },
+    });
+  } catch (error) {
+    console.error('Get Item Blockchain Proof Error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Error fetching blockchain proof',
     });
   }
 };
@@ -637,6 +806,82 @@ const getMyPurchases = async (req, res) => {
   }
 };
 
+/**
+ * @desc    Admin: clear on-chain verification and reset item to pending for re-review
+ * @route   POST /api/items/:id/revoke-verification
+ * @access  Private (Admin only)
+ *
+ * Calls revokeVerification on the contract when a record exists; always clears
+ * blockchain pointer fields on the Item and sets verificationStatus to pending.
+ */
+const revokeItemVerification = async (req, res) => {
+  try {
+    if (!isValidObjectId(req.params.id)) {
+      return res.status(400).json({ success: false, message: 'Invalid item ID' });
+    }
+
+    const item = await Item.findById(req.params.id);
+    if (!item) {
+      return res.status(404).json({ success: false, message: 'Item not found' });
+    }
+
+    const status = String(item.verificationStatus || '').toLowerCase();
+    if (!['verified', 'rejected'].includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Only verified or rejected items can be reversed',
+      });
+    }
+
+    let revocationTxHash = null;
+    let etherscanUrl = null;
+
+    if (blockchainService.contract) {
+      const onChain = await blockchainService
+        .isItemVerifiedOnChain(req.params.id)
+        .catch(() => false);
+
+      if (onChain) {
+        try {
+          const submission = await blockchainService.revokeVerificationOnChain(req.params.id);
+          revocationTxHash = submission.txHash;
+          etherscanUrl = blockchainService.getEtherscanUrl(submission.txHash);
+        } catch (err) {
+          console.error('[itemController] On-chain revoke failed:', err);
+          return res.status(502).json({
+            success: false,
+            message: `Blockchain revoke failed: ${err.message || err}`,
+          });
+        }
+      }
+    }
+
+    item.blockchainHash = null;
+    item.blockchainTransactionHash = null;
+    item.blockchainContractAddress = null;
+    item.blockchainNetwork = null;
+    item.verificationStatus = 'pending';
+    item.verificationRecord = null;
+
+    await item.save();
+    await item.populate('owner', 'username email');
+
+    res.status(200).json({
+      success: true,
+      message: 'Verification reversed; item reset to pending for re-review',
+      data: item,
+      revocationTxHash,
+      etherscanUrl,
+    });
+  } catch (error) {
+    console.error('Revoke Item Verification Error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Error revoking verification',
+    });
+  }
+};
+
 module.exports = {
   createItem,
   getAllItems,
@@ -649,6 +894,8 @@ module.exports = {
   updateItem,
   updateVerificationStatus,
   saveBlockchainDetails,
+  getItemBlockchainProof,
+  revokeItemVerification,
   deleteItem,
   searchItems,
 };

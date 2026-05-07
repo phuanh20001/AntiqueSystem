@@ -12,10 +12,12 @@ const {
   updateItem,
   updateVerificationStatus,
   saveBlockchainDetails,
+  getItemBlockchainProof,
+  revokeItemVerification,
   deleteItem,
   searchItems,
 } = require('../controllers/itemController');
-const { protect } = require('../middleware/authMiddleware');
+const { protect, admin } = require('../middleware/authMiddleware');
 
 /**
  * Public routes
@@ -32,6 +34,7 @@ router.get('/my-purchases', protect, getMyPurchases);
 /**
  * Public routes with ID parameter
  */
+router.get('/:id/proof', getItemBlockchainProof);
 router.get('/:id', getItemById);
 router.get('/owner/:ownerId', getItemsByOwner);
 
@@ -40,6 +43,7 @@ router.get('/owner/:ownerId', getItemsByOwner);
  */
 router.post('/', protect, createItem);
 router.post('/:id/purchase', protect, purchaseItem);
+router.post('/:id/revoke-verification', protect, admin, revokeItemVerification);
 router.put('/:id/relist', protect, relistItem);
 router.put('/:id', protect, updateItem);
 router.delete('/:id', protect, deleteItem);

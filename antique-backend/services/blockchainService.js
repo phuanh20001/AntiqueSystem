@@ -37,6 +37,16 @@ const contractABI = [
     type: 'event'
   },
   {
+    anonymous: false,
+    inputs: [
+      { indexed: true, internalType: 'string', name: 'itemId', type: 'string' },
+      { indexed: true, internalType: 'address', name: 'revokedBy', type: 'address' },
+      { indexed: false, internalType: 'uint256', name: 'timestamp', type: 'uint256' }
+    ],
+    name: 'VerificationRevoked',
+    type: 'event'
+  },
+  {
     inputs: [
       { internalType: 'address', name: 'verifier', type: 'address' }
     ],
@@ -126,6 +136,15 @@ const contractABI = [
   },
   {
     inputs: [
+      { internalType: 'string', name: 'itemId', type: 'string' }
+    ],
+    name: 'revokeVerification',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function'
+  },
+  {
+    inputs: [
       { internalType: 'string', name: 'itemId', type: 'string' },
       { internalType: 'bool', name: 'isAuthentic', type: 'bool' },
       { internalType: 'string', name: 'metadataHash', type: 'string' }
@@ -157,6 +176,30 @@ function generateMetadataHash(data) {
     .createHash('sha256')
     .update(dataToHash)
     .digest('hex');
+}
+
+/**
+ * Build the canonical data object that gets hashed at verification time
+ * AND at proof-check time. Both sides MUST produce byte-identical output,
+ * so we explicitly list and order the fields and stringify nullables.
+ *
+ * Excludes `owner` on purpose — ownership transfers via purchases would
+ * otherwise invalidate the hash for legitimate item flows.
+ *
+ * @param {Object} item - Mongoose Item document or plain object
+ * @returns {Object|null} - Canonical data ready to be passed to generateMetadataHash
+ */
+function buildItemCanonicalData(item) {
+  if (!item) return null;
+  return {
+    itemId: item._id ? String(item._id) : null,
+    title: item.title || null,
+    description: item.description || null,
+    category: item.category || null,
+    material: item.material || null,
+    estimatedPeriod: item.estimatedPeriod || null,
+    estimatedYear: item.estimatedYear ?? null,
+  };
 }
 
 /**
@@ -241,6 +284,35 @@ async function isItemVerifiedOnChain(itemId) {
 }
 
 /**
+ * Owner-only: clears the active on-chain record for an itemId so it can be verified again.
+ * @param {string} itemId - MongoDB item ID
+ * @returns {Promise<Object>} - Transaction receipt and hash
+ */
+async function revokeVerificationOnChain(itemId) {
+  try {
+    if (!contract) {
+      throw new Error('Blockchain contract is not configured');
+    }
+
+    console.log('Sending revokeVerification to Sepolia...');
+    const tx = await contract.revokeVerification(itemId);
+    console.log('Waiting for revoke transaction to be mined...');
+    const receipt = await tx.wait();
+    const txHash = receipt.hash;
+    console.log('Revoke mined! Hash:', txHash);
+
+    return {
+      txHash,
+      receipt,
+      success: true
+    };
+  } catch (error) {
+    console.error('Blockchain revoke error:', error);
+    throw new Error(`Failed to revoke verification on chain: ${error.message}`);
+  }
+}
+
+/**
  * Generate Etherscan URL for a transaction
  * @param {string} txHash - Transaction hash
  * @returns {string} - Etherscan URL
@@ -251,7 +323,9 @@ function getEtherscanUrl(txHash) {
 
 module.exports = {
   generateMetadataHash,
+  buildItemCanonicalData,
   submitVerificationToBlockchain,
+  revokeVerificationOnChain,
   getVerificationFromChain,
   isItemVerifiedOnChain,
   getEtherscanUrl,
