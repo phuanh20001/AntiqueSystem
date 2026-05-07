@@ -1,0 +1,48 @@
+############################
+# General
+############################
+.DS_Store
+Thumbs.db
+
+############################
+# Secrets / environment
+############################
+.env
+.env.*
+!.env.example
+
+############################
+# Node / JavaScript
+############################
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+############################
+# Build outputs / caches
+############################
+dist/
+build/
+coverage/
+.cache/
+
+############################
+# Hardhat / Solidity (antique-backend)
+############################
+antique-backend/artifacts/
+antique-backend/cache/
+antique-backend/typechain-types/
+
+############################
+# Logs
+############################
+logs/
+*.log
+
+############################
+# Editor/IDE
+############################
+.vscode/
+.idea/
