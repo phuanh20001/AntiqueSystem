@@ -81,6 +81,13 @@
               <input class="form-input" type="text" name="dimensions" placeholder="e.g. 32cm H × 18cm W">
             </div>
 
+            <div class="form-group">
+              <label class="form-label">Estimated Price (AUD)</label>
+              <input class="form-input" type="number" name="estimatedValue" min="0" step="0.01" placeholder="e.g. 4500">
+              <div class="form-hint">Leave blank if unsure — owners can set this later.</div>
+              <div class="error-message"></div>
+            </div>
+
             <div class="form-group full">
               <label class="form-label">Item Description *</label>
               <textarea class="form-textarea" name="description" placeholder="Describe the item in detail — materials, markings, style, condition, and any distinguishing features…"></textarea>
@@ -210,16 +217,37 @@
         }
       });
 
+      // Optional but, if provided, must be a non-negative finite number.
+      const priceEl = form.querySelector('[name="estimatedValue"]');
+      const priceError = priceEl.parentElement.querySelector('.error-message');
+      const rawPrice = priceEl.value.trim();
+      if (rawPrice !== '') {
+        const parsed = Number(rawPrice);
+        if (!Number.isFinite(parsed) || parsed < 0) {
+          priceError.textContent = 'Enter a non-negative price, or leave blank.';
+          priceError.classList.add('show');
+          priceEl.classList.add('error');
+          valid = false;
+        }
+      }
+
       return valid;
     }
 
     function getFormPayload(form) {
+      // Convert price to a Number when provided; an empty input becomes null
+      // so the backend leaves estimatedValue at its default and the products
+      // page renders "N/A" instead of "$NaN".
+      const rawPrice = form.estimatedValue.value.trim();
+      const estimatedValue = rawPrice === '' ? null : Number(rawPrice);
+
       return {
         title: form.title.value.trim(),
         category: form.category.value.trim(),
         estimatedYear: form.year.value.trim(),
         country: form.country.value.trim(),
         dimensions: form.dimensions.value.trim(),
+        estimatedValue,
         description: form.description.value.trim(),
         provenance: form.provenance.value.trim(),
         condition: form.condition.value.trim(),
