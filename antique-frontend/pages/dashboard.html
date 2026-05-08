@@ -33,6 +33,7 @@
 
   <script src="../js/utils.js"></script>
   <script src="../js/api.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <script>
     const session = requireDashboardSession();
@@ -196,6 +197,113 @@
         <td>${getStatusBadge(a.status || 'approved')}</td><td>${escapeHtml(a.role || 'user')}</td><td>${state === 'pending' ? `<div class="table-actions"><button class="btn-sm btn-approve" onclick="approveAccount('${a._id}')">Approve</button><button class="btn-sm btn-decline" onclick="rejectAccount('${a._id}')">Reject</button></div>` : allowDelete ? `<button class="btn-sm btn-decline" onclick="deleteAccount('${a._id}')">Delete</button>` : `<span style="color:var(--ink-light);font-size:13px;">No action</span>`}</td></tr>`).join('');
     }
 
+    function getItemStatusSeries(items) {
+      const pending = countByStatus(items, ['pending', 'in_progress']);
+      const verified = countByStatus(items, ['verified']);
+      const rejected = countByStatus(items, ['rejected']);
+      const other = Math.max(items.length - pending - verified - rejected, 0);
+      return [pending, verified, rejected, other];
+    }
+
+    function renderAdminAnalyticsPanel(items, pendingUsers, approvedUsers, rejectedUsers, allUsers) {
+      const itemSeries = getItemStatusSeries(items);
+      return `<div class="dash-content dashboard-grid dashboard-grid-single">
+        <section class="dashboard-panel dashboard-panel-wide">
+          <div class="panel-head">
+            <div>
+              <h3>Admin Analytics</h3>
+              <p>Track account approvals and item verification trends with visual summaries.</p>
+            </div>
+            <button class="btn-sm btn-review" onclick="loadDashboardData()">Refresh</button>
+          </div>
+          <div class="panel-body">
+            <div class="analytics-kpis">
+              <div class="analytics-kpi"><div class="analytics-kpi-value">${pendingUsers.length}</div><div class="analytics-kpi-label">Pending Accounts</div></div>
+              <div class="analytics-kpi"><div class="analytics-kpi-value">${approvedUsers.length}</div><div class="analytics-kpi-label">Approved Accounts</div></div>
+              <div class="analytics-kpi"><div class="analytics-kpi-value">${rejectedUsers.length}</div><div class="analytics-kpi-label">Rejected Accounts</div></div>
+              <div class="analytics-kpi"><div class="analytics-kpi-value">${allUsers.length}</div><div class="analytics-kpi-label">Total Accounts</div></div>
+              <div class="analytics-kpi"><div class="analytics-kpi-value">${items.length}</div><div class="analytics-kpi-label">Submitted Items</div></div>
+              <div class="analytics-kpi"><div class="analytics-kpi-value">${itemSeries[1]}</div><div class="analytics-kpi-label">Verified Items</div></div>
+            </div>
+
+            <div class="analytics-chart-grid">
+              <div class="analytics-chart-card">
+                <h4>Account Decisions</h4>
+                <canvas id="accounts-analytics-chart" aria-label="Account analytics chart"></canvas>
+              </div>
+              <div class="analytics-chart-card">
+                <h4>Item Verification Status</h4>
+                <canvas id="items-analytics-chart" aria-label="Item status analytics chart"></canvas>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>`;
+    }
+
+    function renderAdminAnalyticsCharts(items, pendingUsers, approvedUsers, rejectedUsers) {
+      if (typeof Chart === 'undefined') return;
+
+      const accountsCanvas = document.getElementById('accounts-analytics-chart');
+      const itemsCanvas = document.getElementById('items-analytics-chart');
+      if (!accountsCanvas || !itemsCanvas) return;
+
+      const existingAccountsChart = Chart.getChart(accountsCanvas);
+      if (existingAccountsChart) existingAccountsChart.destroy();
+      const existingItemsChart = Chart.getChart(itemsCanvas);
+      if (existingItemsChart) existingItemsChart.destroy();
+
+      const accountCounts = [pendingUsers.length, approvedUsers.length, rejectedUsers.length];
+      new Chart(accountsCanvas, {
+        type: 'bar',
+        data: {
+          labels: ['Pending', 'Approved', 'Rejected'],
+          datasets: [{
+            label: 'Accounts',
+            data: accountCounts,
+            backgroundColor: ['#c68458', '#7da56f', '#ca6f4d'],
+            borderRadius: 8
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: { precision: 0 }
+            }
+          }
+        }
+      });
+
+      const itemCounts = getItemStatusSeries(items);
+      new Chart(itemsCanvas, {
+        type: 'doughnut',
+        data: {
+          labels: ['Pending/In Review', 'Verified', 'Rejected', 'Other'],
+          datasets: [{
+            label: 'Items',
+            data: itemCounts,
+            backgroundColor: ['#d1a36d', '#7da56f', '#ca6f4d', '#8b7f6f'],
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'bottom'
+            }
+          }
+        }
+      });
+    }
+
     function renderRolePanel(role, items, pendingUsers, approvedUsers, rejectedUsers, allUsers) {
       if (role === 'admin') {
         if (dashboardAdminView === 'items') {
@@ -203,7 +311,7 @@
           return `<div class="dash-content dashboard-grid dashboard-grid-single"><section class="dashboard-panel dashboard-panel-wide"><div class="panel-head"><div><h3>Submitted Items</h3><p>Reverse a mistaken approval or rejection: clears the active on-chain record (contract owner wallet) and returns the item to pending. Original transactions stay visible on Etherscan.</p></div><button class="btn-sm btn-review" onclick="loadDashboardData()">Refresh</button></div><div class="panel-body"><table class="review-table"><thead><tr><th></th><th>Item</th><th>Status</th><th>Certificate Hash</th><th>Transaction Hash</th><th>Action</th></tr></thead><tbody>${renderItemRows(filteredItems, 'admin')}</tbody></table></div></section></div>`;
         }
         if (dashboardAdminView === 'analytics') {
-          return `<div class="dash-content dashboard-grid dashboard-grid-single"><section class="dashboard-panel dashboard-panel-wide"><div class="panel-head"><div><h3>Admin Analytics</h3><p>Track account approvals and item verification trends.</p></div><button class="btn-sm btn-review" onclick="loadDashboardData()">Refresh</button></div><div class="panel-body"><table class="review-table"><thead><tr><th>Metric</th><th>Count</th></tr></thead><tbody><tr><td>Pending Accounts</td><td>${pendingUsers.length}</td></tr><tr><td>Approved Accounts</td><td>${approvedUsers.length}</td></tr><tr><td>Rejected Accounts</td><td>${rejectedUsers.length}</td></tr><tr><td>Total Accounts</td><td>${allUsers.length}</td></tr><tr><td>Submitted Items</td><td>${items.length}</td></tr></tbody></table></div></section></div>`;
+          return renderAdminAnalyticsPanel(items, pendingUsers, approvedUsers, rejectedUsers, allUsers);
         }
         const cfg = dashboardAdminView === 'approved' ? { h: 'Approved Accounts', s: 'approved', data: approvedUsers, del: true } : dashboardAdminView === 'rejected' ? { h: 'Rejected Accounts', s: 'rejected', data: rejectedUsers, del: true } : dashboardAdminView === 'accounts' ? { h: 'All Accounts', s: 'all', data: allUsers, del: true } : { h: 'Pending Accounts', s: 'pending', data: pendingUsers, del: false };
         const createAccountPanel = cfg.s === 'all'
@@ -254,6 +362,9 @@
       const heading = role === 'admin' ? 'Admin Dashboard' : role === 'verifier' ? 'Verifier Dashboard' : 'Collector Dashboard';
       const subheading = role === 'admin' ? 'Manage users, approvals, and analytics.' : role === 'verifier' ? 'Review submissions and verification decisions.' : 'View only your own submitted antiques and statuses.';
       root.innerHTML = `${renderSidebar(user, items, pendingUsers, approvedUsers, rejectedUsers, allUsers)}<div class="dashboard-main"><div class="dash-topbar"><div><h2>${heading}</h2><p>${subheading}</p></div><div class="dash-topbar-actions">${getHealthBadge(health)}${role === 'collector' ? '<a class="btn-primary" style="font-size:13px;padding:10px 20px;" href="submit.html">Submit New Item</a>' : ''}</div></div>${renderStats(role, items, pendingUsers, approvedUsers, rejectedUsers)}${renderRolePanel(role, items, pendingUsers, approvedUsers, rejectedUsers, allUsers)}</div>`;
+      if (role === 'admin' && dashboardAdminView === 'analytics') {
+        renderAdminAnalyticsCharts(items, pendingUsers, approvedUsers, rejectedUsers);
+      }
       showWelcomeBanner(user);
     }
 

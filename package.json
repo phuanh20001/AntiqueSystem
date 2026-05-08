@@ -1,0 +1,13 @@
+{
+  "name": "antique-system",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "dev:backend": "npm --prefix antique-backend start",
+    "dev:frontend": "npm --prefix antique-frontend run dev",
+    "dev": "concurrently -n backend,frontend -c green,cyan \"npm run dev:backend\" \"npm run dev:frontend\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}

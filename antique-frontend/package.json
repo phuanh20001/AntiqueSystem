@@ -1,0 +1,13 @@
+{
+  "name": "antique-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Static frontend for Antique System",
+  "scripts": {
+    "dev": "live-server . --port=5500 --open=/index.html",
+    "start": "npm run dev"
+  },
+  "devDependencies": {
+    "live-server": "^1.2.2"
+  }
+}

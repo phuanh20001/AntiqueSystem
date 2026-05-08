@@ -21,6 +21,14 @@ const generateToken = (id) => {
 
 const isAdminRequest = (req) => req.user && req.user.role === 'admin';
 
+const normalizeRequestedRole = (role) => {
+  const rawRole = String(role || '').trim().toLowerCase();
+  if (rawRole === 'collector') return 'user';
+  if (rawRole === 'verifier') return 'verifier';
+  if (rawRole === 'admin') return 'admin';
+  return 'user';
+};
+
 // @desc    Register a new user
 // @route   POST /api/auth/register
 // @access  Public
@@ -43,12 +51,15 @@ const registerUser = async (req, res) => {
     const salt = await bcrypt.genSalt(SALT_ROUNDS);
     const hashedPassword = await bcrypt.hash(password, salt);
 
+    const normalizedEmail = String(email).toLowerCase().trim();
+    const normalizedRole = normalizeRequestedRole(role);
+
     // Create user
     const user = await User.create({
       username,
-      email,
+      email: normalizedEmail,
       password: hashedPassword,
-      role: role || 'user',
+      role: normalizedRole,
     });
 
     if (user) {

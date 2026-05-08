@@ -138,7 +138,7 @@
             <div class="form-group">
               <label class="form-label" for="regRole">I am registering as</label>
               <select class="form-select" id="regRole">
-                <option value="collector">Collector / Buyer</option>
+                <option value="user">Collector / Buyer</option>
                 <option value="verifier">Expert Verifier</option>
               </select>
             </div>
@@ -344,7 +344,7 @@
       const firstName = firstNameInput.value.trim();
       const lastName = lastNameInput.value.trim();
       const email = emailInput.value.trim();
-      const role = roleInput.value || 'collector';
+      const role = roleInput.value || 'user';
       const password = passwordInput.value.trim();
       const confirmPassword = confirmPasswordInput.value.trim();
 
@@ -420,7 +420,7 @@
           emailInput.value = '';
           passwordInput.value = '';
           confirmPasswordInput.value = '';
-          roleInput.value = 'collector';
+          roleInput.value = 'user';
 
           switchPanel('login');
           document.getElementById('email').value = email;
