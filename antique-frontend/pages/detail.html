@@ -96,6 +96,17 @@
       </div>
 
       <div>
+        <div class="verifier-card" id="verifierDecisionCard" style="display:none;">
+          <div class="verifier-eyebrow">Verifier Action</div>
+          <div class="verifier-title">Review Decision</div>
+          <div class="verifier-status" id="verifierDecisionStatus"></div>
+          <div class="verifier-actions">
+            <button class="btn-full verifier-approve-btn" id="verifierApproveBtn" type="button">Approve</button>
+            <button class="btn-full verifier-decline-btn" id="verifierDeclineBtn" type="button">Decline</button>
+          </div>
+          <a class="verifier-dashboard-link" id="verifierDashboardLink" href="dashboard.html" style="display:none;">Back to Dashboard</a>
+        </div>
+
         <div class="purchase-card" id="purchaseCard" style="display:none;">
           <div class="purchase-eyebrow">Marketplace</div>
           <div class="purchase-title" id="purchaseTitle">Purchase This Item</div>
@@ -107,16 +118,10 @@
         <div class="cert-card">
           <div class="cert-seal">🏛️</div>
           <div class="cert-title">Certificate of Authenticity</div>
-          <div class="cert-num">CERT-2025-00142</div>
-          <div class="cert-detail">
-            Ming Dynasty Blue & White<br>
-            Porcelain Vase<br><br>
-            Issued to: James Morrison<br>
-            Verified by: Dr. A. Chen, PhD<br>
-            Authenticity Score: 94 / 100
-          </div>
-          <div class="cert-issued">Issued: 14 March 2025</div>
-          <button class="btn-full" style="background:var(--sepia);color:var(--ink);margin-top:16px;" onclick="showToast('Certificate PDF downloaded successfully')">
+          <div class="cert-num" id="certNumber">Not issued yet</div>
+          <div class="cert-detail" id="certDetail">Certificate data will appear after verification is completed.</div>
+          <div class="cert-issued" id="certIssued">Issued: Pending verification</div>
+          <button class="btn-full" id="certDownloadBtn" style="background:var(--sepia);color:var(--ink);margin-top:16px;" type="button" onclick="downloadCertificatePdf()">
             Download Certificate PDF
           </button>
         </div>
@@ -212,6 +217,36 @@
             </div>
           </div>
         </div>
+
+        <div class="bc-modal" id="verifierDecisionModal" role="dialog" aria-modal="true" aria-labelledby="verifierDecisionModalTitle">
+          <div class="bc-modal-card verifier-decision-modal-card">
+            <button class="bc-modal-close" onclick="closeVerifierDecisionModal()" aria-label="Close">×</button>
+            <div class="bc-modal-title" id="verifierDecisionModalTitle">Confirm Verifier Decision</div>
+            <div class="verifier-modal-help" id="verifierDecisionInstruction"></div>
+            <label class="bc-modal-label" for="verifierDecisionInput">Type confirmation word</label>
+            <input class="form-input" id="verifierDecisionInput" type="text" autocomplete="off" />
+            <label class="bc-modal-label" for="verifierDecisionComment" style="margin-top:12px;">Verification comment</label>
+            <textarea class="form-input" id="verifierDecisionComment" rows="4" placeholder="Explain your decision clearly."></textarea>
+            <label class="bc-modal-label" for="verifierDecisionScore" style="margin-top:12px;">Authenticity score (0-100)</label>
+            <input class="form-input" id="verifierDecisionScore" type="number" min="0" max="100" placeholder="Enter a score from 0 to 100" />
+            <div class="verifier-modal-error" id="verifierDecisionError"></div>
+            <div class="bc-modal-actions">
+              <button class="bc-modal-btn" type="button" onclick="closeVerifierDecisionModal()">Cancel</button>
+              <button class="bc-modal-btn primary" id="verifierDecisionConfirmBtn" type="button" disabled>Confirm</button>
+            </div>
+          </div>
+        </div>
+        <div class="bc-modal" id="purchaseConfirmModal" role="dialog" aria-modal="true" aria-labelledby="purchaseConfirmModalTitle">
+          <div class="bc-modal-card purchase-confirm-modal-card">
+            <button class="bc-modal-close" onclick="closePurchaseConfirmModal()" aria-label="Close">×</button>
+            <div class="bc-modal-title" id="purchaseConfirmModalTitle">Confirm Purchase</div>
+            <div class="purchase-modal-copy" id="purchaseConfirmMessage"></div>
+            <div class="bc-modal-actions">
+              <button class="bc-modal-btn" type="button" onclick="closePurchaseConfirmModal()">Cancel</button>
+              <button class="bc-modal-btn primary" type="button" id="purchaseConfirmBtn">Confirm Purchase</button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -247,6 +282,8 @@
   <script src="../js/api.js"></script>
   <script>
     const session = getAuthSession();
+    let verifierDecisionState = null;
+    let pendingPurchaseItem = null;
 
     document.querySelectorAll('.detail-thumb').forEach((thumb) => {
       thumb.addEventListener('click', function () {
@@ -266,6 +303,14 @@
     function formatNetworkName(net) {
       if (!net) return 'Unknown';
       return net.charAt(0).toUpperCase() + net.slice(1);
+    }
+    function escapeHtml(value) {
+      return String(value || '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
     }
 
     // The status pill / dot color reflects whether on-chain data is present.
@@ -494,6 +539,207 @@
     document.addEventListener('keydown', (event) => {
       if (event.key === 'Escape') closeProofModal();
     });
+    function renderVerifierDecisionCard(item) {
+      const card = document.getElementById('verifierDecisionCard');
+      const status = document.getElementById('verifierDecisionStatus');
+      const approveBtn = document.getElementById('verifierApproveBtn');
+      const declineBtn = document.getElementById('verifierDeclineBtn');
+      const dashboardLink = document.getElementById('verifierDashboardLink');
+      if (!card || !status || !approveBtn || !declineBtn || !dashboardLink) return;
+
+      const role = String(session?.role || '').toLowerCase();
+      const normalizedRole = role === 'user' ? 'collector' : role;
+      const decisionState = String(item?.verificationStatus || '').toLowerCase();
+      const canDecide = normalizedRole === 'verifier' && ['pending', 'in_progress'].includes(decisionState);
+
+      if (!canDecide) {
+        card.style.display = 'none';
+        return;
+      }
+
+      card.style.display = 'block';
+      dashboardLink.style.display = '';
+      status.textContent = 'You can decide this item directly from the detail page.';
+      approveBtn.disabled = false;
+      declineBtn.disabled = false;
+      approveBtn.onclick = () => openVerifierDecisionModal(item, 'verified');
+      declineBtn.onclick = () => openVerifierDecisionModal(item, 'rejected');
+    }
+    function openVerifierDecisionModal(item, verificationStatus) {
+      const modal = document.getElementById('verifierDecisionModal');
+      const input = document.getElementById('verifierDecisionInput');
+      const commentInput = document.getElementById('verifierDecisionComment');
+      const scoreInput = document.getElementById('verifierDecisionScore');
+      const instruction = document.getElementById('verifierDecisionInstruction');
+      const error = document.getElementById('verifierDecisionError');
+      const confirmBtn = document.getElementById('verifierDecisionConfirmBtn');
+      if (!modal || !input || !commentInput || !scoreInput || !instruction || !error || !confirmBtn) return;
+
+      const expectedWord = verificationStatus === 'verified' ? 'Approve' : 'Decline';
+      verifierDecisionState = { itemId: item._id, verificationStatus, expectedWord };
+      instruction.innerHTML = `To continue, type <strong>${expectedWord}</strong> exactly.`;
+      input.value = '';
+      commentInput.value = '';
+      scoreInput.value = '';
+      input.placeholder = expectedWord;
+      input.classList.remove('error');
+      commentInput.classList.remove('error');
+      scoreInput.classList.remove('error');
+      error.textContent = '';
+      confirmBtn.disabled = true;
+      confirmBtn.textContent = expectedWord;
+      modal.classList.add('show');
+      document.body.style.overflow = 'hidden';
+      input.focus();
+    }
+    function closeVerifierDecisionModal() {
+      const modal = document.getElementById('verifierDecisionModal');
+      if (modal) modal.classList.remove('show');
+      document.body.style.overflow = '';
+      verifierDecisionState = null;
+    }
+    function updateVerifierDecisionInputState() {
+      const input = document.getElementById('verifierDecisionInput');
+      const commentInput = document.getElementById('verifierDecisionComment');
+      const scoreInput = document.getElementById('verifierDecisionScore');
+      const error = document.getElementById('verifierDecisionError');
+      const confirmBtn = document.getElementById('verifierDecisionConfirmBtn');
+      if (!input || !commentInput || !scoreInput || !error || !confirmBtn || !verifierDecisionState) return;
+      const isExactMatch = input.value === verifierDecisionState.expectedWord;
+      const comment = commentInput.value.trim();
+      const parsedScore = Number(scoreInput.value);
+      const hasValidScore = Number.isFinite(parsedScore) && parsedScore >= 0 && parsedScore <= 100;
+      const isCommentValid = comment.length > 0;
+      const isValid = isExactMatch && isCommentValid && hasValidScore;
+      confirmBtn.disabled = !isValid;
+
+      if (!isExactMatch && input.value.length > 0) {
+        input.classList.add('error');
+      } else {
+        input.classList.remove('error');
+      }
+      if (!isCommentValid && commentInput.value.length > 0) {
+        commentInput.classList.add('error');
+      } else {
+        commentInput.classList.remove('error');
+      }
+      if (!hasValidScore && scoreInput.value.length > 0) {
+        scoreInput.classList.add('error');
+      } else {
+        scoreInput.classList.remove('error');
+      }
+      if (!isExactMatch) {
+        error.textContent = `You must type ${verifierDecisionState.expectedWord} exactly.`;
+      } else if (!isCommentValid) {
+        error.textContent = 'A verification comment is required.';
+      } else if (!hasValidScore) {
+        error.textContent = 'Authenticity score must be a number between 0 and 100.';
+      } else {
+        error.textContent = '';
+      }
+    }
+    async function submitVerifierDecision() {
+      if (!verifierDecisionState) return;
+      const input = document.getElementById('verifierDecisionInput');
+      const commentInput = document.getElementById('verifierDecisionComment');
+      const scoreInput = document.getElementById('verifierDecisionScore');
+      const error = document.getElementById('verifierDecisionError');
+      const confirmBtn = document.getElementById('verifierDecisionConfirmBtn');
+      if (!input || !commentInput || !scoreInput || !error || !confirmBtn) return;
+      const comment = commentInput.value.trim();
+      const authenticityScore = Number(scoreInput.value);
+      const scoreValid = Number.isFinite(authenticityScore) && authenticityScore >= 0 && authenticityScore <= 100;
+      if (input.value !== verifierDecisionState.expectedWord || !comment || !scoreValid) {
+        updateVerifierDecisionInputState();
+        return;
+      }
+      confirmBtn.disabled = true;
+      try {
+        const decisionLabel = verifierDecisionState.verificationStatus === 'verified' ? 'approved' : 'declined';
+        showToast('Submitting verification to blockchain… this may take ~15–30s.');
+        await apiRequest(
+          `/items/${verifierDecisionState.itemId}/verification-status`,
+          'PUT',
+          {
+            verificationStatus: verifierDecisionState.verificationStatus,
+            verifierComment: comment,
+            authenticityScore,
+          },
+          true
+        );
+        showToast(`Item ${decisionLabel} successfully.`);
+        const dashboardLink = document.getElementById('verifierDashboardLink');
+        if (dashboardLink) dashboardLink.style.display = '';
+        closeVerifierDecisionModal();
+        setTimeout(() => loadItemDetail(), 400);
+      } catch (err) {
+        showToast(err.message || 'Unable to update item status.', true);
+        error.textContent = err.message || 'Unable to update item status.';
+        confirmBtn.disabled = false;
+      }
+    }
+    function renderCertificateCard(item) {
+      const certNumber = document.getElementById('certNumber');
+      const certDetail = document.getElementById('certDetail');
+      const certIssued = document.getElementById('certIssued');
+      const certDownloadBtn = document.getElementById('certDownloadBtn');
+      if (!certNumber || !certDetail || !certIssued || !certDownloadBtn) return;
+
+      const record = item.verificationRecord || {};
+      const cert = record.authenticityCertificate || {};
+      const certificateNumber = cert.certificateNumber || `CERT-${String(item._id || '').slice(-8).toUpperCase()}`;
+      const issueDate = cert.issueDate || record.updatedAt || item.updatedAt || item.createdAt;
+      const formattedIssueDate = issueDate ? new Date(issueDate).toLocaleDateString() : 'Pending verification';
+      const verifierName = record.verifier?.username || item.owner?.username || 'N/A';
+      const score = record.authenticationScore;
+      const displayedScore = score === 0 || score ? `${score} / 100` : 'Pending';
+
+      certNumber.textContent = certificateNumber;
+      certDetail.innerHTML = `${escapeHtml(item.title || 'Untitled Item')}<br>${escapeHtml(item.category || 'Antique Item')}<br><br>Issued to: ${escapeHtml(item.owner?.username || 'Unknown owner')}<br>Verified by: ${escapeHtml(verifierName)}<br>Authenticity Score: ${escapeHtml(displayedScore)}`;
+      certIssued.textContent = `Issued: ${formattedIssueDate}`;
+      certDownloadBtn.disabled = String(item.verificationStatus || '').toLowerCase() !== 'verified';
+    }
+    async function downloadCertificatePdf() {
+      const itemId = new URLSearchParams(window.location.search).get('id');
+      const certDownloadBtn = document.getElementById('certDownloadBtn');
+      const apiBaseUrl = (typeof API_BASE_URL === 'string' && API_BASE_URL)
+        ? API_BASE_URL
+        : 'http://localhost:5000/api';
+      if (!itemId) {
+        showToast('Item ID not provided', true);
+        return;
+      }
+      if (certDownloadBtn) certDownloadBtn.disabled = true;
+      try {
+        const token = getStoredToken();
+        const response = await fetch(`${apiBaseUrl}/items/${itemId}/certificate`, {
+          method: 'GET',
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        if (!response.ok) {
+          let message = 'Unable to download certificate.';
+          try {
+            const parsed = await response.json();
+            if (parsed?.message) message = parsed.message;
+          } catch (error) {}
+          throw new Error(message);
+        }
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `certificate-${itemId}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(url);
+        showToast('Certificate PDF downloaded successfully.');
+      } catch (error) {
+        showToast(error.message || 'Unable to download certificate.', true);
+      } finally {
+        if (certDownloadBtn) certDownloadBtn.disabled = false;
+      }
+    }
 
     async function loadItemDetail() {
       const itemId = new URLSearchParams(window.location.search).get('id');
@@ -505,7 +751,6 @@
       try {
         const response = await apiRequest(`/items/${itemId}`, 'GET', null, false);
         const item = response.data || response;
-
         document.querySelector('.page-header-eyebrow').textContent = `Item Record · ${item._id || 'N/A'}`;
         document.querySelector('.page-header h1').textContent = item.title || 'Untitled Item';
         document.querySelector('.page-header p').textContent = `${item.verificationStatus || 'Pending'} · Submitted by: ${item.owner?.username || 'Unknown'} · Category: ${item.category || 'Unknown'}`;
@@ -552,6 +797,8 @@
         // Render the contextual purchase CTA last so the rest of the page
         // never depends on auth/role lookup completing first.
         renderPurchaseCard(item);
+        renderVerifierDecisionCard(item);
+        renderCertificateCard(item);
       } catch (error) {
         showToast('Unable to load item details: ' + error.message, true);
       }
@@ -630,9 +877,27 @@
     }
 
     async function purchaseCurrentItem(item) {
-      if (!confirm(`Purchase "${item.title || 'this item'}" for ${item.estimatedValue ? '$' + item.estimatedValue : 'the listed price'}?`)) {
-        return;
-      }
+      openPurchaseConfirmModal(item);
+    }
+    function openPurchaseConfirmModal(item) {
+      const modal = document.getElementById('purchaseConfirmModal');
+      const message = document.getElementById('purchaseConfirmMessage');
+      if (!modal || !message || !item) return;
+      pendingPurchaseItem = item;
+      message.textContent = `Purchase "${item.title || 'this item'}" for ${item.estimatedValue ? '$' + item.estimatedValue : 'the listed price'}?`;
+      modal.classList.add('show');
+      document.body.style.overflow = 'hidden';
+    }
+    function closePurchaseConfirmModal() {
+      const modal = document.getElementById('purchaseConfirmModal');
+      if (modal) modal.classList.remove('show');
+      document.body.style.overflow = '';
+      pendingPurchaseItem = null;
+    }
+    async function submitPurchaseFromModal() {
+      if (!pendingPurchaseItem) return;
+      const item = pendingPurchaseItem;
+      closePurchaseConfirmModal();
 
       const btn = document.getElementById('purchaseBtn');
       btn.disabled = true;
@@ -650,6 +915,37 @@
         btn.textContent = originalLabel;
       }
     }
+
+    const verifierDecisionModal = document.getElementById('verifierDecisionModal');
+    const verifierDecisionInput = document.getElementById('verifierDecisionInput');
+    const verifierDecisionComment = document.getElementById('verifierDecisionComment');
+    const verifierDecisionScore = document.getElementById('verifierDecisionScore');
+    const verifierDecisionConfirmBtn = document.getElementById('verifierDecisionConfirmBtn');
+    if (verifierDecisionInput) verifierDecisionInput.addEventListener('input', updateVerifierDecisionInputState);
+    if (verifierDecisionComment) verifierDecisionComment.addEventListener('input', updateVerifierDecisionInputState);
+    if (verifierDecisionScore) verifierDecisionScore.addEventListener('input', updateVerifierDecisionInputState);
+    if (verifierDecisionConfirmBtn) verifierDecisionConfirmBtn.addEventListener('click', submitVerifierDecision);
+    if (verifierDecisionModal) {
+      verifierDecisionModal.addEventListener('click', (event) => {
+        if (event.target === verifierDecisionModal) closeVerifierDecisionModal();
+      });
+    }
+    const purchaseConfirmModal = document.getElementById('purchaseConfirmModal');
+    const purchaseConfirmBtn = document.getElementById('purchaseConfirmBtn');
+    if (purchaseConfirmBtn) purchaseConfirmBtn.addEventListener('click', submitPurchaseFromModal);
+    if (purchaseConfirmModal) {
+      purchaseConfirmModal.addEventListener('click', (event) => {
+        if (event.target === purchaseConfirmModal) closePurchaseConfirmModal();
+      });
+    }
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && verifierDecisionModal && verifierDecisionModal.classList.contains('show')) {
+        closeVerifierDecisionModal();
+      }
+      if (event.key === 'Escape' && purchaseConfirmModal && purchaseConfirmModal.classList.contains('show')) {
+        closePurchaseConfirmModal();
+      }
+    });
 
     loadItemDetail();
   </script>

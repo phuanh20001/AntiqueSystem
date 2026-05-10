@@ -367,7 +367,24 @@
   color: var(--ink-light);
   margin-top: 2px;
 }
+.item-row-desc {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--ink);
+  line-height: 1.45;
+  max-width: 600px;
+}
+.item-row-chain {
+  font-size: 12px;
+  color: var(--ink-light);
+  white-space: nowrap;
+}
 .table-actions { display: flex; gap: 6px; }
+.action-helper-text {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--ink-light);
+}
 
 /* ── REVIEW MODAL ── */
 .modal-overlay {
@@ -417,6 +434,11 @@
 }
 .modal-close:hover { color: var(--parchment); }
 .modal-body { padding: 28px; }
+.listing-modal-copy {
+  margin: 0 0 12px;
+  font-size: 13px;
+  color: var(--ink-light);
+}
 .score-display {
   display: flex;
   align-items: center;

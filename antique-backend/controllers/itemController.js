@@ -1,10 +1,14 @@
 const mongoose = require('mongoose');
 const Item = require('../models/Item');
 const User = require('../models/User');
+const VerificationRecord = require('../models/VerificationRecord');
 const blockchainService = require('../services/blockchainService');
+const PDFDocument = require('pdfkit');
 
 const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
 const isCollectorRole = (role) => ['user', 'collector'].includes(String(role || '').toLowerCase());
+const buildCertificateNumber = (itemId) => `CERT-${String(itemId || '').slice(-8).toUpperCase()}`;
+const getOwnerIdString = (ownerField) => String(ownerField?._id || ownerField || '');
 
 // "No record found" is a normal contract revert when an item has not been verified yet —
 // we treat it as an absent record rather than a hard failure.
@@ -203,7 +207,7 @@ const updateItem = async (req, res) => {
     }
 
     // Check ownership (unless user is admin)
-    if (item.owner.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+    if (getOwnerIdString(item.owner) !== String(req.user._id) && req.user.role !== 'admin') {
       return res.status(403).json({
         success: false,
         message: 'Not authorized to update this item',
@@ -269,7 +273,7 @@ const updateVerificationStatus = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Invalid item ID' });
     }
 
-    const { verificationStatus, verificationRecord } = req.body;
+    const { verificationStatus, verificationRecord, verifierComment, authenticityScore } = req.body;
 
     if (!['pending', 'verified', 'rejected', 'in_progress'].includes(verificationStatus)) {
       return res.status(400).json({
@@ -286,6 +290,24 @@ const updateVerificationStatus = async (req, res) => {
     let blockchainResult = null;
     const isTerminalDecision =
       verificationStatus === 'verified' || verificationStatus === 'rejected';
+    const parsedScore = Number(authenticityScore);
+    const hasScore = authenticityScore !== undefined && authenticityScore !== null && authenticityScore !== '';
+    const normalizedComment = String(verifierComment || '').trim();
+
+    if (isTerminalDecision) {
+      if (!normalizedComment) {
+        return res.status(400).json({
+          success: false,
+          message: 'Verifier comment is required for approval or decline',
+        });
+      }
+      if (!hasScore || !Number.isFinite(parsedScore) || parsedScore < 0 || parsedScore > 100) {
+        return res.status(400).json({
+          success: false,
+          message: 'Authenticity score must be a number between 0 and 100',
+        });
+      }
+    }
 
     if (isTerminalDecision && blockchainService.contract) {
       const isAuthentic = verificationStatus === 'verified';
@@ -335,12 +357,73 @@ const updateVerificationStatus = async (req, res) => {
     }
 
     item.verificationStatus = verificationStatus;
-    if (verificationRecord) {
-      item.verificationRecord = verificationRecord;
+
+    let resolvedVerificationRecord = null;
+    if (isTerminalDecision || verificationRecord || item.verificationRecord) {
+      resolvedVerificationRecord = verificationRecord
+        ? await VerificationRecord.findById(verificationRecord)
+        : item.verificationRecord
+          ? await VerificationRecord.findById(item.verificationRecord)
+          : await VerificationRecord.findOne({ item: item._id });
+
+      if (!resolvedVerificationRecord) {
+        resolvedVerificationRecord = await VerificationRecord.create({
+          item: item._id,
+          verifier: req.user?._id || null,
+          status: verificationStatus === 'verified' ? 'approved' : verificationStatus === 'rejected' ? 'rejected' : 'pending',
+          verificationMethod: 'manual',
+          authenticationScore: hasScore ? parsedScore : null,
+          verificationDetails: {
+            authenticityComments: normalizedComment || '',
+          },
+          rejectionReason: verificationStatus === 'rejected' ? normalizedComment : null,
+          authenticityCertificate: verificationStatus === 'verified'
+            ? {
+                certificateNumber: buildCertificateNumber(item._id),
+                issueDate: new Date(),
+              }
+            : {},
+          timeline: [
+            {
+              event: 'created',
+              description: 'Verification record created from item decision',
+              performedBy: req.user?._id || null,
+              timestamp: new Date(),
+            },
+          ],
+        });
+      } else {
+        resolvedVerificationRecord.status = verificationStatus === 'verified' ? 'approved' : verificationStatus === 'rejected' ? 'rejected' : 'pending';
+        if (req.user?._id) resolvedVerificationRecord.verifier = req.user._id;
+        if (hasScore) resolvedVerificationRecord.authenticationScore = parsedScore;
+        resolvedVerificationRecord.verificationDetails = {
+          ...(resolvedVerificationRecord.verificationDetails || {}),
+          authenticityComments: normalizedComment || resolvedVerificationRecord.verificationDetails?.authenticityComments || '',
+        };
+        if (verificationStatus === 'rejected') {
+          resolvedVerificationRecord.rejectionReason = normalizedComment;
+        }
+        if (verificationStatus === 'verified') {
+          resolvedVerificationRecord.authenticityCertificate = {
+            ...(resolvedVerificationRecord.authenticityCertificate || {}),
+            certificateNumber: resolvedVerificationRecord.authenticityCertificate?.certificateNumber || buildCertificateNumber(item._id),
+            issueDate: resolvedVerificationRecord.authenticityCertificate?.issueDate || new Date(),
+          };
+        }
+        resolvedVerificationRecord.timeline.push({
+          event: verificationStatus,
+          description: `Item ${verificationStatus} by verifier decision`,
+          performedBy: req.user?._id || null,
+          timestamp: new Date(),
+        });
+        await resolvedVerificationRecord.save();
+      }
+      item.verificationRecord = resolvedVerificationRecord._id;
     }
 
     await item.save();
     await item.populate('owner', 'username email');
+    await item.populate('verificationRecord');
 
     res.status(200).json({
       success: true,
@@ -354,6 +437,87 @@ const updateVerificationStatus = async (req, res) => {
       success: false,
       message: error.message || 'Error updating verification status',
     });
+  }
+};
+
+/**
+ * @desc    Download item certificate as PDF
+ * @route   GET /api/items/:id/certificate
+ * @access  Private
+ */
+const downloadCertificatePdf = async (req, res) => {
+  try {
+    if (!isValidObjectId(req.params.id)) {
+      return res.status(400).json({ success: false, message: 'Invalid item ID' });
+    }
+
+    const item = await Item.findById(req.params.id)
+      .populate('owner', 'username email')
+      .populate({
+        path: 'verificationRecord',
+        populate: { path: 'verifier', select: 'username email' },
+      });
+
+    if (!item) {
+      return res.status(404).json({ success: false, message: 'Item not found' });
+    }
+
+    if (String(item.verificationStatus || '').toLowerCase() !== 'verified') {
+      return res.status(400).json({
+        success: false,
+        message: 'Certificate PDF is available only for verified items',
+      });
+    }
+
+    const record = item.verificationRecord || {};
+    const cert = record.authenticityCertificate || {};
+    const certNumber = cert.certificateNumber || buildCertificateNumber(item._id);
+    const issueDate = cert.issueDate || record.updatedAt || item.updatedAt || item.createdAt;
+    const verifierName = record.verifier?.username || req.user?.username || 'Verifier';
+    const score = record.authenticationScore ?? 'N/A';
+    const comments = record.verificationDetails?.authenticityComments || 'No verifier comments were provided.';
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="certificate-${item._id}.pdf"`);
+
+    const doc = new PDFDocument({ size: 'A4', margin: 50 });
+    doc.pipe(res);
+
+    doc.fontSize(22).text('Certificate of Authenticity', { align: 'center' });
+    doc.moveDown(0.4);
+    doc.fontSize(12).text(certNumber, { align: 'center' });
+    doc.moveDown(1.2);
+
+    doc.fontSize(14).text('Item Details', { underline: true });
+    doc.moveDown(0.4);
+    doc.fontSize(11).text(`Title: ${item.title || 'Untitled Item'}`);
+    doc.text(`Category: ${item.category || 'N/A'}`);
+    doc.text(`Owner: ${item.owner?.username || 'Unknown owner'}`);
+    doc.text(`Issued Date: ${new Date(issueDate).toLocaleDateString()}`);
+    doc.moveDown(0.8);
+
+    doc.fontSize(14).text('Verification Summary', { underline: true });
+    doc.moveDown(0.4);
+    doc.fontSize(11).text(`Verified By: ${verifierName}`);
+    doc.text(`Authenticity Score: ${score}/100`);
+    doc.text(`Decision: Verified`);
+    doc.moveDown(0.8);
+
+    doc.fontSize(14).text('Verifier Comment', { underline: true });
+    doc.moveDown(0.4);
+    doc.fontSize(11).text(comments, { align: 'left' });
+    doc.moveDown(1.5);
+
+    doc.fontSize(10).text(`Generated on ${new Date().toLocaleString()} by AntiqChain`, { align: 'right' });
+    doc.end();
+  } catch (error) {
+    console.error('Download Certificate PDF Error:', error);
+    if (!res.headersSent) {
+      res.status(500).json({
+        success: false,
+        message: error.message || 'Error generating certificate PDF',
+      });
+    }
   }
 };
 
@@ -539,7 +703,7 @@ const deleteItem = async (req, res) => {
     }
 
     // Check ownership (unless user is admin)
-    if (item.owner.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+    if (getOwnerIdString(item.owner) !== String(req.user._id) && req.user.role !== 'admin') {
       return res.status(403).json({
         success: false,
         message: 'Not authorized to delete this item',
@@ -678,7 +842,7 @@ const purchaseItem = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Only verified items can be purchased' });
     }
 
-    if (item.owner.toString() === req.user._id.toString()) {
+    if (getOwnerIdString(item.owner) === String(req.user._id)) {
       return res.status(400).json({ success: false, message: 'You already own this item' });
     }
 
@@ -738,12 +902,28 @@ const relistItem = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Item not found' });
     }
 
-    if (item.owner.toString() !== req.user._id.toString()) {
+    if (getOwnerIdString(item.owner) !== String(req.user._id)) {
       return res.status(403).json({ success: false, message: 'Not authorized to relist this item' });
     }
 
     if (item.verificationStatus !== 'verified') {
       return res.status(400).json({ success: false, message: 'Only verified items can be listed for sale' });
+    }
+
+    const listingMode = String(req.body?.listingMode || (item.isSold ? 'sell_back' : 'list')).toLowerCase();
+    const listingPrice = req.body?.listingPrice;
+    if (!['list', 'sell_back'].includes(listingMode)) {
+      return res.status(400).json({ success: false, message: 'Invalid listing mode' });
+    }
+    if (listingMode === 'list') {
+      const parsedPrice = Number(listingPrice);
+      if (!Number.isFinite(parsedPrice) || parsedPrice < 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Listing price is required and must be a non-negative number',
+        });
+      }
+      item.estimatedValue = parsedPrice;
     }
 
     item.isSold = false;
@@ -895,6 +1075,7 @@ module.exports = {
   updateVerificationStatus,
   saveBlockchainDetails,
   getItemBlockchainProof,
+  downloadCertificatePdf,
   revokeItemVerification,
   deleteItem,
   searchItems,

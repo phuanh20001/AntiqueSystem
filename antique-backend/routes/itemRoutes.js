@@ -13,6 +13,7 @@ const {
   updateVerificationStatus,
   saveBlockchainDetails,
   getItemBlockchainProof,
+  downloadCertificatePdf,
   revokeItemVerification,
   deleteItem,
   searchItems,
@@ -35,6 +36,7 @@ router.get('/my-purchases', protect, getMyPurchases);
  * Public routes with ID parameter
  */
 router.get('/:id/proof', getItemBlockchainProof);
+router.get('/:id/certificate', protect, downloadCertificatePdf);
 router.get('/:id', getItemById);
 router.get('/owner/:ownerId', getItemsByOwner);
 

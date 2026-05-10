@@ -30,6 +30,26 @@
   </div>
 
   <div class="toast" id="toast"></div>
+  <div class="modal-overlay" id="listing-price-modal" role="dialog" aria-modal="true" aria-labelledby="listing-price-title">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-title" id="listing-price-title">Set Listing Price</div>
+        <button class="modal-close" type="button" onclick="closeListingPriceModal()" aria-label="Close">×</button>
+      </div>
+      <div class="modal-body">
+        <p class="listing-modal-copy">Enter the price (AUD) before listing this item in products.</p>
+        <div class="form-group">
+          <label class="form-label" for="listing-price-input">Listing price (AUD)</label>
+          <input class="form-input" id="listing-price-input" type="number" min="0" step="0.01" placeholder="e.g. 4500">
+          <div class="error-message" id="listing-price-error"></div>
+        </div>
+        <div class="modal-actions">
+          <button class="btn-sm btn-review" type="button" onclick="closeListingPriceModal()">Cancel</button>
+          <button class="btn-sm btn-approve" type="button" id="listing-price-submit">List In Products</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <script src="../js/utils.js"></script>
   <script src="../js/api.js"></script>
@@ -42,6 +62,7 @@
     let dashboardItemView = 'all';
     let dashboardAdminView = 'analytics';
     let dashboardPurchaseHistory = [];
+    let listingPriceState = null;
 
     function escapeHtml(value) {
       return String(value || '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#39;');
@@ -94,6 +115,58 @@
       dashboardAdminView = 'items';
       dashboardItemView = view;
       loadDashboardData();
+    }
+    function openItemDetailForVerification(itemId) {
+      window.location.href = `detail.html?id=${itemId}`;
+    }
+    function openListingPriceModal(itemId, existingPrice) {
+      listingPriceState = { itemId };
+      const modal = document.getElementById('listing-price-modal');
+      const input = document.getElementById('listing-price-input');
+      const error = document.getElementById('listing-price-error');
+      if (!modal || !input || !error) return;
+      input.value = existingPrice !== null && existingPrice !== undefined ? existingPrice : '';
+      input.classList.remove('error');
+      error.textContent = '';
+      error.classList.remove('show');
+      modal.classList.add('open');
+      document.body.style.overflow = 'hidden';
+      input.focus();
+    }
+    function closeListingPriceModal() {
+      const modal = document.getElementById('listing-price-modal');
+      const input = document.getElementById('listing-price-input');
+      const error = document.getElementById('listing-price-error');
+      if (modal) modal.classList.remove('open');
+      if (input) input.classList.remove('error');
+      if (error) {
+        error.textContent = '';
+        error.classList.remove('show');
+      }
+      document.body.style.overflow = '';
+      listingPriceState = null;
+    }
+    async function submitListingPriceModal() {
+      const input = document.getElementById('listing-price-input');
+      const error = document.getElementById('listing-price-error');
+      if (!listingPriceState || !input || !error) return;
+      const parsedPrice = Number(String(input.value || '').trim());
+      if (!Number.isFinite(parsedPrice) || parsedPrice < 0) {
+        input.classList.add('error');
+        error.textContent = 'Please enter a valid non-negative listing price.';
+        error.classList.add('show');
+        return;
+      }
+      try {
+        await apiRequest(`/items/${listingPriceState.itemId}/relist`, 'PUT', { listingMode: 'list', listingPrice: parsedPrice }, true);
+        closeListingPriceModal();
+        showToast('Item listed to products page.');
+        loadDashboardData();
+      } catch (requestError) {
+        input.classList.add('error');
+        error.textContent = requestError.message || 'Unable to list item.';
+        error.classList.add('show');
+      }
     }
 
     function renderSidebar(user, items, pendingUsers, approvedUsers, rejectedUsers, allUsers) {
@@ -158,19 +231,24 @@
         const relistLabel = item.isSold ? 'Sell Back' : 'List In Products';
         let actionMarkup;
         if (canDecide) {
-          actionMarkup = `<div class="table-actions"><button class="btn-sm btn-approve" onclick="changeItemStatus('${item._id}','verified')">Approve</button><button class="btn-sm btn-decline" onclick="changeItemStatus('${item._id}','rejected')">Decline</button></div>`;
+          actionMarkup = `<div class="table-actions"><button class="btn-sm btn-review" onclick="openItemDetailForVerification('${item._id}')">View Details</button></div><div class="action-helper-text">Approve/Decline is only available from item details.</div>`;
         } else if (canAdminRevoke) {
           actionMarkup = `<div class="table-actions"><button class="btn-sm btn-review" onclick="revokeChainVerification('${item._id}')">Reverse Decision</button><button class="btn-sm btn-review" onclick="window.location.href='detail.html?id=${item._id}'">View</button></div>`;
         } else if (canRelist) {
-          actionMarkup = `<div class="table-actions"><button class="btn-sm btn-approve" onclick="sellBackItem('${item._id}')">${relistLabel}</button><button class="btn-sm btn-review" onclick="window.location.href='detail.html?id=${item._id}'">View</button></div>`;
+          actionMarkup = `<div class="table-actions"><button class="btn-sm btn-approve" onclick="sellBackItem('${item._id}', ${item.isSold ? 'true' : 'false'}, ${item.estimatedValue ?? 'null'})">${relistLabel}</button><button class="btn-sm btn-review" onclick="window.location.href='detail.html?id=${item._id}'">View</button></div>`;
         } else {
           actionMarkup = `<button class="btn-sm btn-review" onclick="window.location.href='detail.html?id=${item._id}'">View</button>`;
         }
+        const descriptionSnippet = String(item.description || 'No description provided.')
+          .replace(/\s+/g, ' ')
+          .trim();
+        const shortChainHash = item.blockchainHash ? `${String(item.blockchainHash).slice(0, 10)}…` : 'Pending';
+        const shortTxHash = item.blockchainTransactionHash ? `${String(item.blockchainTransactionHash).slice(0, 10)}…` : 'Pending';
         return `<tr><td class="item-row-thumb">🏺</td><td><div class="item-row-title">${escapeHtml(item.title || 'Untitled Item')}</div>
           <div class="item-row-sub">${escapeHtml(item.category || 'Antique Item')} · ${escapeHtml(item.estimatedPeriod || item.year || 'Period not provided')}</div>
-          <div class="item-row-sub">Owner: ${escapeHtml(item.owner?.username || item.owner?.email || 'Unknown owner')}</div></td>
-          <td>${getStatusBadge(status)}</td><td style="font-size:13px;color:var(--ink-light);">${escapeHtml(item.blockchainHash || 'Pending')}</td>
-          <td style="font-size:13px;color:var(--ink-light);">${escapeHtml(item.blockchainTransactionHash || 'Pending')}</td>
+          <div class="item-row-sub">Owner: ${escapeHtml(item.owner?.username || item.owner?.email || 'Unknown owner')}</div>
+          <div class="item-row-desc">${escapeHtml(descriptionSnippet)}</div></td>
+          <td>${getStatusBadge(status)}</td><td class="item-row-chain"><div>Cert: ${escapeHtml(shortChainHash)}</div><div>Tx: ${escapeHtml(shortTxHash)}</div></td>
           <td>${actionMarkup}</td></tr>`;
       }).join('');
     }
@@ -308,7 +386,7 @@
       if (role === 'admin') {
         if (dashboardAdminView === 'items') {
           const filteredItems = getFilteredItems('admin', items);
-          return `<div class="dash-content dashboard-grid dashboard-grid-single"><section class="dashboard-panel dashboard-panel-wide"><div class="panel-head"><div><h3>Submitted Items</h3><p>Reverse a mistaken approval or rejection: clears the active on-chain record (contract owner wallet) and returns the item to pending. Original transactions stay visible on Etherscan.</p></div><button class="btn-sm btn-review" onclick="loadDashboardData()">Refresh</button></div><div class="panel-body"><table class="review-table"><thead><tr><th></th><th>Item</th><th>Status</th><th>Certificate Hash</th><th>Transaction Hash</th><th>Action</th></tr></thead><tbody>${renderItemRows(filteredItems, 'admin')}</tbody></table></div></section></div>`;
+          return `<div class="dash-content dashboard-grid dashboard-grid-single"><section class="dashboard-panel dashboard-panel-wide"><div class="panel-head"><div><h3>Submitted Items</h3><p>Reverse a mistaken approval or rejection: clears the active on-chain record (contract owner wallet) and returns the item to pending. Original transactions stay visible on Etherscan.</p></div><button class="btn-sm btn-review" onclick="loadDashboardData()">Refresh</button></div><div class="panel-body"><table class="review-table"><thead><tr><th></th><th>Item Details</th><th>Status</th><th>On-chain Proof</th><th>Action</th></tr></thead><tbody>${renderItemRows(filteredItems, 'admin')}</tbody></table></div></section></div>`;
         }
         if (dashboardAdminView === 'analytics') {
           return renderAdminAnalyticsPanel(items, pendingUsers, approvedUsers, rejectedUsers, allUsers);
@@ -352,7 +430,7 @@
             </div>
           </section>`
         : '';
-      return `<div class="dash-content dashboard-grid dashboard-grid-single"><section class="dashboard-panel dashboard-panel-wide"><div class="panel-head"><div><h3>${title}</h3><p>Use sidebar filters to switch views.</p></div><button class="btn-sm btn-review" onclick="loadDashboardData()">Refresh</button></div><div class="panel-body"><table class="review-table"><thead><tr><th></th><th>Item</th><th>Status</th><th>Certificate Hash</th><th>Transaction Hash</th><th>Action</th></tr></thead><tbody>${renderItemRows(filteredItems, role)}</tbody></table></div></section>${purchasesSection}</div>`;
+      return `<div class="dash-content dashboard-grid dashboard-grid-single"><section class="dashboard-panel dashboard-panel-wide"><div class="panel-head"><div><h3>${title}</h3><p>Use sidebar filters to switch views.</p></div><button class="btn-sm btn-review" onclick="loadDashboardData()">Refresh</button></div><div class="panel-body"><table class="review-table"><thead><tr><th></th><th>Item Details</th><th>Status</th><th>On-chain Proof</th><th>Action</th></tr></thead><tbody>${renderItemRows(filteredItems, role)}</tbody></table></div></section>${purchasesSection}</div>`;
     }
 
     function renderDashboard(user, items, health, pendingUsers, approvedUsers, rejectedUsers, allUsers) {
@@ -372,28 +450,6 @@
     function renderError(message) { document.getElementById('dashboard-root').innerHTML = `<div class="dashboard-main" style="width:100%; padding:40px;"><div class="dashboard-panel"><div class="panel-head"><div><h3>Unable to load dashboard</h3><p>${escapeHtml(message || 'Please try again later.')}</p></div></div><div class="panel-body"><button class="btn-sm btn-review" onclick="loadDashboardData()">Retry</button></div></div></div>`; }
     function stopDashboardAutoRefresh() { if (dashboardRefreshTimer) { clearInterval(dashboardRefreshTimer); dashboardRefreshTimer = null; } }
     function startDashboardAutoRefresh() { stopDashboardAutoRefresh(); }
-
-    async function changeItemStatus(itemId, verificationStatus) {
-      const isTerminal = verificationStatus === 'verified' || verificationStatus === 'rejected';
-      const verb = verificationStatus === 'verified' ? 'approved' : 'declined';
-      try {
-        if (isTerminal) {
-          showToast('Submitting verification to blockchain… this may take ~15–30s.');
-        }
-        const resp = await apiRequest(`/items/${itemId}/verification-status`, 'PUT', { verificationStatus }, true);
-        const tx = resp && resp.blockchain && resp.blockchain.txHash;
-        if (tx) {
-          showToast(`Item ${verb} & recorded on chain (tx ${tx.slice(0, 10)}…).`);
-        } else if (resp && resp.blockchain && resp.blockchain.alreadyOnChain) {
-          showToast(`Item ${verb}. Already on chain — no new transaction needed.`);
-        } else {
-          showToast(`Item ${verb} successfully.`);
-        }
-        loadDashboardData();
-      } catch (error) {
-        showToast(error.message || 'Unable to update item status.', true);
-      }
-    }
 
     async function revokeChainVerification(itemId) {
       if (!confirm(
@@ -425,9 +481,13 @@
       try { await apiRequest(`/auth/users/${userId}`, 'DELETE', null, true); showToast('User account deleted.'); loadDashboardData(); }
       catch (error) { showToast(error.message || 'Unable to delete account.', true); }
     }
-    async function sellBackItem(itemId) {
+    async function sellBackItem(itemId, isSold, existingPrice) {
       try {
-        await apiRequest(`/items/${itemId}/relist`, 'PUT', null, true);
+        if (!isSold) {
+          openListingPriceModal(itemId, existingPrice);
+          return;
+        }
+        await apiRequest(`/items/${itemId}/relist`, 'PUT', { listingMode: 'sell_back' }, true);
         showToast('Item relisted to products page.');
         loadDashboardData();
       } catch (error) {
@@ -491,7 +551,22 @@
       }
     }
 
-    document.addEventListener('DOMContentLoaded', () => { if (session) loadDashboardData(); });
+    document.addEventListener('DOMContentLoaded', () => {
+      const listingModal = document.getElementById('listing-price-modal');
+      const listingSubmit = document.getElementById('listing-price-submit');
+      if (listingSubmit) listingSubmit.addEventListener('click', submitListingPriceModal);
+      if (listingModal) {
+        listingModal.addEventListener('click', (event) => {
+          if (event.target === listingModal) closeListingPriceModal();
+        });
+      }
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && listingModal && listingModal.classList.contains('open')) {
+          closeListingPriceModal();
+        }
+      });
+      if (session) loadDashboardData();
+    });
     document.addEventListener('visibilitychange', () => {});
     window.addEventListener('beforeunload', stopDashboardAutoRefresh);
   </script>

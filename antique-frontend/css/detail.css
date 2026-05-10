@@ -162,6 +162,85 @@
   cursor: not-allowed;
 }
 
+/* ── VERIFIER DECISION CARD ── */
+.verifier-card {
+  background: var(--parchment);
+  border: 2px solid var(--rust);
+  border-radius: 8px;
+  padding: 24px;
+  margin-bottom: 20px;
+}
+.verifier-eyebrow {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--rust);
+  margin-bottom: 8px;
+}
+.verifier-title {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.verifier-status {
+  margin-top: 8px;
+  margin-bottom: 16px;
+  font-family: var(--font-ui);
+  font-size: 13px;
+  color: var(--ink-light);
+}
+.verifier-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.verifier-dashboard-link {
+  display: inline-block;
+  margin-top: 12px;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  color: var(--ink);
+  text-decoration: underline;
+}
+.verifier-dashboard-link:hover {
+  color: var(--sepia);
+}
+.verifier-approve-btn {
+  background: var(--sage);
+  color: #fff;
+}
+.verifier-approve-btn:hover:not(:disabled) {
+  background: var(--sage-light);
+}
+.verifier-decline-btn {
+  background: var(--rust);
+  color: #fff;
+}
+.verifier-decline-btn:hover:not(:disabled) {
+  background: var(--rust-light);
+}
+.verifier-modal-help {
+  margin-bottom: 12px;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--ink);
+}
+.verifier-modal-error {
+  min-height: 18px;
+  margin-top: 6px;
+  color: var(--rust);
+  font-size: 12px;
+}
+.purchase-modal-copy {
+  margin: 0 0 14px;
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
 /* ── CERTIFICATE CARD ── */
 .cert-card {
   background: var(--parchment);
