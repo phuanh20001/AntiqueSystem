@@ -117,7 +117,13 @@ function stopDashboardAutoRefresh() {
         </div>
       `;
     }
+function setItemView(event, view) {
+  if (event) event.preventDefault();
 
+  dashboardItemView = view;
+
+  loadDashboardData();
+}
     function renderSidebar(user, items) {
       const name =
         user.displayName ||
@@ -143,46 +149,38 @@ function stopDashboardAutoRefresh() {
 
       return `
         <div class="dashboard-sidebar">
-          <div class="sidebar-profile">
-            <div class="sidebar-name">${escapeHtml(name)}</div>
-            <div class="sidebar-role">${escapeHtml(role)} account</div>
-          </div>
-
-          <div class="sidebar-section-label">
-  ${
-    role === 'admin'
-      ? 'Administration'
-      : role === 'verifier'
-      ? 'Verification'
-      : 'Collection'
-  }
-</div>
           <div class="sidebar-section">
-            <a class="sidebar-item active" href="#">
-              <span>📦</span>
-${
-  role === 'admin'
-    ? 'All Items'
-    : role === 'verifier'
-    ? 'Review Queue'
-    : 'My Submissions'
-}
-              <span class="sidebar-count">${totalItems}</span>
-            </a>
-            <a class="sidebar-item" href="#">
-              <span>🟡</span> In Review
-              <span class="sidebar-count rust">${pendingItems}</span>
-            </a>
-            <a class="sidebar-item" href="#">
-              <span>📜</span> Verified
-              <span class="sidebar-count green">${verifiedItems}</span>
-            </a>
-            <a class="sidebar-item" href="#">
-           <span>❌</span> Rejected
-           <span class="sidebar-count rust">${rejectedItems}</span>
-          </a>
 
-          </div>
+  <a class="sidebar-item ${dashboardItemView === 'all' ? 'active' : ''}" href="#" onclick="setItemView(event, 'all')">
+    <span>📦</span>
+
+    ${
+      role === 'admin'
+        ? 'All Items'
+        : role === 'verifier'
+        ? 'Review Queue'
+        : 'My Submissions'
+    }
+
+    <span class="sidebar-count">${totalItems}</span>
+  </a>
+
+  <a class="sidebar-item ${dashboardItemView === 'pending' ? 'active' : ''}" href="#" onclick="setItemView(event, 'pending')">
+    <span>🟡</span> In Review
+    <span class="sidebar-count rust">${pendingItems}</span>
+  </a>
+
+  <a class="sidebar-item ${dashboardItemView === 'verified' ? 'active' : ''}" href="#" onclick="setItemView(event, 'verified')">
+    <span>📜</span> Verified
+    <span class="sidebar-count green">${verifiedItems}</span>
+  </a>
+
+  <a class="sidebar-item ${dashboardItemView === 'rejected' ? 'active' : ''}" href="#" onclick="setItemView(event, 'rejected')">
+    <span>❌</span> Rejected
+    <span class="sidebar-count rust">${rejectedItems}</span>
+  </a>
+
+</div>
 
           <div class="sidebar-section-label">Actions</div>
           <div class="sidebar-section">
@@ -391,6 +389,41 @@ async function loadAdminUsers() {
     panel.innerHTML = `<p style="padding:12px;color:#b00020;">Unable to load accounts.</p>`;
   }
 }
+function getFilteredItems(items) {
+
+  if (dashboardItemView === 'pending') {
+    return items.filter(item => {
+      const status = String(item.verificationStatus || item.status || '').toLowerCase();
+
+      return (
+        status.includes('pending') ||
+        status.includes('review') ||
+        status === 'in_progress'
+      );
+    });
+  }
+
+  if (dashboardItemView === 'verified') {
+    return items.filter(item => {
+      const status = String(item.verificationStatus || item.status || '').toLowerCase();
+
+      return (
+        status.includes('verified') ||
+        status.includes('approved')
+      );
+    });
+  }
+
+  if (dashboardItemView === 'rejected') {
+    return items.filter(item => {
+      const status = String(item.verificationStatus || item.status || '').toLowerCase();
+
+      return status.includes('rejected');
+    });
+  }
+
+  return items;
+}
     function renderDashboard(user, items, health) {
       const root = document.getElementById('dashboard-root');
 
@@ -465,7 +498,7 @@ async function loadAdminUsers() {
                     </tr>
                   </thead>
                   <tbody>
-                    ${renderItemRows(items,user.role)}
+                    ${renderItemRows(getFilteredItems(items), user.role)}
                   </tbody>
                 </table>
               </div>
