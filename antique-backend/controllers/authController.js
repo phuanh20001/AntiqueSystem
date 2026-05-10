@@ -11,6 +11,14 @@ const TOKEN_EXPIRY = '30d';
 
 // Bcrypt salt rounds
 const SALT_ROUNDS = 10;
+const normalizeRequestedRole = (role) => {
+  const value = String(role || 'user').toLowerCase().trim();
+  return ['user', 'verifier', 'admin'].includes(value) ? value : 'user';
+};
+
+const isAdminRequest = (req) => {
+  return req.user && req.user.role === 'admin';
+};
 
 // Generate JWT token
 const generateToken = (id) => {

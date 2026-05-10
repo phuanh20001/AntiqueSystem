@@ -5,15 +5,21 @@ const BACKEND_BASE_URL = "http://localhost:5000";
 // If `getStoredToken` is already defined by utils.js, do not overwrite it.
 if (typeof getStoredToken !== 'function') {
   function getStoredToken() {
-    try {
-      return (
-        sessionStorage.getItem('antiqchain-token-session') ||
-        localStorage.getItem('antiqchain-token')
-      );
-    } catch (e) {
-      return null;
-    }
+  try {
+    const directToken =
+      sessionStorage.getItem('antiqchain-token-session') ||
+      localStorage.getItem('antiqchain-token');
+
+    if (directToken) return directToken;
+
+    const sessionAuth = JSON.parse(sessionStorage.getItem('antiqchain-auth-session') || 'null');
+    const localAuth = JSON.parse(localStorage.getItem('antiqchain-auth') || 'null');
+
+    return sessionAuth?.token || localAuth?.token || null;
+  } catch (e) {
+    return null;
   }
+}
 }
 
 async function apiRequest(endpoint, method = "GET", data = null, requiresAuth = false) {

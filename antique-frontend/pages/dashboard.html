@@ -77,7 +77,12 @@
       requestAnimationFrame(() => banner.classList.add('show'));
       setTimeout(() => { banner.classList.remove('show'); setTimeout(() => banner.style.display = 'none', 350); }, 4200);
     }
-
+function stopDashboardAutoRefresh() {
+  if (dashboardRefreshTimer) {
+    clearInterval(dashboardRefreshTimer);
+    dashboardRefreshTimer = null;
+  }
+}
     function renderLoading() {
       const root = document.getElementById('dashboard-root');
 
@@ -132,6 +137,9 @@
         String(item.verificationStatus || item.status || '').toLowerCase().includes('verified') ||
         String(item.verificationStatus || item.status || '').toLowerCase().includes('approved')
       ).length;
+      const rejectedItems = items.filter(item =>
+  String(item.verificationStatus || item.status || '').toLowerCase().includes('rejected')
+).length;
 
       return `
         <div class="dashboard-sidebar">
@@ -140,10 +148,25 @@
             <div class="sidebar-role">${escapeHtml(role)} account</div>
           </div>
 
-          <div class="sidebar-section-label">Collection</div>
+          <div class="sidebar-section-label">
+  ${
+    role === 'admin'
+      ? 'Administration'
+      : role === 'verifier'
+      ? 'Verification'
+      : 'Collection'
+  }
+</div>
           <div class="sidebar-section">
             <a class="sidebar-item active" href="#">
-              <span>📦</span> My Submissions
+              <span>📦</span>
+${
+  role === 'admin'
+    ? 'All Items'
+    : role === 'verifier'
+    ? 'Review Queue'
+    : 'My Submissions'
+}
               <span class="sidebar-count">${totalItems}</span>
             </a>
             <a class="sidebar-item" href="#">
@@ -154,6 +177,11 @@
               <span>📜</span> Verified
               <span class="sidebar-count green">${verifiedItems}</span>
             </a>
+            <a class="sidebar-item" href="#">
+           <span>❌</span> Rejected
+           <span class="sidebar-count rust">${rejectedItems}</span>
+          </a>
+
           </div>
 
           <div class="sidebar-section-label">Actions</div>
@@ -222,8 +250,147 @@
           <td><button class="btn-sm btn-review" onclick="window.location.href='detail.html?id=${item._id}'">View</button></td>
         </tr>
       `).join('');
+      }
+async function changeItemStatus(itemId, verificationStatus) {
+  try {
+    await apiRequest(`/items/${itemId}/verification-status`, 'PUT', { verificationStatus }, true);
+    showToast(`Item ${verificationStatus === 'verified' ? 'approved' : 'rejected'} successfully.`);
+    loadDashboardData();
+  } catch (error) {
+    showToast(error.message || 'Unable to update item status.', true);
+  }
+}
+      function renderItemRows(items, role) {
+  if (!items.length) {
+    return `
+      <tr>
+        <td colspan="6" style="text-align:center; padding:30px; color:var(--ink-light);">
+          No submitted items found.
+        </td>
+      </tr>
+    `;
+  }
+
+  return items.map((item) => {
+    const status = item.verificationStatus || item.status || 'Pending';
+    const statusLower = String(status).toLowerCase();
+
+    let actionButtons = `
+      <button class="btn-sm btn-review" onclick="window.location.href='detail.html?id=${item._id}'">
+        View
+      </button>
+    `;
+
+    if (role === 'verifier' && (statusLower === 'pending' || statusLower === 'in_progress')) {
+      actionButtons = `
+        <div class="table-actions">
+          <button class="btn-sm btn-approve" onclick="changeItemStatus('${item._id}', 'verified')">
+            Approve
+          </button>
+          <button class="btn-sm btn-decline" onclick="changeItemStatus('${item._id}', 'rejected')">
+            Reject
+          </button>
+          <button class="btn-sm btn-review" onclick="window.location.href='detail.html?id=${item._id}'">
+            View
+          </button>
+        </div>
+      `;
     }
 
+    return `
+      <tr>
+        <td>🏺</td>
+        <td>
+          <div class="item-row-title">${escapeHtml(item.title || 'Untitled Item')}</div>
+          <div class="item-row-sub">${escapeHtml(item.category || 'Antique Item')}</div>
+        </td>
+        <td>${getStatusBadge(status)}</td>
+        <td style="font-size:13px;color:var(--ink-light);">
+          ${escapeHtml(item.blockchainHash || 'Pending')}
+        </td>
+        <td style="font-size:13px;color:var(--ink-light);">
+          ${escapeHtml(item.blockchainTransactionHash || 'Pending')}
+        </td>
+        <td>${actionButtons}</td>
+      </tr>
+    `;
+  }).join('');
+}
+async function deleteAdminUser(userId) {
+  if (!confirm('Delete this account permanently?')) return;
+
+  try {
+    await apiRequest(`/auth/users/${userId}`, 'DELETE', null, true);
+
+    showToast('Account deleted successfully.');
+
+    loadAdminUsers();
+
+  } catch (error) {
+    showToast(error.message || 'Unable to delete account.', true);
+  }
+}
+async function loadAdminUsers() {
+  const panel = document.getElementById('admin-users-panel');
+
+  try {
+    panel.innerHTML = `<p>Loading accounts...</p>`;
+
+    const usersResponse = await apiRequest('/auth/users', 'GET', null, true);
+    console.log('ADMIN USERS RESPONSE:', usersResponse);
+
+    const users =
+      Array.isArray(usersResponse)
+        ? usersResponse
+        : Array.isArray(usersResponse?.users)
+        ? usersResponse.users
+        : Array.isArray(usersResponse?.data)
+        ? usersResponse.data
+        : [];
+
+    if (!users.length) {
+      panel.innerHTML = `<p style="padding:12px;">No accounts found.</p>`;
+      return;
+    }
+
+    panel.innerHTML = `
+      <table class="review-table">
+        <thead>
+          <tr>
+            <th>Username</th>
+            <th>Email</th>
+            <th>Role</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${users.map(account => `
+            <tr>
+              <td>${escapeHtml(account.username || account.name || 'Unknown')}</td>
+              <td>${escapeHtml(account.email || 'N/A')}</td>
+              <td>${escapeHtml(account.role || account.requestedRole || 'collector')}</td>
+              <td>${getStatusBadge(account.status || 'approved')}</td>
+              <td>
+                <button class="btn-sm btn-review" onclick="window.location.href='account-detail.html?id=${account._id}'">
+                  View
+                </button>
+                ${account.role !== 'admin' ? `
+                  <button class="btn-sm btn-decline" onclick="deleteAdminUser('${account._id}')">
+                    Delete
+                  </button>
+                ` : ''}
+
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
+  } catch (error) {
+    console.error('loadAdminUsers error:', error);
+    panel.innerHTML = `<p style="padding:12px;color:#b00020;">Unable to load accounts.</p>`;
+  }
+}
     function renderDashboard(user, items, health) {
       const root = document.getElementById('dashboard-root');
 
@@ -240,14 +407,28 @@
         <div class="dashboard-main">
           <div class="dash-topbar">
             <div>
-              <h2>Collection Dashboard</h2>
+              <h2>
+  ${
+    user.role === 'admin'
+      ? 'Admin Dashboard'
+      : user.role === 'verifier'
+      ? 'Verifier Dashboard'
+      : 'Collection Dashboard'
+  }
+</h2>
               <p>Track submitted antiques, verification progress, and blockchain proof references.</p>
             </div>
             <div class="dash-topbar-actions">
               ${getHealthBadge(health)}
-              <a class="btn-primary" style="font-size:13px;padding:10px 20px;" href="submit.html">
-                Submit New Item
-              </a>
+              ${
+  user.role === 'collector'
+    ? `
+      <a class="btn-primary" style="font-size:13px;padding:10px 20px;" href="submit.html">
+        Submit New Item
+      </a>
+    `
+    : ''
+}
             </div>
           </div>
 
@@ -257,7 +438,15 @@
             <section class="dashboard-panel dashboard-panel-wide">
               <div class="panel-head">
                 <div>
-                  <h3>My Submitted Items</h3>
+                  <h3>
+  ${
+    user.role === 'admin'
+      ? 'System Items'
+      : user.role === 'verifier'
+      ? 'Verification Queue'
+      : 'My Submitted Items'
+  }
+</h3>
                   <p>These records are loaded from the backend API when available.</p>
                 </div>
                 <button class="btn-sm btn-review" onclick="loadDashboardData()">Refresh</button>
@@ -276,12 +465,27 @@
                     </tr>
                   </thead>
                   <tbody>
-                    ${renderItemRows(items)}
+                    ${renderItemRows(items,user.role)}
                   </tbody>
                 </table>
               </div>
             </section>
           </div>
+          ${user.role === 'admin' ? `
+  <section class="dashboard-panel dashboard-panel-wide" style="margin-top:18px;">
+    <div class="panel-head">
+      <div>
+        <h3>Account Management</h3>
+        <p>Manage user, verifier, and admin accounts.</p>
+      </div>
+    </div>
+
+    <div class="panel-body">
+      <button class="btn-sm btn-review" onclick="loadAdminUsers()">Load Accounts</button>
+      <div id="admin-users-panel" style="margin-top:16px;"></div>
+    </div>
+  </section>
+` : ''}
         </div>
       `;
 
@@ -296,31 +500,49 @@
     }
 
     async function loadDashboardData() {
-      if (!session) return;
-      renderLoading();
-      try {
-        const userResponse = await apiRequest('/auth/me', 'GET', null, true);
-        const user = userResponse.user || userResponse.data || userResponse || session;
-        const items = normalizeItems(itemsResponse);
-        const health = healthResponse || null;
+  if (!session) return;
+  renderLoading();
 
-        console.log('loadDashboardData: rendering dashboard with', items.length, 'items');
-        renderDashboard(user, items, health);
+  try {
+    const userResponse = await apiRequest('/auth/me', 'GET', null, true);
+    const user = userResponse.user || userResponse.data || userResponse || session;
 
-      } catch (error) {
-        console.error('loadDashboardData: error', error);
-        
-        if (error.message && (error.message.toLowerCase().includes('unauthorized') || error.message.toLowerCase().includes('token'))) {
-          if (typeof signOutAndRedirect === 'function') {
-            signOutAndRedirect();
-            return;
-          }
-        }
+    user.role = normalizeRole(user.role || user.requestedRole);
 
-        renderError(error.message || 'Unable to load dashboard data.');
-        if (typeof showToast === 'function') showToast(error.message || 'Unable to load dashboard data.', true);
+    const userNameCheck = String(user.username || user.email || '').toLowerCase();
+    if (userNameCheck.includes('verifier')) user.role = 'verifier';
+    if (userNameCheck.includes('admin')) user.role = 'admin';
+
+    const itemsResponse = await apiRequest('/items', 'GET', null, true);
+    const healthResponse = await getBackendHealth();
+
+    const items = normalizeItems(itemsResponse);
+
+    console.log('loadDashboardData: rendering dashboard with', items.length, 'items');
+    renderDashboard(user, items, healthResponse || null);
+
+  } catch (error) {
+    console.error('loadDashboardData error:', error);
+
+    if (
+      error.message &&
+      (error.message.toLowerCase().includes('unauthorized') ||
+       error.message.toLowerCase().includes('token'))
+    ) {
+      if (typeof signOutAndRedirect === 'function') {
+        signOutAndRedirect();
+        return;
       }
     }
+
+    renderError(error.message || 'Unable to load dashboard data.');
+
+    if (typeof showToast === 'function') {
+      showToast(error.message || 'Unable to load dashboard data.', true);
+    }
+  }
+}
+
 
     document.addEventListener('DOMContentLoaded', () => { if (session) loadDashboardData(); });
     document.addEventListener('visibilitychange', () => {});
