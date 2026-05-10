@@ -281,12 +281,29 @@
   showToast("Certificate PDF downloaded successfully");
 }
 
-    document.querySelectorAll('.detail-thumb').forEach((thumb) => {
-      thumb.addEventListener('click', function () {
-        document.querySelectorAll('.detail-thumb').forEach((item) => item.classList.remove('active'));
-        this.classList.add('active');
-      });
-    });
+    const detailImage = document.querySelector('.detail-image');
+const thumbViews = [
+  { icon: '🏺', label: 'Main Item View' },
+  { icon: '🔍', label: 'Close Inspection View' },
+  { icon: '📐', label: 'Measurement View' },
+  { icon: '⚪', label: 'Alternate Angle View' }
+];
+
+document.querySelectorAll('.detail-thumb').forEach((thumb, index) => {
+  thumb.addEventListener('click', function () {
+    document.querySelectorAll('.detail-thumb').forEach((item) => item.classList.remove('active'));
+    this.classList.add('active');
+
+    const view = thumbViews[index] || thumbViews[0];
+
+    detailImage.innerHTML = `
+      <div style="font-size:72px;">${view.icon}</div>
+      <div style="font-size:16px;margin-top:12px;color:var(--ink-light);">
+        ${view.label}
+      </div>
+    `;
+  });
+});
 
     // Truncate long hashes/addresses to "0x1234abcd…ef901234" for compact display.
     function shortenHash(value, head = 10, tail = 8) {
