@@ -6,14 +6,10 @@ const {
   getItemById,
   getItemsByOwner,
   getMyItems,
-  getMyPurchases,
-  purchaseItem,
-  relistItem,
   updateItem,
   updateVerificationStatus,
   saveBlockchainDetails,
   getItemBlockchainProof,
-  revokeItemVerification,
   deleteItem,
   searchItems,
 } = require('../controllers/itemController');
@@ -29,7 +25,6 @@ router.get('/search', searchItems);
  * Protected routes (must come before :id route)
  */
 router.get('/my-items', protect, getMyItems);
-router.get('/my-purchases', protect, getMyPurchases);
 
 /**
  * Public routes with ID parameter

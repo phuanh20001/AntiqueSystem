@@ -4,7 +4,11 @@ const User = require('../models/User');
 const blockchainService = require('../services/blockchainService');
 
 const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
-
+const isAbsentRecordError = (message) => {
+  return String(message || '').toLowerCase().includes('absent') ||
+         String(message || '').toLowerCase().includes('not found') ||
+         String(message || '').toLowerCase().includes('record');
+};
 /**
  * @desc    Create a new antique item
  * @route   POST /api/items
@@ -280,15 +284,10 @@ const updateVerificationStatus = async (req, res) => {
 
     if (verificationStatus === 'verified') {
       updateData.blockchainHash =
-        'CERT-' +
-        Date.now() +
-        '-' +
-        Math.random().toString(36).substring(2, 8).toUpperCase();
+        'CERT-' + Date.now() + '-' + Math.random().toString(36).substring(2, 8).toUpperCase();
 
       updateData.blockchainTransactionHash =
-        '0x' +
-        Math.random().toString(16).substring(2, 18) +
-        Date.now().toString(16);
+        '0x' + Math.random().toString(16).substring(2, 18) + Date.now().toString(16);
     }
 
     if (verificationStatus === 'rejected') {
@@ -298,10 +297,7 @@ const updateVerificationStatus = async (req, res) => {
 
     const item = await Item.findByIdAndUpdate(
       req.params.id,
-      {
-        verificationStatus,
-        verificationRecord: verificationRecord || undefined,
-      },
+      updateData,
       { new: true, runValidators: true }
     ).populate('owner', 'username email');
 
@@ -309,70 +305,10 @@ const updateVerificationStatus = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Item not found' });
     }
 
-    let blockchainResult = null;
-    const isTerminalDecision =
-      verificationStatus === 'verified' || verificationStatus === 'rejected';
-
-    if (isTerminalDecision && blockchainService.contract) {
-      const isAuthentic = verificationStatus === 'verified';
-      const canonical = blockchainService.buildItemCanonicalData(item);
-      const metadataHash = blockchainService.generateMetadataHash(canonical);
-
-      try {
-        // The contract reverts on duplicate verification, so check first.
-        const alreadyOnChain = await blockchainService
-          .isItemVerifiedOnChain(req.params.id)
-          .catch(() => false);
-
-        if (alreadyOnChain) {
-          blockchainResult = { alreadyOnChain: true };
-        } else {
-          console.log(
-            `[itemController] Submitting verification to chain — item=${req.params.id}, decision=${verificationStatus}`
-          );
-          const submission = await blockchainService.submitVerificationToBlockchain(
-            req.params.id,
-            isAuthentic,
-            metadataHash
-          );
-
-          item.blockchainHash = metadataHash;
-          item.blockchainTransactionHash = submission.txHash;
-          item.blockchainContractAddress = process.env.CONTRACT_ADDRESS || null;
-          item.blockchainNetwork = process.env.ALCHEMY_SEPOLIA_URL ? 'sepolia' : null;
-
-          blockchainResult = {
-            txHash: submission.txHash,
-            metadataHash,
-            etherscanUrl: blockchainService.getEtherscanUrl(submission.txHash),
-            contractAddress: process.env.CONTRACT_ADDRESS || null,
-            network: 'sepolia',
-          };
-        }
-      } catch (err) {
-        console.error('[itemController] Blockchain submission failed:', err);
-        // Refuse the off-chain status update if the on-chain commit failed —
-        // we don't want to silently produce a "verified" item with no chain proof.
-        return res.status(502).json({
-          success: false,
-          message: `Blockchain submission failed: ${err.message || err}`,
-        });
-      }
-    }
-
-    item.verificationStatus = verificationStatus;
-    if (verificationRecord) {
-      item.verificationRecord = verificationRecord;
-    }
-
-    await item.save();
-    await item.populate('owner', 'username email');
-
     res.status(200).json({
       success: true,
       message: 'Verification status updated successfully',
       data: item,
-      blockchain: blockchainResult,
     });
   } catch (error) {
     console.error('Update Verification Status Error:', error);
@@ -683,14 +619,10 @@ module.exports = {
   getItemById,
   getItemsByOwner,
   getMyItems,
-  getMyPurchases,
-  purchaseItem,
-  relistItem,
   updateItem,
   updateVerificationStatus,
   saveBlockchainDetails,
   getItemBlockchainProof,
-  revokeItemVerification,
   deleteItem,
   searchItems,
 };
