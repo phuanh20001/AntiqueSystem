@@ -4,11 +4,6 @@ const User = require('../models/User');
 const blockchainService = require('../services/blockchainService');
 
 const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
-const isCollectorRole = (role) => ['user', 'collector'].includes(String(role || '').toLowerCase());
-
-// "No record found" is a normal contract revert when an item has not been verified yet —
-// we treat it as an absent record rather than a hard failure.
-const isAbsentRecordError = (message) => /no\s+record/i.test(String(message || ''));
 
 /**
  * @desc    Create a new antique item
@@ -278,7 +273,38 @@ const updateVerificationStatus = async (req, res) => {
       });
     }
 
-    const item = await Item.findById(req.params.id);
+    const updateData = {
+      verificationStatus,
+      verificationRecord: verificationRecord || undefined,
+    };
+
+    if (verificationStatus === 'verified') {
+      updateData.blockchainHash =
+        'CERT-' +
+        Date.now() +
+        '-' +
+        Math.random().toString(36).substring(2, 8).toUpperCase();
+
+      updateData.blockchainTransactionHash =
+        '0x' +
+        Math.random().toString(16).substring(2, 18) +
+        Date.now().toString(16);
+    }
+
+    if (verificationStatus === 'rejected') {
+      updateData.blockchainHash = null;
+      updateData.blockchainTransactionHash = null;
+    }
+
+    const item = await Item.findByIdAndUpdate(
+      req.params.id,
+      {
+        verificationStatus,
+        verificationRecord: verificationRecord || undefined,
+      },
+      { new: true, runValidators: true }
+    ).populate('owner', 'username email');
+
     if (!item) {
       return res.status(404).json({ success: false, message: 'Item not found' });
     }
@@ -356,6 +382,7 @@ const updateVerificationStatus = async (req, res) => {
     });
   }
 };
+
 
 /**
  * @desc    Save blockchain transaction details
@@ -646,238 +673,6 @@ const getMyItems = async (req, res) => {
     res.status(500).json({
       success: false,
       message: error.message || 'Error fetching your items',
-    });
-  }
-};
-
-/**
- * @desc    Purchase a verified item
- * @route   POST /api/items/:id/purchase
- * @access  Private (Collector only)
- */
-const purchaseItem = async (req, res) => {
-  try {
-    if (!req.user || !req.user._id) {
-      return res.status(401).json({ success: false, message: 'User not authenticated' });
-    }
-
-    if (!isCollectorRole(req.user.role)) {
-      return res.status(403).json({ success: false, message: 'Only collector accounts can buy items' });
-    }
-
-    if (!isValidObjectId(req.params.id)) {
-      return res.status(400).json({ success: false, message: 'Invalid item ID' });
-    }
-
-    const item = await Item.findById(req.params.id);
-    if (!item) {
-      return res.status(404).json({ success: false, message: 'Item not found' });
-    }
-
-    if (item.verificationStatus !== 'verified') {
-      return res.status(400).json({ success: false, message: 'Only verified items can be purchased' });
-    }
-
-    if (item.owner.toString() === req.user._id.toString()) {
-      return res.status(400).json({ success: false, message: 'You already own this item' });
-    }
-
-    if (item.isSold) {
-      return res.status(400).json({ success: false, message: 'Item has already been sold' });
-    }
-
-    const sellerId = item.owner;
-    item.previousOwner = sellerId;
-    item.owner = req.user._id;
-    item.isSold = true;
-    item.soldAt = new Date();
-    item.purchaseHistory.push({
-      buyer: req.user._id,
-      seller: sellerId,
-      amount: item.estimatedValue || null,
-    });
-
-    await item.save();
-    await item.populate('owner', 'username email');
-
-    res.status(200).json({
-      success: true,
-      message: 'Item purchased successfully',
-      data: item,
-    });
-  } catch (error) {
-    console.error('Purchase Item Error:', error);
-    res.status(500).json({
-      success: false,
-      message: error.message || 'Error purchasing item',
-    });
-  }
-};
-
-/**
- * @desc    Relist owned item to marketplace
- * @route   PUT /api/items/:id/relist
- * @access  Private (Collector owner only)
- */
-const relistItem = async (req, res) => {
-  try {
-    if (!req.user || !req.user._id) {
-      return res.status(401).json({ success: false, message: 'User not authenticated' });
-    }
-
-    if (!isCollectorRole(req.user.role)) {
-      return res.status(403).json({ success: false, message: 'Only collector accounts can relist items' });
-    }
-
-    if (!isValidObjectId(req.params.id)) {
-      return res.status(400).json({ success: false, message: 'Invalid item ID' });
-    }
-
-    const item = await Item.findById(req.params.id);
-    if (!item) {
-      return res.status(404).json({ success: false, message: 'Item not found' });
-    }
-
-    if (item.owner.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ success: false, message: 'Not authorized to relist this item' });
-    }
-
-    if (item.verificationStatus !== 'verified') {
-      return res.status(400).json({ success: false, message: 'Only verified items can be listed for sale' });
-    }
-
-    item.isSold = false;
-    item.soldAt = null;
-    await item.save();
-    await item.populate('owner', 'username email');
-
-    res.status(200).json({
-      success: true,
-      message: 'Item relisted to marketplace successfully',
-      data: item,
-    });
-  } catch (error) {
-    console.error('Relist Item Error:', error);
-    res.status(500).json({
-      success: false,
-      message: error.message || 'Error relisting item',
-    });
-  }
-};
-
-/**
- * @desc    Get purchase history for authenticated collector
- * @route   GET /api/items/my-purchases
- * @access  Private
- */
-const getMyPurchases = async (req, res) => {
-  try {
-    if (!req.user || !req.user._id) {
-      return res.status(401).json({ success: false, message: 'User not authenticated' });
-    }
-
-    const items = await Item.find({ 'purchaseHistory.buyer': req.user._id })
-      .sort({ soldAt: -1 })
-      .populate('owner', 'username email');
-
-    const purchasedItems = items.map((item) => {
-      const latestRecord = [...item.purchaseHistory]
-        .reverse()
-        .find((entry) => entry.buyer && entry.buyer.toString() === req.user._id.toString());
-
-      return {
-        ...item.toObject(),
-        purchasedAt: latestRecord?.purchasedAt || item.soldAt || null,
-        purchaseAmount: latestRecord?.amount ?? item.estimatedValue ?? null,
-      };
-    });
-
-    res.status(200).json({
-      success: true,
-      count: purchasedItems.length,
-      data: purchasedItems,
-    });
-  } catch (error) {
-    console.error('Get My Purchases Error:', error);
-    res.status(500).json({
-      success: false,
-      message: error.message || 'Error fetching purchase history',
-    });
-  }
-};
-
-/**
- * @desc    Admin: clear on-chain verification and reset item to pending for re-review
- * @route   POST /api/items/:id/revoke-verification
- * @access  Private (Admin only)
- *
- * Calls revokeVerification on the contract when a record exists; always clears
- * blockchain pointer fields on the Item and sets verificationStatus to pending.
- */
-const revokeItemVerification = async (req, res) => {
-  try {
-    if (!isValidObjectId(req.params.id)) {
-      return res.status(400).json({ success: false, message: 'Invalid item ID' });
-    }
-
-    const item = await Item.findById(req.params.id);
-    if (!item) {
-      return res.status(404).json({ success: false, message: 'Item not found' });
-    }
-
-    const status = String(item.verificationStatus || '').toLowerCase();
-    if (!['verified', 'rejected'].includes(status)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Only verified or rejected items can be reversed',
-      });
-    }
-
-    let revocationTxHash = null;
-    let etherscanUrl = null;
-
-    if (blockchainService.contract) {
-      const onChain = await blockchainService
-        .isItemVerifiedOnChain(req.params.id)
-        .catch(() => false);
-
-      if (onChain) {
-        try {
-          const submission = await blockchainService.revokeVerificationOnChain(req.params.id);
-          revocationTxHash = submission.txHash;
-          etherscanUrl = blockchainService.getEtherscanUrl(submission.txHash);
-        } catch (err) {
-          console.error('[itemController] On-chain revoke failed:', err);
-          return res.status(502).json({
-            success: false,
-            message: `Blockchain revoke failed: ${err.message || err}`,
-          });
-        }
-      }
-    }
-
-    item.blockchainHash = null;
-    item.blockchainTransactionHash = null;
-    item.blockchainContractAddress = null;
-    item.blockchainNetwork = null;
-    item.verificationStatus = 'pending';
-    item.verificationRecord = null;
-
-    await item.save();
-    await item.populate('owner', 'username email');
-
-    res.status(200).json({
-      success: true,
-      message: 'Verification reversed; item reset to pending for re-review',
-      data: item,
-      revocationTxHash,
-      etherscanUrl,
-    });
-  } catch (error) {
-    console.error('Revoke Item Verification Error:', error);
-    res.status(500).json({
-      success: false,
-      message: error.message || 'Error revoking verification',
     });
   }
 };
