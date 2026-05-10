@@ -168,13 +168,12 @@ const itemSchema = new mongoose.Schema(
 itemSchema.index({ owner: 1, createdAt: -1 });
 itemSchema.index({ verificationStatus: 1 });
 
-// Auto-populate owner details on find queries
+// Pre-find hook to populate owner details if needed
 itemSchema.pre(/^find/, function () {
-  if (this.options._recursed) {
-    return;
+  if (!this.options._recursed) {
+    this.populate('owner', 'username email');
+    this.options._recursed = true;
   }
-  this.populate('owner', 'username email');
-  this.options._recursed = true;
 });
 
 module.exports = mongoose.model('Item', itemSchema);

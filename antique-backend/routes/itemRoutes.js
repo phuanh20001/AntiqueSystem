@@ -42,9 +42,6 @@ router.get('/owner/:ownerId', getItemsByOwner);
  * Protected routes for modification
  */
 router.post('/', protect, createItem);
-router.post('/:id/purchase', protect, purchaseItem);
-router.post('/:id/revoke-verification', protect, admin, revokeItemVerification);
-router.put('/:id/relist', protect, relistItem);
 router.put('/:id', protect, updateItem);
 router.delete('/:id', protect, deleteItem);
 

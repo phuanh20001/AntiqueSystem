@@ -19,16 +19,6 @@ const generateToken = (id) => {
   });
 };
 
-const isAdminRequest = (req) => req.user && req.user.role === 'admin';
-
-const normalizeRequestedRole = (role) => {
-  const rawRole = String(role || '').trim().toLowerCase();
-  if (rawRole === 'collector') return 'user';
-  if (rawRole === 'verifier') return 'verifier';
-  if (rawRole === 'admin') return 'admin';
-  return 'user';
-};
-
 // @desc    Register a new user
 // @route   POST /api/auth/register
 // @access  Public
