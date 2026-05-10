@@ -116,9 +116,9 @@
             Authenticity Score: 94 / 100
           </div>
           <div class="cert-issued">Issued: 14 March 2025</div>
-          <button class="btn-full" style="background:var(--sepia);color:var(--ink);margin-top:16px;" onclick="showToast('Certificate PDF downloaded successfully')">
-            Download Certificate PDF
-          </button>
+          <button class="btn-full" style="background:var(--sepia);color:var(--ink);margin-top:16px;" onclick="downloadCertificatePDF()">
+  Download Certificate PDF
+</button>
         </div>
 
         <div class="blockchain-card" id="blockchainCard">
@@ -245,8 +245,41 @@
 
   <script src="../js/utils.js"></script>
   <script src="../js/api.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script>
     const session = getAuthSession();
+    function downloadCertificatePDF() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(22);
+  doc.text("Certificate of Authenticity", 105, 25, { align: "center" });
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(12);
+
+  const title = document.querySelector(".detail-title")?.textContent || "Verified Antique Item";
+  const certificateId = document.querySelector(".cert-num")?.textContent || "CERT-2025-00142";
+  const certDetail = document.querySelector(".cert-detail")?.innerText || "";
+  const issuedDate = document.querySelector(".cert-issued")?.textContent || "";
+
+  doc.text(`Certificate ID: ${certificateId}`, 20, 50);
+  doc.text(`Item: ${title}`, 20, 65);
+
+  const lines = doc.splitTextToSize(certDetail, 170);
+  doc.text(lines, 20, 85);
+
+  doc.text(issuedDate, 20, 125);
+
+  doc.text("Blockchain Verification", 20, 150);
+  doc.text(`Metadata Hash: ${document.getElementById("bcMetadataHash")?.textContent || "Pending"}`, 20, 165);
+  doc.text(`Network: ${document.getElementById("bcNetwork")?.textContent || "Sepolia"}`, 20, 180);
+  doc.text(`Transaction Hash: ${document.getElementById("bcTxHash")?.title || document.getElementById("bcTxHash")?.textContent || "Pending"}`, 20, 195);
+
+  doc.save(`${certificateId}-AntiqChain-Certificate.pdf`);
+  showToast("Certificate PDF downloaded successfully");
+}
 
     document.querySelectorAll('.detail-thumb').forEach((thumb) => {
       thumb.addEventListener('click', function () {
