@@ -642,13 +642,16 @@
     function startDashboardAutoRefresh() { stopDashboardAutoRefresh(); }
 
     async function revokeChainVerification(itemId) {
-      if (!confirm(
-        'Reverse this verification?\n\n' +
-        'This clears the active on-chain record (if any) and resets the item to pending. ' +
-        'Past transactions remain on Etherscan forever. This may take ~15–30 seconds.'
-      )) {
-        return;
-      }
+      const ok = await showAppConfirm({
+        title: 'Reverse on-chain verification?',
+        message:
+          'This clears the active on-chain record (if any) and resets the item to pending.\n\n' +
+          'Past transactions remain on Etherscan forever. This may take roughly 15–30 seconds.',
+        confirmLabel: 'Reverse',
+        cancelLabel: 'Cancel',
+        danger: true
+      });
+      if (!ok) return;
       try {
         showToast('Submitting revocation to blockchain… ~15–30s.');
         const resp = await apiRequest(`/items/${itemId}/revoke-verification`, 'POST', null, true);
@@ -667,7 +670,14 @@
     async function approveAccount(userId) { try { await apiRequest(`/auth/approve-user/${userId}`, 'PUT', null, true); showToast('User account approved.'); loadDashboardData(); } catch (error) { showToast(error.message || 'Unable to approve account.', true); } }
     async function rejectAccount(userId) { try { await apiRequest(`/auth/reject-user/${userId}`, 'PUT', null, true); showToast('User account rejected.'); loadDashboardData(); } catch (error) { showToast(error.message || 'Unable to reject account.', true); } }
     async function deleteAccount(userId) {
-      if (!confirm('Delete this account permanently?')) return;
+      const ok = await showAppConfirm({
+        title: 'Delete account permanently?',
+        message: 'This action cannot be undone. The account and its access will be removed.',
+        confirmLabel: 'Delete',
+        cancelLabel: 'Cancel',
+        danger: true
+      });
+      if (!ok) return;
       try { await apiRequest(`/auth/users/${userId}`, 'DELETE', null, true); showToast('User account deleted.'); loadDashboardData(); }
       catch (error) { showToast(error.message || 'Unable to delete account.', true); }
     }

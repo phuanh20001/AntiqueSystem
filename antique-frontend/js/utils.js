@@ -15,6 +15,113 @@ function showToast(msg, isError = false) {
   setTimeout(() => t.classList.remove('show'), 3500);
 }
 
+let _appConfirmResolver = null;
+let _appConfirmHandlersBound = false;
+
+function bindAppConfirmHandlers(overlay, modalEl) {
+  if (_appConfirmHandlersBound) return;
+  _appConfirmHandlersBound = true;
+
+  overlay.addEventListener('click', e => {
+    if (e.target === overlay) finishAppConfirm(false);
+  });
+
+  modalEl.querySelector('[data-app-confirm-cancel]').addEventListener('click', () =>
+    finishAppConfirm(false)
+  );
+  modalEl.querySelector('[data-app-confirm-primary]').addEventListener('click', () =>
+    finishAppConfirm(true)
+  );
+  modalEl.querySelector('.app-confirm-close').addEventListener('click', () =>
+    finishAppConfirm(false)
+  );
+
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Escape') return;
+    const o = document.getElementById('app-confirm-overlay');
+    if (o && o.classList.contains('open')) finishAppConfirm(false);
+  });
+}
+
+function ensureAppConfirmDialog() {
+  let overlay = document.getElementById('app-confirm-overlay');
+  if (overlay) return overlay;
+
+  overlay = document.createElement('div');
+  overlay.id = 'app-confirm-overlay';
+  overlay.className = 'app-confirm-overlay';
+  overlay.setAttribute('aria-hidden', 'true');
+  overlay.innerHTML =
+    '<div class="app-confirm-modal" role="dialog" aria-modal="true" aria-labelledby="app-confirm-title">' +
+    '<div class="app-confirm-head">' +
+    '<h2 id="app-confirm-title" class="app-confirm-title"></h2>' +
+    '<button type="button" class="app-confirm-close" aria-label="Close">&times;</button>' +
+    '</div><div class="app-confirm-body">' +
+    '<p class="app-confirm-message"></p>' +
+    '<div class="app-confirm-actions">' +
+    '<button type="button" class="btn-sm btn-review" data-app-confirm-cancel></button>' +
+    '<button type="button" class="btn-sm btn-approve" data-app-confirm-primary></button>' +
+    '</div></div></div>';
+
+  document.body.appendChild(overlay);
+  bindAppConfirmHandlers(overlay, overlay.querySelector('.app-confirm-modal'));
+  return overlay;
+}
+
+function finishAppConfirm(result) {
+  const overlay = document.getElementById('app-confirm-overlay');
+  if (!overlay || !overlay.classList.contains('open')) return;
+
+  overlay.classList.remove('open');
+  overlay.setAttribute('aria-hidden', 'true');
+
+  document.body.style.overflow = '';
+
+  if (!_appConfirmResolver) return;
+
+  const res = _appConfirmResolver;
+  _appConfirmResolver = null;
+  res(Boolean(result));
+}
+
+/**
+ * Promisified confirmation dialog (replaces native confirm).
+ * @param {{
+ *   title?: string,
+ *   message?: string,
+ *   confirmLabel?: string,
+ *   cancelLabel?: string,
+ *   danger?: boolean
+ * }} opts
+ */
+function showAppConfirm(opts = {}) {
+  return new Promise(resolve => {
+    const overlay = ensureAppConfirmDialog();
+    const modal = overlay.querySelector('.app-confirm-modal');
+    const titleEl = modal.querySelector('.app-confirm-title');
+    const msgEl = modal.querySelector('.app-confirm-message');
+    const cancelBtn = modal.querySelector('[data-app-confirm-cancel]');
+    const primaryBtn = modal.querySelector('[data-app-confirm-primary]');
+
+    if (_appConfirmResolver) finishAppConfirm(false);
+
+    titleEl.textContent = opts.title || 'Confirm';
+    msgEl.textContent = opts.message || '';
+    cancelBtn.textContent = opts.cancelLabel || 'Cancel';
+    primaryBtn.textContent = opts.confirmLabel || 'OK';
+    primaryBtn.classList.remove('btn-approve', 'btn-reject');
+    primaryBtn.classList.add(opts.danger ? 'btn-reject' : 'btn-approve');
+
+    _appConfirmResolver = resolve;
+
+    overlay.classList.add('open');
+    overlay.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+
+    primaryBtn.focus();
+  });
+}
+
 function safeParseJSON(value) {
   try {
     return JSON.parse(value);
