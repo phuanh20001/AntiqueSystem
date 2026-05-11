@@ -51,6 +51,22 @@
     </div>
   </div>
 
+  <div class="modal-overlay" id="unlist-confirm-modal" role="dialog" aria-modal="true" aria-labelledby="unlist-modal-title">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-title" id="unlist-modal-title">Remove from marketplace</div>
+        <button class="modal-close" type="button" onclick="closeUnlistModal()" aria-label="Close">×</button>
+      </div>
+      <div class="modal-body">
+        <p class="listing-modal-copy">Remove this item from the Products marketplace? It stays verified but will no longer appear on the public Products page until you list it again.</p>
+        <div class="modal-actions">
+          <button class="btn-sm btn-review" type="button" onclick="closeUnlistModal()">Cancel</button>
+          <button class="btn-sm btn-decline" type="button" id="unlist-confirm-submit">Remove listing</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script src="../js/utils.js"></script>
   <script src="../js/api.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -63,9 +79,104 @@
     let dashboardAdminView = 'analytics';
     let dashboardPurchaseHistory = [];
     let listingPriceState = null;
+    let unlistModalItemId = null;
 
     function escapeHtml(value) {
       return String(value || '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#39;');
+    }
+    function truncateChainDigits(val, head, tail) {
+      const s = String(val ?? '').trim();
+      if (!s) return '';
+      const h = Math.max(4, Number(head) || 8);
+      const t = Math.max(4, Number(tail) || 6);
+      if (s.length <= h + t + 1) return s;
+      return `${s.slice(0, h)}…${s.slice(-t)}`;
+    }
+    function renderDashboardChainCell(item) {
+      const rawId = item._id != null ? String(item._id) : '';
+      const encId = encodeURIComponent(rawId);
+      const st = String(item.verificationStatus || item.status || '').toLowerCase();
+      if (!['verified', 'rejected'].includes(st)) {
+        return `<div class="dash-chain-cell" id="dash-chain-${rawId}">
+          <div class="dash-chain-line muted">No chain verdict until verification finishes.</div>
+        </div>`;
+      }
+      const certShown = truncateChainDigits(item.blockchainHash, 10, 6) || '—';
+      const txShown = truncateChainDigits(item.blockchainTransactionHash, 10, 6) || '—';
+      const detailHref = rawId ? `detail.html?id=${encId}` : '#';
+      return `<div class="dash-chain-cell" id="dash-chain-${rawId}">
+        <div class="dash-chain-line"><span class="muted">Cert</span> ${escapeHtml(certShown)}</div>
+        <div class="dash-chain-line"><span class="muted">Tx</span> ${escapeHtml(txShown)}</div>
+        <div class="dash-chain-live muted" data-dash-chain-live="1">Checking live chain proof…</div>
+        ${rawId ? `<a class="dash-chain-detail-link" href="${detailHref}">Open item proof →</a>` : ''}
+      </div>`;
+    }
+    async function hydrateDashboardChainProof(rows) {
+      const targets = rows.filter((item) =>
+        ['verified', 'rejected'].includes(String(item.verificationStatus || '').toLowerCase()),
+      );
+      const chunkSize = 4;
+      for (let i = 0; i < targets.length; i += chunkSize) {
+        const chunk = targets.slice(i, i + chunkSize);
+        await Promise.all(chunk.map((item) => updateDashboardChainLiveCell(item)));
+      }
+    }
+    async function updateDashboardChainLiveCell(item) {
+      const rawId = item._id != null ? String(item._id) : '';
+      const shell = rawId ? document.getElementById(`dash-chain-${rawId}`) : null;
+      const liveEl = shell ? shell.querySelector('[data-dash-chain-live]') : null;
+      if (!liveEl || !shell) return;
+      try {
+        const resp = await apiRequest(`/items/${rawId}/proof`, 'GET', null, false);
+        const proof = (resp && resp.data) || {};
+        const rec = proof.onChainRecord || null;
+        const hasOnChain =
+          !!rec && rec.exists !== false && String(proof.onChainStatus || '') === 'present';
+        const hasStoredTx =
+          !!(proof.txHash || item.blockchainTransactionHash || proof.etherscanTxUrl);
+
+        let message = '';
+        let toneClass = 'muted';
+
+        if (hasOnChain) {
+          toneClass = 'ok';
+          if (rec && rec.isAuthentic === false) {
+            message = '✓ On chain · marked inauthentic';
+          } else if (rec && rec.isAuthentic === true) {
+            message = '✓ On chain · authentic';
+          } else {
+            message = '✓ On chain · record confirmed';
+          }
+        } else if (proof.onChainError) {
+          toneClass = 'err';
+          message = proof.onChainError;
+        } else if (hasStoredTx && String(proof.onChainStatus || '') === 'absent') {
+          toneClass = 'err';
+          message =
+            'Transaction on file does not resolve to a contract row — check CONTRACT_ADDRESS on the API or open proof on the item page.';
+        } else if (hasStoredTx) {
+          toneClass = 'muted';
+          message = 'Awaiting confirmations or RPC sync — hashes above are from MongoDB.';
+        } else {
+          toneClass = 'muted';
+          message =
+            'No transaction hash cached — duplicate on-chain verification path or blockchain was disabled when decided; open item page for full detail.';
+        }
+
+        if (message.length > 210) message = `${message.slice(0, 207)}…`;
+
+        liveEl.className =
+          toneClass === 'ok'
+            ? 'dash-chain-live ok'
+            : toneClass === 'err'
+              ? 'dash-chain-live err'
+              : 'dash-chain-live muted';
+
+        liveEl.textContent = message;
+      } catch (err) {
+        liveEl.className = 'dash-chain-live err';
+        liveEl.textContent = err.message ? `Proof request failed · ${err.message}` : 'Proof request failed';
+      }
     }
     function normalizeRole(role) {
       const raw = String(role || '').toLowerCase().trim();
@@ -73,6 +184,13 @@
       if (raw === 'verifier') return 'verifier';
       if (raw === 'admin') return 'admin';
       return 'collector';
+    }
+    /** Maps DB role (`user` | `verifier` | `admin`) to dashboard labels — collectors are stored as `user`. */
+    function formatRoleLabel(role) {
+      const n = normalizeRole(role);
+      if (n === 'admin') return 'Admin';
+      if (n === 'verifier') return 'Verifier';
+      return 'Collector';
     }
     function normalizeItems(r) { if (Array.isArray(r)) return r; if (Array.isArray(r?.items)) return r.items; if (Array.isArray(r?.data)) return r.data; return []; }
     function normalizeUsers(r) { if (Array.isArray(r)) return r; if (Array.isArray(r?.users)) return r.users; if (Array.isArray(r?.data)) return r.data; return []; }
@@ -99,13 +217,45 @@
       setTimeout(() => { banner.classList.remove('show'); setTimeout(() => banner.style.display = 'none', 350); }, 4200);
     }
 
+    /** Verified items actively shown on the Products page (listed + available). */
+    function isActiveProductListing(item) {
+      return (
+        item.listedInMarketplace === true &&
+        String(item.verificationStatus || '').toLowerCase() === 'verified' &&
+        item.isSold !== true
+      );
+    }
+
+    function collectorItemsExcludingActiveListings(items) {
+      return items.filter((i) => !isActiveProductListing(i));
+    }
+
+    function collectorActiveListings(items) {
+      return items.filter(isActiveProductListing);
+    }
+
     function getFilteredItems(role, items) {
-      if (dashboardItemView === 'all') return items;
+      const r = normalizeRole(role);
+      const useListingSplit = r === 'collector';
+
+      if (useListingSplit && dashboardItemView === 'listing') {
+        return collectorActiveListings(items);
+      }
+
+      const pool = useListingSplit ? collectorItemsExcludingActiveListings(items) : items;
+
+      if (dashboardItemView === 'all') return pool;
       if (dashboardItemView === 'owned') return items;
-      if (dashboardItemView === 'pending') return items.filter((i) => ['pending', 'in_progress'].includes(String(i.verificationStatus || '').toLowerCase()));
-      if (dashboardItemView === 'verified') return items.filter((i) => String(i.verificationStatus || '').toLowerCase() === 'verified');
-      if (dashboardItemView === 'rejected') return items.filter((i) => String(i.verificationStatus || '').toLowerCase() === 'rejected');
-      return items;
+      if (dashboardItemView === 'pending') {
+        return pool.filter((i) => ['pending', 'in_progress'].includes(String(i.verificationStatus || '').toLowerCase()));
+      }
+      if (dashboardItemView === 'verified') {
+        return pool.filter((i) => String(i.verificationStatus || '').toLowerCase() === 'verified');
+      }
+      if (dashboardItemView === 'rejected') {
+        return pool.filter((i) => String(i.verificationStatus || '').toLowerCase() === 'rejected');
+      }
+      return pool;
     }
 
     function setItemView(event, view) { if (event) event.preventDefault(); dashboardItemView = view; loadDashboardData(); }
@@ -171,9 +321,11 @@
 
     function renderSidebar(user, items, pendingUsers, approvedUsers, rejectedUsers, allUsers) {
       const role = normalizeRole(user.role);
-      const pendingItems = countByStatus(items, ['pending', 'in_progress']);
-      const verifiedItems = countByStatus(items, ['verified']);
-      const rejectedItems = countByStatus(items, ['rejected']);
+      const mainPoolItems = role === 'collector' ? collectorItemsExcludingActiveListings(items) : items;
+      const listingCount = role === 'collector' ? collectorActiveListings(items).length : 0;
+      const pendingItems = countByStatus(mainPoolItems, ['pending', 'in_progress']);
+      const verifiedItems = countByStatus(mainPoolItems, ['verified']);
+      const rejectedItems = countByStatus(mainPoolItems, ['rejected']);
       const roleLabel = role === 'admin' ? 'Administrator' : role === 'verifier' ? 'Verifier' : 'Collector';
       const name = user.username || user.displayName || user.name || 'AntiqChain User';
       const roleSection = role === 'admin'
@@ -191,8 +343,9 @@
             <a class="sidebar-item ${dashboardAdminView === 'items' && dashboardItemView === 'rejected' ? 'active' : ''}" href="#" onclick="setAdminItemView(event,'rejected')"><span>⛔</span> Rejected <span class="sidebar-count rust">${rejectedItems}</span></a>
           </div>`
         : `<div class="sidebar-section-label">Submitted Items</div><div class="sidebar-section">
-            <a class="sidebar-item ${dashboardItemView === 'all' ? 'active' : ''}" href="#" onclick="setItemView(event,'all')"><span>📦</span> All Submissions <span class="sidebar-count">${items.length}</span></a>
-            ${role === 'collector' ? `<a class="sidebar-item ${dashboardItemView === 'owned' ? 'active' : ''}" href="#" onclick="setItemView(event,'owned')"><span>🛍️</span> My Antique <span class="sidebar-count green">${items.length}</span></a>` : ''}
+            <a class="sidebar-item ${dashboardItemView === 'all' ? 'active' : ''}" href="#" onclick="setItemView(event,'all')"><span>📦</span> All Submissions <span class="sidebar-count">${mainPoolItems.length}</span></a>
+            ${role === 'collector' ? `<a class="sidebar-item ${dashboardItemView === 'listing' ? 'active' : ''}" href="#" onclick="setItemView(event,'listing')"><span>🏷️</span> My Listing <span class="sidebar-count green">${listingCount}</span></a>` : ''}
+            ${role === 'collector' ? `<a class="sidebar-item ${dashboardItemView === 'owned' ? 'active' : ''}" href="#" onclick="setItemView(event,'owned')"><span>🛍️</span> My Inventory <span class="sidebar-count green">${items.length}</span></a>` : ''}
             <a class="sidebar-item ${dashboardItemView === 'pending' ? 'active' : ''}" href="#" onclick="setItemView(event,'pending')"><span>🟡</span> In Review <span class="sidebar-count rust">${pendingItems}</span></a>
             <a class="sidebar-item ${dashboardItemView === 'verified' ? 'active' : ''}" href="#" onclick="setItemView(event,'verified')"><span>📜</span> Verified <span class="sidebar-count green">${verifiedItems}</span></a>
             <a class="sidebar-item ${dashboardItemView === 'rejected' ? 'active' : ''}" href="#" onclick="setItemView(event,'rejected')"><span>⛔</span> Rejected <span class="sidebar-count rust">${rejectedItems}</span></a>
@@ -205,14 +358,25 @@
     }
 
     function renderStats(role, items, pendingUsers, approvedUsers, rejectedUsers) {
-      const pendingItems = countByStatus(items, ['pending', 'in_progress']);
-      const verifiedItems = countByStatus(items, ['verified']);
-      const rejectedItems = countByStatus(items, ['rejected']);
+      const r = normalizeRole(role);
+      const mainPoolItems = r === 'collector' ? collectorItemsExcludingActiveListings(items) : items;
+      const listingCount = r === 'collector' ? collectorActiveListings(items).length : 0;
+      const pendingItems = countByStatus(mainPoolItems, ['pending', 'in_progress']);
+      const verifiedItems = countByStatus(mainPoolItems, ['verified']);
+      const rejectedItems = countByStatus(mainPoolItems, ['rejected']);
       if (role === 'admin') return `<div class="dash-stats">
         <div class="dash-stat"><div class="dash-stat-num rust">${pendingUsers.length}</div><div class="dash-stat-label">Pending Accounts</div></div>
         <div class="dash-stat"><div class="dash-stat-num green">${approvedUsers.length}</div><div class="dash-stat-label">Approved Accounts</div></div>
         <div class="dash-stat"><div class="dash-stat-num">${rejectedUsers.length}</div><div class="dash-stat-label">Rejected Accounts</div></div>
         <div class="dash-stat"><div class="dash-stat-num gold">${items.length}</div><div class="dash-stat-label">Submitted Items</div></div></div>`;
+      if (r === 'collector') {
+        return `<div class="dash-stats dash-stats-collector">
+        <div class="dash-stat"><div class="dash-stat-num gold">${mainPoolItems.length}</div><div class="dash-stat-label">Submissions (excl. listings)</div></div>
+        <div class="dash-stat"><div class="dash-stat-num green">${listingCount}</div><div class="dash-stat-label">Active listings</div></div>
+        <div class="dash-stat"><div class="dash-stat-num rust">${pendingItems}</div><div class="dash-stat-label">In Review</div></div>
+        <div class="dash-stat"><div class="dash-stat-num green">${verifiedItems}</div><div class="dash-stat-label">Verified</div></div>
+        <div class="dash-stat"><div class="dash-stat-num">${rejectedItems}</div><div class="dash-stat-label">Rejected</div></div></div>`;
+      }
       return `<div class="dash-stats">
         <div class="dash-stat"><div class="dash-stat-num gold">${items.length}</div><div class="dash-stat-label">All Submitted Items</div></div>
         <div class="dash-stat"><div class="dash-stat-num rust">${pendingItems}</div><div class="dash-stat-label">In Review</div></div>
@@ -235,20 +399,28 @@
         } else if (canAdminRevoke) {
           actionMarkup = `<div class="table-actions"><button class="btn-sm btn-review" onclick="revokeChainVerification('${item._id}')">Reverse Decision</button><button class="btn-sm btn-review" onclick="window.location.href='detail.html?id=${item._id}'">View</button></div>`;
         } else if (canRelist) {
-          actionMarkup = `<div class="table-actions"><button class="btn-sm btn-approve" onclick="sellBackItem('${item._id}', ${item.isSold ? 'true' : 'false'}, ${item.estimatedValue ?? 'null'})">${relistLabel}</button><button class="btn-sm btn-review" onclick="window.location.href='detail.html?id=${item._id}'">View</button></div>`;
+          const r = normalizeRole(role);
+          const listingTab = r === 'collector' && dashboardItemView === 'listing';
+          if (listingTab && isActiveProductListing(item)) {
+            const priceLabel =
+              item.estimatedValue === 0 || item.estimatedValue
+                ? `$${escapeHtml(item.estimatedValue)} AUD`
+                : 'Price on file';
+            actionMarkup = `<div class="table-actions"><button type="button" class="btn-sm btn-decline" onclick="unlistMarketplaceListing('${item._id}')">Remove</button><button class="btn-sm btn-review" onclick="window.location.href='detail.html?id=${item._id}'">View</button></div><div class="action-helper-text">On Products · ${priceLabel}</div>`;
+          } else {
+            actionMarkup = `<div class="table-actions"><button class="btn-sm btn-approve" onclick="sellBackItem('${item._id}', ${item.isSold ? 'true' : 'false'}, ${item.estimatedValue ?? 'null'})">${relistLabel}</button><button class="btn-sm btn-review" onclick="window.location.href='detail.html?id=${item._id}'">View</button></div>`;
+          }
         } else {
           actionMarkup = `<button class="btn-sm btn-review" onclick="window.location.href='detail.html?id=${item._id}'">View</button>`;
         }
         const descriptionSnippet = String(item.description || 'No description provided.')
           .replace(/\s+/g, ' ')
           .trim();
-        const shortChainHash = item.blockchainHash ? `${String(item.blockchainHash).slice(0, 10)}…` : 'Pending';
-        const shortTxHash = item.blockchainTransactionHash ? `${String(item.blockchainTransactionHash).slice(0, 10)}…` : 'Pending';
         return `<tr><td class="item-row-thumb">🏺</td><td><div class="item-row-title">${escapeHtml(item.title || 'Untitled Item')}</div>
           <div class="item-row-sub">${escapeHtml(item.category || 'Antique Item')} · ${escapeHtml(item.estimatedPeriod || item.year || 'Period not provided')}</div>
           <div class="item-row-sub">Owner: ${escapeHtml(item.owner?.username || item.owner?.email || 'Unknown owner')}</div>
           <div class="item-row-desc">${escapeHtml(descriptionSnippet)}</div></td>
-          <td>${getStatusBadge(status)}</td><td class="item-row-chain"><div>Cert: ${escapeHtml(shortChainHash)}</div><div>Tx: ${escapeHtml(shortTxHash)}</div></td>
+          <td>${getStatusBadge(status)}</td><td class="item-row-chain">${renderDashboardChainCell(item)}</td>
           <td>${actionMarkup}</td></tr>`;
       }).join('');
     }
@@ -271,8 +443,8 @@
 
     function renderAccountRows(accounts, state, allowDelete) {
       if (!accounts.length) return `<tr><td colspan="6" style="text-align:center; padding:30px; color:var(--ink-light);">No accounts found.</td></tr>`;
-      return accounts.map((a) => `<tr><td>${escapeHtml(a.username || 'Unknown')}</td><td>${escapeHtml(a.email || '')}</td><td>${escapeHtml(normalizeRole(a.requestedRole || a.role))}</td>
-        <td>${getStatusBadge(a.status || 'approved')}</td><td>${escapeHtml(a.role || 'user')}</td><td>${state === 'pending' ? `<div class="table-actions"><button class="btn-sm btn-approve" onclick="approveAccount('${a._id}')">Approve</button><button class="btn-sm btn-decline" onclick="rejectAccount('${a._id}')">Reject</button></div>` : allowDelete ? `<button class="btn-sm btn-decline" onclick="deleteAccount('${a._id}')">Delete</button>` : `<span style="color:var(--ink-light);font-size:13px;">No action</span>`}</td></tr>`).join('');
+      return accounts.map((a) => `<tr><td>${escapeHtml(a.username || 'Unknown')}</td><td>${escapeHtml(a.email || '')}</td><td>${escapeHtml(formatRoleLabel(a.requestedRole || a.role))}</td>
+        <td>${getStatusBadge(a.status || 'approved')}</td><td>${escapeHtml(formatRoleLabel(a.role))}</td><td>${state === 'pending' ? `<div class="table-actions"><button class="btn-sm btn-approve" onclick="approveAccount('${a._id}')">Approve</button><button class="btn-sm btn-decline" onclick="rejectAccount('${a._id}')">Reject</button></div>` : allowDelete ? `<button class="btn-sm btn-decline" onclick="deleteAccount('${a._id}')">Delete</button>` : `<span style="color:var(--ink-light);font-size:13px;">No action</span>`}</td></tr>`).join('');
     }
 
     function getItemStatusSeries(items) {
@@ -411,7 +583,18 @@
         return `<div class="dash-content dashboard-grid dashboard-grid-single"><section class="dashboard-panel dashboard-panel-wide"><div class="panel-head"><div><h3>${cfg.h}</h3><p>Admin can review and manage user accounts.</p></div><button class="btn-sm btn-review" onclick="loadDashboardData()">Refresh</button></div><div class="panel-body">${createAccountPanel}<table class="review-table"><thead><tr><th>Username</th><th>Email</th><th>Requested Role</th><th>Status</th><th>Current Role</th><th>Action</th></tr></thead><tbody>${renderAccountRows(cfg.data, cfg.s, cfg.del)}</tbody></table></div></section></div>`;
       }
       const filteredItems = getFilteredItems(role, items);
-      const title = role === 'verifier' ? 'Verifier Item Queue' : dashboardItemView === 'owned' ? 'My Antique' : 'Your Submitted Items';
+      const title =
+        role === 'verifier'
+          ? 'Verifier Item Queue'
+          : dashboardItemView === 'owned'
+            ? 'My Inventory'
+            : dashboardItemView === 'listing'
+              ? 'My Listing'
+              : 'Your Submitted Items';
+      const panelSubtitle =
+        normalizeRole(role) === 'collector' && dashboardItemView === 'listing'
+          ? 'Items you have published to the Products marketplace (verified and available).'
+          : 'Use sidebar filters to switch views.';
       const purchasesSection = role === 'collector' && dashboardItemView === 'owned'
         ? `<section class="dashboard-panel dashboard-panel-wide" style="margin-top:18px;">
             <div class="panel-head">
@@ -430,7 +613,7 @@
             </div>
           </section>`
         : '';
-      return `<div class="dash-content dashboard-grid dashboard-grid-single"><section class="dashboard-panel dashboard-panel-wide"><div class="panel-head"><div><h3>${title}</h3><p>Use sidebar filters to switch views.</p></div><button class="btn-sm btn-review" onclick="loadDashboardData()">Refresh</button></div><div class="panel-body"><table class="review-table"><thead><tr><th></th><th>Item Details</th><th>Status</th><th>On-chain Proof</th><th>Action</th></tr></thead><tbody>${renderItemRows(filteredItems, role)}</tbody></table></div></section>${purchasesSection}</div>`;
+      return `<div class="dash-content dashboard-grid dashboard-grid-single"><section class="dashboard-panel dashboard-panel-wide"><div class="panel-head"><div><h3>${title}</h3><p>${panelSubtitle}</p></div><button class="btn-sm btn-review" onclick="loadDashboardData()">Refresh</button></div><div class="panel-body"><table class="review-table"><thead><tr><th></th><th>Item Details</th><th>Status</th><th>On-chain Proof</th><th>Action</th></tr></thead><tbody>${renderItemRows(filteredItems, role)}</tbody></table></div></section>${purchasesSection}</div>`;
     }
 
     function renderDashboard(user, items, health, pendingUsers, approvedUsers, rejectedUsers, allUsers) {
@@ -444,6 +627,13 @@
         renderAdminAnalyticsCharts(items, pendingUsers, approvedUsers, rejectedUsers);
       }
       showWelcomeBanner(user);
+      queueMicrotask(() => {
+        if (role === 'admin' && dashboardAdminView === 'items') {
+          hydrateDashboardChainProof(getFilteredItems('admin', items));
+        } else if (role === 'collector' || role === 'verifier') {
+          hydrateDashboardChainProof(getFilteredItems(role, items));
+        }
+      });
     }
 
     function renderLoading() { document.getElementById('dashboard-root').innerHTML = `<div class="dashboard-main" style="width:100%; padding:40px;"><div class="dashboard-panel"><div class="panel-body" style="text-align: center; padding: 60px 20px;"><div style="font-size: 24px; margin-bottom: 16px;">⏳</div><p style="color: var(--ink-light); font-weight: 500;">Loading dashboard data...</p></div></div></div>`; }
@@ -494,6 +684,40 @@
         showToast(error.message || 'Unable to relist item.', true);
       }
     }
+    async function unlistMarketplaceListing(itemId) {
+      const id = String(itemId || '').trim();
+      if (!id) return;
+      unlistModalItemId = id;
+      const modal = document.getElementById('unlist-confirm-modal');
+      if (modal) {
+        modal.classList.add('open');
+        document.body.style.overflow = 'hidden';
+      }
+    }
+
+    function closeUnlistModal() {
+      unlistModalItemId = null;
+      const modal = document.getElementById('unlist-confirm-modal');
+      if (modal) modal.classList.remove('open');
+      document.body.style.overflow = '';
+    }
+
+    async function submitUnlistModal() {
+      const id = unlistModalItemId;
+      if (!id) return;
+      const btn = document.getElementById('unlist-confirm-submit');
+      if (btn) btn.disabled = true;
+      try {
+        await apiRequest(`/items/${id}/unlist`, 'PUT', null, true);
+        closeUnlistModal();
+        showToast('Listing removed. You can list again anytime from Verified or All Submissions.');
+        loadDashboardData();
+      } catch (error) {
+        showToast(error.message || 'Unable to remove listing.', true);
+      } finally {
+        if (btn) btn.disabled = false;
+      }
+    }
     async function createAccount(event) {
       event.preventDefault();
       const username = document.getElementById('new-username')?.value?.trim();
@@ -519,7 +743,9 @@
 
         let itemsResponse = { data: [] };
         try {
-          const itemEndpoint = user.role === 'collector' ? '/items/my-items' : '/items';
+          const listQuery = '?page=1&limit=200';
+          const itemEndpoint =
+            user.role === 'collector' ? `/items/my-items${listQuery}` : `/items${listQuery}`;
           itemsResponse = await apiRequest(itemEndpoint, 'GET', null, true);
         } catch (itemsError) {
           console.error('Dashboard items fetch failed:', itemsError);
@@ -553,15 +779,28 @@
 
     document.addEventListener('DOMContentLoaded', () => {
       const listingModal = document.getElementById('listing-price-modal');
+      const unlistModal = document.getElementById('unlist-confirm-modal');
       const listingSubmit = document.getElementById('listing-price-submit');
+      const unlistSubmit = document.getElementById('unlist-confirm-submit');
       if (listingSubmit) listingSubmit.addEventListener('click', submitListingPriceModal);
+      if (unlistSubmit) unlistSubmit.addEventListener('click', submitUnlistModal);
       if (listingModal) {
         listingModal.addEventListener('click', (event) => {
           if (event.target === listingModal) closeListingPriceModal();
         });
       }
+      if (unlistModal) {
+        unlistModal.addEventListener('click', (event) => {
+          if (event.target === unlistModal) closeUnlistModal();
+        });
+      }
       document.addEventListener('keydown', (event) => {
-        if (event.key === 'Escape' && listingModal && listingModal.classList.contains('open')) {
+        if (event.key !== 'Escape') return;
+        if (unlistModal && unlistModal.classList.contains('open')) {
+          closeUnlistModal();
+          return;
+        }
+        if (listingModal && listingModal.classList.contains('open')) {
           closeListingPriceModal();
         }
       });

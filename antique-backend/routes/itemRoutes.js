@@ -9,6 +9,7 @@ const {
   getMyPurchases,
   purchaseItem,
   relistItem,
+  unlistFromMarketplace,
   updateItem,
   updateVerificationStatus,
   saveBlockchainDetails,
@@ -47,6 +48,7 @@ router.post('/', protect, createItem);
 router.post('/:id/purchase', protect, purchaseItem);
 router.post('/:id/revoke-verification', protect, admin, revokeItemVerification);
 router.put('/:id/relist', protect, relistItem);
+router.put('/:id/unlist', protect, unlistFromMarketplace);
 router.put('/:id', protect, updateItem);
 router.delete('/:id', protect, deleteItem);
 

@@ -131,6 +131,7 @@
             <span>Blockchain Record</span>
             <span class="bc-status-pill" id="bcStatusPill">Loading…</span>
           </div>
+          <div class="bc-issue-note" id="bcIssueNote" style="display:none;"></div>
 
           <div class="bc-empty" id="bcEmpty" style="display:none;">
             This item has not been recorded on the blockchain yet.
@@ -348,6 +349,11 @@
         // Decide which card state to render.
         if (!hasOnChain && !hasTxHash && !proof.onChainError) {
           setBlockchainStatus('missing');
+          const earlyNote = document.getElementById('bcIssueNote');
+          if (earlyNote) {
+            earlyNote.style.display = 'none';
+            earlyNote.innerHTML = '';
+          }
           document.getElementById('bcEmpty').style.display = 'block';
           document.getElementById('bcEmpty').textContent =
             'This item has not been recorded on the blockchain yet.';
@@ -357,6 +363,11 @@
 
         if (proof.onChainError && !hasOnChain && !hasTxHash) {
           setBlockchainStatus('error');
+          const earlyNote2 = document.getElementById('bcIssueNote');
+          if (earlyNote2) {
+            earlyNote2.style.display = 'none';
+            earlyNote2.innerHTML = '';
+          }
           document.getElementById('bcEmpty').style.display = 'block';
           document.getElementById('bcEmpty').textContent =
             'On-chain lookup failed: ' + proof.onChainError;
@@ -367,9 +378,26 @@
         if (hasOnChain) {
           setBlockchainStatus('ok');
         } else if (hasTxHash) {
-          setBlockchainStatus('pending');
+          const stuck =
+            !!proof.onChainError || String(proof.onChainStatus || '') === 'absent';
+          setBlockchainStatus(stuck ? 'error' : 'pending');
         } else {
           setBlockchainStatus('error');
+        }
+
+        const bcIssueNote = document.getElementById('bcIssueNote');
+        if (bcIssueNote) {
+          const confused =
+            !hasOnChain && hasTxHash && (!!proof.onChainError || String(proof.onChainStatus || '') === 'absent');
+          if (confused) {
+            bcIssueNote.style.display = 'block';
+            bcIssueNote.innerHTML =
+              escapeHtml(proof.onChainError) ||
+              'A transaction hash is stored, but no matching verification exists on the deployed contract yet. Confirm CONTRACT_ADDRESS matches the contract that received your tx, or reopen this page after confirmations.';
+          } else {
+            bcIssueNote.style.display = 'none';
+            bcIssueNote.innerHTML = '';
+          }
         }
 
         document.getElementById('bcEmpty').style.display = 'none';
@@ -420,6 +448,11 @@
         }
       } catch (err) {
         setBlockchainStatus('error');
+        const note = document.getElementById('bcIssueNote');
+        if (note) {
+          note.style.display = 'none';
+          note.innerHTML = '';
+        }
         document.getElementById('bcEmpty').style.display = 'block';
         document.getElementById('bcEmpty').textContent =
           'Could not load on-chain data: ' + (err.message || err);
@@ -455,6 +488,14 @@
         status.textContent = '⚠ Could not read from blockchain';
         status.className = 'bc-modal-status error';
         errorBox.textContent = proof.onChainError;
+        errorBox.style.display = 'block';
+      } else if (onChainAbsent && proof && proof.txHash) {
+        status.textContent =
+          '⚠ Stored transaction on file, but the contract reports no verification for this item.';
+        status.className = 'bc-modal-status error';
+        errorBox.textContent =
+          proof.onChainError ||
+          'Usually means CONTRACT_ADDRESS doesn’t match the contract that received your transaction, item id mismatched verifyItem(...), or the tx reverted.';
         errorBox.style.display = 'block';
       } else if (onChainAbsent) {
         status.textContent = 'No verification record found on chain for this item.';
@@ -792,7 +833,8 @@
 
         // Fetch real on-chain data + integrity proof in a separate request
         // so a slow/missing RPC never blocks the rest of the detail page.
-        loadBlockchainCard(item._id);
+        // Use the URL id so proof always matches routing (handles odd _id serializations).
+        loadBlockchainCard(itemId);
 
         // Render the contextual purchase CTA last so the rest of the page
         // never depends on auth/role lookup completing first.

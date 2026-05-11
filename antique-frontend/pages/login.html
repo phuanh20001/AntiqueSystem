@@ -114,7 +114,7 @@
         <div class="auth-panel" id="panel-register">
           <div class="auth-panel-head">
             <div class="auth-title">Create Account</div>
-            <div class="auth-subtitle">Join AntiqChain to submit pieces and track verification history.</div>
+            <div class="auth-subtitle">Join AntiqChain to submit pieces and track verification history. New accounts require administrator approval before you can sign in.</div>
           </div>
 
           <div class="auth-form">
@@ -411,7 +411,7 @@
           password: password
         });
 
-        showToast('Account created — please sign in to continue.');
+        showToast('Account created. Redirecting — an admin must approve before you can sign in.');
 
         setTimeout(() => {
           // Clear form fields
@@ -422,11 +422,14 @@
           confirmPasswordInput.value = '';
           roleInput.value = 'user';
 
-          switchPanel('login');
-          document.getElementById('email').value = email;
           registerButton.disabled = false;
           registerButton.textContent = 'Create Account';
-        }, 800);
+
+          const pendingPath = typeof getPagePath === 'function'
+            ? getPagePath('pending-approval.html')
+            : 'pending-approval.html';
+          window.location.href = pendingPath;
+        }, 900);
 
       } catch (error) {
         showToast(error.message || 'Registration failed. Please try again.', true);

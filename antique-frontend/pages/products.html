@@ -135,7 +135,7 @@
       root.textContent = 'Loading approved products...';
 
       try {
-        const response = await apiRequest('/items?verificationStatus=verified&isSold=false&limit=200', 'GET', null, false);
+        const response = await apiRequest('/items?verificationStatus=verified&isSold=false&publicMarketplace=true&limit=200', 'GET', null, false);
         approvedItems = Array.isArray(response?.data) ? response.data : [];
         renderProducts();
       } catch (error) {

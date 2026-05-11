@@ -10,10 +10,6 @@ const isCollectorRole = (role) => ['user', 'collector'].includes(String(role || 
 const buildCertificateNumber = (itemId) => `CERT-${String(itemId || '').slice(-8).toUpperCase()}`;
 const getOwnerIdString = (ownerField) => String(ownerField?._id || ownerField || '');
 
-// "No record found" is a normal contract revert when an item has not been verified yet —
-// we treat it as an absent record rather than a hard failure.
-const isAbsentRecordError = (message) => /no\s+record/i.test(String(message || ''));
-
 /**
  * @desc    Create a new antique item
  * @route   POST /api/items
@@ -79,6 +75,12 @@ const getAllItems = async (req, res) => {
     if (owner) filter.owner = owner;
     if (isSold !== undefined) {
       filter.isSold = String(isSold).toLowerCase() === 'true';
+    }
+
+    // Products browse: hide items explicitly removed from marketplace (listedInMarketplace: false).
+    // Omits only explicit false; missing field still shows for legacy documents.
+    if (String(req.query.publicMarketplace || '').toLowerCase() === 'true') {
+      filter.$nor = [{ listedInMarketplace: false }];
     }
 
     const items = await Item.find(filter)
@@ -322,6 +324,24 @@ const updateVerificationStatus = async (req, res) => {
 
         if (alreadyOnChain) {
           blockchainResult = { alreadyOnChain: true };
+          // Keep dashboards / proof UI in sync: duplicate verify paths skip submit but should
+          // still persist the anchored metadata hash (and pointers) Mongo normally gets from receipt.
+          item.blockchainHash = item.blockchainHash || metadataHash;
+          item.blockchainContractAddress =
+            item.blockchainContractAddress || process.env.CONTRACT_ADDRESS || null;
+          item.blockchainNetwork =
+            item.blockchainNetwork || (process.env.ALCHEMY_SEPOLIA_URL ? 'sepolia' : null);
+          try {
+            const chainRec = await blockchainService.getVerificationFromChain(req.params.id);
+            if (chainRec && chainRec.exists && chainRec.metadataHash) {
+              item.blockchainHash = chainRec.metadataHash;
+            }
+          } catch (syncErr) {
+            console.warn(
+              '[itemController] Could not sync metadata hash from chain (already verified):',
+              syncErr.message || syncErr
+            );
+          }
         } else {
           console.log(
             `[itemController] Submitting verification to chain — item=${req.params.id}, decision=${verificationStatus}`
@@ -596,6 +616,17 @@ const getItemBlockchainProof = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Item not found' });
     }
 
+    const contractAddress =
+      process.env.CONTRACT_ADDRESS || item.blockchainContractAddress || null;
+    const network =
+      item.blockchainNetwork || (process.env.ALCHEMY_SEPOLIA_URL ? 'sepolia' : null);
+    const txHash = item.blockchainTransactionHash || null;
+
+    let storedTxDiagnosis = null;
+    if (txHash && contractAddress) {
+      storedTxDiagnosis = await blockchainService.diagnoseStoredVerificationTx(txHash, contractAddress);
+    }
+
     let onChainRecord = null;
     let onChainError = null;
     let onChainStatus = 'error';
@@ -607,17 +638,18 @@ const getItemBlockchainProof = async (req, res) => {
         onChainRecord = await blockchainService.getVerificationFromChain(req.params.id);
         onChainStatus = onChainRecord && onChainRecord.exists ? 'present' : 'absent';
       } catch (err) {
-        const msg = err.message || 'Failed to read from blockchain';
-        if (isAbsentRecordError(msg)) {
-          onChainStatus = 'absent';
-        } else {
-          onChainError = msg;
-        }
+        onChainStatus = 'error';
+        onChainError = err.message || 'Failed to read from blockchain';
       }
     }
 
+    if (onChainStatus !== 'present' && storedTxDiagnosis) {
+      onChainError = storedTxDiagnosis;
+    }
+
     const offChainHash = item.blockchainHash || null;
-    const onChainHash = onChainRecord ? onChainRecord.metadataHash : null;
+    const onChainHash =
+      onChainRecord && onChainRecord.exists ? onChainRecord.metadataHash || null : null;
 
     // Recompute the hash from the CURRENT item snapshot. If this differs
     // from what's on-chain, the off-chain Item document has been tampered
@@ -635,11 +667,6 @@ const getItemBlockchainProof = async (req, res) => {
       recomputedMatches = recomputedHash === onChainHash;
     }
 
-    const contractAddress =
-      process.env.CONTRACT_ADDRESS || item.blockchainContractAddress || null;
-    const network =
-      item.blockchainNetwork || (process.env.ALCHEMY_SEPOLIA_URL ? 'sepolia' : null);
-    const txHash = item.blockchainTransactionHash || null;
     const etherscanTxUrl = txHash
       ? `https://sepolia.etherscan.io/tx/${txHash}`
       : null;
@@ -855,6 +882,7 @@ const purchaseItem = async (req, res) => {
     item.owner = req.user._id;
     item.isSold = true;
     item.soldAt = new Date();
+    item.listedInMarketplace = false;
     item.purchaseHistory.push({
       buyer: req.user._id,
       seller: sellerId,
@@ -926,6 +954,7 @@ const relistItem = async (req, res) => {
       item.estimatedValue = parsedPrice;
     }
 
+    item.listedInMarketplace = true;
     item.isSold = false;
     item.soldAt = null;
     await item.save();
@@ -941,6 +970,56 @@ const relistItem = async (req, res) => {
     res.status(500).json({
       success: false,
       message: error.message || 'Error relisting item',
+    });
+  }
+};
+
+/**
+ * @desc    Remove collector listing from public marketplace (Products page)
+ * @route   PUT /api/items/:id/unlist
+ * @access  Private (Collector owner only)
+ */
+const unlistFromMarketplace = async (req, res) => {
+  try {
+    if (!req.user || !req.user._id) {
+      return res.status(401).json({ success: false, message: 'User not authenticated' });
+    }
+
+    if (!isCollectorRole(req.user.role)) {
+      return res.status(403).json({ success: false, message: 'Only collector accounts can unlist items' });
+    }
+
+    if (!isValidObjectId(req.params.id)) {
+      return res.status(400).json({ success: false, message: 'Invalid item ID' });
+    }
+
+    const item = await Item.findById(req.params.id);
+    if (!item) {
+      return res.status(404).json({ success: false, message: 'Item not found' });
+    }
+
+    if (getOwnerIdString(item.owner) !== String(req.user._id)) {
+      return res.status(403).json({ success: false, message: 'Not authorized to modify this listing' });
+    }
+
+    if (item.verificationStatus !== 'verified') {
+      return res.status(400).json({ success: false, message: 'Only verified items can be managed as marketplace listings' });
+    }
+
+    item.listedInMarketplace = false;
+    await item.save();
+    await item.populate('owner', 'username email');
+
+    res.status(200).json({
+      success: true,
+      message: 'Item removed from marketplace',
+      data: item,
+    });
+  } catch (error) {
+    console.error('Unlist Item Error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Error removing listing',
     });
   }
 };
@@ -1042,6 +1121,7 @@ const revokeItemVerification = async (req, res) => {
     item.blockchainNetwork = null;
     item.verificationStatus = 'pending';
     item.verificationRecord = null;
+    item.listedInMarketplace = false;
 
     await item.save();
     await item.populate('owner', 'username email');
@@ -1071,6 +1151,7 @@ module.exports = {
   getMyPurchases,
   purchaseItem,
   relistItem,
+  unlistFromMarketplace,
   updateItem,
   updateVerificationStatus,
   saveBlockchainDetails,

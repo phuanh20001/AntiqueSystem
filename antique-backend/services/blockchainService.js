@@ -244,24 +244,84 @@ async function submitVerificationToBlockchain(itemId, isAuthentic, metadataHash)
  * @returns {Promise<Object>} - Verification record from chain
  */
 async function getVerificationFromChain(itemId) {
+  if (!contract) {
+    throw new Error('Blockchain contract is not configured');
+  }
+
+  const id = String(itemId ?? '');
+
   try {
-    if (!contract) {
-      throw new Error('Blockchain contract is not configured');
+    // isVerified reads the mapping without reverting — getRecord() reverts when absent,
+    // which previously produced noisy failures and brittle string matching downstream.
+    const exists = await contract.isVerified(id);
+    if (!exists) {
+      return {
+        itemId: id,
+        verifier: ethers.ZeroAddress,
+        isAuthentic: false,
+        metadataHash: '',
+        timestamp: null,
+        exists: false
+      };
     }
 
-    const record = await contract.getRecord(itemId);
+    const record = await contract.getRecord(id);
+    const tsRaw = record.timestamp;
+    const tsSeconds =
+      typeof tsRaw === 'bigint'
+        ? Number(tsRaw)
+        : Number(tsRaw || 0);
+
     return {
-      itemId: record.itemId,
+      itemId: record.itemId || id,
       verifier: record.verifier,
-      isAuthentic: record.isAuthentic,
-      metadataHash: record.metadataHash,
-      timestamp: new Date(Number(record.timestamp) * 1000).toISOString(),
-      blockHash: record.blockHash,
-      exists: record.exists
+      isAuthentic: Boolean(record.isAuthentic),
+      metadataHash: record.metadataHash || '',
+      timestamp: tsSeconds ? new Date(tsSeconds * 1000).toISOString() : null,
+      exists: true
     };
   } catch (error) {
-    console.error('Error retrieving from chain:', error);
+    console.error('Error retrieving from blockchain:', error);
     throw new Error(`Failed to retrieve verification: ${error.message}`);
+  }
+}
+
+/**
+ * Check whether a persisted tx hash plausibly wrote to the configured AntiqueVerification contract.
+ */
+async function diagnoseStoredVerificationTx(txHash, configuredContractAddress) {
+  if (!provider || !txHash || !configuredContractAddress) {
+    return null;
+  }
+  try {
+    const receipt = await provider.getTransactionReceipt(txHash);
+    // Receipt briefly unavailable on some RPCs right after inclusion; callers keep "pending" UX.
+    if (!receipt) {
+      return null;
+    }
+
+    const failed =
+      receipt.status === false || receipt.status === 0 || receipt.status === 0n;
+    if (failed) {
+      return (
+        `Stored transaction ${txHash} failed (reverted), so no on-chain verification was written. ` +
+        'Fix verifier permissions or chain conditions, revoke if needed, and verify again.'
+      );
+    }
+
+    const to = receipt.to ? receipt.to.toLowerCase() : '';
+    const exp = String(configuredContractAddress).toLowerCase();
+    if (to && to !== exp) {
+      return (
+        `This item's stored tx was sent to ${receipt.to}, but CONTRACT_ADDRESS is ${configuredContractAddress}. ` +
+        'Those addresses must match, or paste the deployed AntiqueVerification address into .env and restart the API.'
+      );
+    }
+
+    return null;
+  } catch (error) {
+    console.error('[blockchainService] diagnoseStoredVerificationTx:', error.message || error);
+    return null;
   }
 }
 
@@ -327,6 +387,7 @@ module.exports = {
   submitVerificationToBlockchain,
   revokeVerificationOnChain,
   getVerificationFromChain,
+  diagnoseStoredVerificationTx,
   isItemVerifiedOnChain,
   getEtherscanUrl,
   contract,

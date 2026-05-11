@@ -26,6 +26,20 @@ const protect = async (req, res, next) => {
         return res.status(401).json({ message: 'Not authorized, user not found' });
       }
 
+      const accountStatus = req.user.status || 'approved';
+      if (accountStatus === 'pending') {
+        return res.status(403).json({
+          message: 'Your account is pending administrator approval.',
+          code: 'ACCOUNT_PENDING',
+        });
+      }
+      if (accountStatus === 'rejected') {
+        return res.status(403).json({
+          message: 'Your account registration was declined.',
+          code: 'ACCOUNT_REJECTED',
+        });
+      }
+
       next();
     } catch (error) {
       console.error('Auth middleware error:', error.message);
