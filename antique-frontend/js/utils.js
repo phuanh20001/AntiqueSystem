@@ -280,11 +280,27 @@ function updateAuthUI() {
     const isDashboardLink = pathOnly.endsWith('dashboard.html');
     const isLoginLink = pathOnly.endsWith('login.html');
     const isSubmitLink = pathOnly.endsWith('submit.html');
+    const isTicketsLink = pathOnly.endsWith('tickets.html');
 
     if (isDashboardLink) {
       link.href = session
         ? getDashboardPath()
         : getLoginPath() + '?returnTo=' + encodeURIComponent('dashboard.html');
+    }
+
+    if (isTicketsLink) {
+      if (!session) {
+        link.href = getLoginPath() + '?returnTo=' + encodeURIComponent('tickets.html');
+      } else {
+        const role = normalizeUserRole(session.role);
+        if (role === 'admin') {
+          // Admins manage tickets from the dashboard
+          link.style.display = 'none';
+        } else {
+          link.href = getPagePath('tickets.html');
+          link.style.display = '';
+        }
+      }
     }
 
     if (isLoginLink) {
