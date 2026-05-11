@@ -49,6 +49,17 @@
   color: var(--ink-light);
   font-size: 15px;
 }
+.product-badges {
+  margin-top: 8px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.badge-owned {
+  background: rgba(45, 120, 200, 0.15);
+  color: #1b4f9a;
+  border: 1px solid rgba(45, 120, 200, 0.35);
+}
 
 .product-actions {
   margin-top: 12px;

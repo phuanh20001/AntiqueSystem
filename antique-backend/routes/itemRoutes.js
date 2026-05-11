@@ -6,10 +6,16 @@ const {
   getItemById,
   getItemsByOwner,
   getMyItems,
+  getMyPurchases,
+  purchaseItem,
+  relistItem,
+  unlistFromMarketplace,
   updateItem,
   updateVerificationStatus,
   saveBlockchainDetails,
   getItemBlockchainProof,
+  downloadCertificatePdf,
+  revokeItemVerification,
   deleteItem,
   searchItems,
 } = require('../controllers/itemController');
@@ -25,11 +31,13 @@ router.get('/search', searchItems);
  * Protected routes (must come before :id route)
  */
 router.get('/my-items', protect, getMyItems);
+router.get('/my-purchases', protect, getMyPurchases);
 
 /**
  * Public routes with ID parameter
  */
 router.get('/:id/proof', getItemBlockchainProof);
+router.get('/:id/certificate', protect, downloadCertificatePdf);
 router.get('/:id', getItemById);
 router.get('/owner/:ownerId', getItemsByOwner);
 
@@ -37,6 +45,10 @@ router.get('/owner/:ownerId', getItemsByOwner);
  * Protected routes for modification
  */
 router.post('/', protect, createItem);
+router.post('/:id/purchase', protect, purchaseItem);
+router.post('/:id/revoke-verification', protect, admin, revokeItemVerification);
+router.put('/:id/relist', protect, relistItem);
+router.put('/:id/unlist', protect, unlistFromMarketplace);
 router.put('/:id', protect, updateItem);
 router.delete('/:id', protect, deleteItem);
 

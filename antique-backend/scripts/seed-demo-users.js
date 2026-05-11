@@ -13,20 +13,26 @@ const DEMO_USERS = [
     username: 'collector_demo',
     email: 'collector@example.com',
     password: 'demo123456',
-    role: 'user'
+    role: 'user',
+    status: 'approved',
+    requestedRole: null,
   },
   {
     username: 'verifier_demo',
     email: 'verifier@example.com',
     password: 'demo123456',
-    role: 'user'
+    role: 'verifier',
+    status: 'approved',
+    requestedRole: null,
   },
   {
     username: 'admin_demo',
     email: 'admin@example.com',
     password: 'demo123456',
-    role: 'admin'
-  }
+    role: 'admin',
+    status: 'approved',
+    requestedRole: null,
+  },
 ];
 
 const seedDemoUsers = async () => {

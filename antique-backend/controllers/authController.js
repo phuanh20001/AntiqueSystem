@@ -38,8 +38,8 @@ const registerUser = async (req, res) => {
       return res.status(400).json({ message: 'Please add all fields' });
     }
 
-    // Check if user exists
-    const userExists = await User.findOne({ email });
+    const normalizedEmail = String(email).toLowerCase().trim();
+    const userExists = await User.findOne({ email: normalizedEmail });
 
     if (userExists) {
       return res.status(400).json({ message: 'User already exists' });
@@ -49,25 +49,32 @@ const registerUser = async (req, res) => {
     const salt = await bcrypt.genSalt(SALT_ROUNDS);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    const normalizedEmail = String(email).toLowerCase().trim();
     const normalizedRole = normalizeRequestedRole(role);
+    // Public self-service sign-up never grants admin; role stays 'user' until an admin approves.
+    const requestedRole =
+      normalizedRole === 'admin' ? 'user' : normalizedRole;
 
-    // Create user
+    // Create user — pending until an admin approves (no JWT until approved)
     const user = await User.create({
       username,
       email: normalizedEmail,
       password: hashedPassword,
-      role: normalizedRole,
+      role: 'user',
+      requestedRole,
+      status: 'pending',
     });
 
     if (user) {
-      console.log(`New user registered: ${user.email}`);
+      console.log(`New user registered (pending approval): ${user.email}`);
       res.status(201).json({
+        success: true,
+        message:
+          'Registration received. An administrator must approve your account before you can sign in.',
+        pendingApproval: true,
         _id: user.id,
         username: user.username,
         email: user.email,
-        role: user.role,
-        token: generateToken(user._id),
+        requestedRole,
       });
     } else {
       res.status(400).json({ message: 'Invalid user data' });
@@ -93,11 +100,29 @@ const loginUser = async (req, res) => {
     const user = await User.findOne({ email: normalizedEmail }).select('+password');
 
     if (user && (await bcrypt.compare(password, user.password))) {
+      const accountStatus = user.status || 'approved';
+
+      if (accountStatus === 'pending') {
+        return res.status(403).json({
+          message:
+            'Your account is pending administrator approval. You can sign in once it has been approved.',
+          code: 'ACCOUNT_PENDING',
+        });
+      }
+
+      if (accountStatus === 'rejected') {
+        return res.status(403).json({
+          message: 'Your registration was declined. Contact support if you believe this is an error.',
+          code: 'ACCOUNT_REJECTED',
+        });
+      }
+
       res.json({
         _id: user.id,
         username: user.username,
         email: user.email,
         role: user.role,
+        status: user.status || 'approved',
         token: generateToken(user._id),
       });
     } else {
@@ -263,6 +288,7 @@ const approveUser = async (req, res) => {
     const nextRole = user.requestedRole || user.role || 'user';
     user.role = ['user', 'verifier', 'admin'].includes(nextRole) ? nextRole : 'user';
     user.status = 'approved';
+    user.requestedRole = null;
     await user.save();
 
     res.status(200).json({ success: true, message: 'User approved successfully' });

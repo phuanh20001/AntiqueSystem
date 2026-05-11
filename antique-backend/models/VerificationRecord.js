@@ -98,7 +98,7 @@ verificationRecordSchema.index({ status: 1 });
 verificationRecordSchema.index({ createdAt: -1 });
 verificationRecordSchema.index({ 'blockchainDetails.transactionHash': 1 });
 
-// Pre-save hook to populate item and verifier
+// Auto-populate item and verifier on find queries (Mongoose 7+ query hooks have no next())
 verificationRecordSchema.pre(/^find/, function () {
   if (this.options._recursed) {
     return;

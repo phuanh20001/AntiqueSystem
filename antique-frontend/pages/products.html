@@ -54,7 +54,6 @@
     const currentSession = requirePageSession('products.html');
     const currentRole = String(currentSession?.role || '').toLowerCase();
     const normalizedRole = currentRole === 'user' ? 'collector' : currentRole;
-    const canBuyProducts = normalizedRole === 'collector';
 
     let approvedItems = [];
 
@@ -101,8 +100,13 @@
       root.className = 'products-grid';
       root.innerHTML = filtered.map((item) => {
         const viewBtn = `<button class="btn-sm btn-review" onclick="viewProduct('${item._id}')">View Details</button>`;
-        const buyBtn = canBuyProducts
-          ? `<button class="btn-sm btn-approve" onclick="buyProduct('${item._id}')">Buy Product</button>`
+        const itemOwnerId = item.owner?._id || item.owner;
+        const isOwnItem = currentSession && itemOwnerId && String(itemOwnerId) === String(currentSession._id);
+        const availabilityBadge = item.isSold
+          ? '<span class="badge badge-rejected">Sold</span>'
+          : '<span class="badge badge-verified">Available</span>';
+        const ownedBadge = isOwnItem
+          ? '<span class="badge badge-owned">Owned by you</span>'
           : '';
         return `
         <div class="product-card">
@@ -112,10 +116,9 @@
             <div class="product-meta">${escapeHtml(item.category || 'Uncategorized')} · ${escapeHtml(item.estimatedPeriod || item.estimatedYear || 'Period not specified')}</div>
             <div class="product-meta">Owner: ${escapeHtml(item.owner?.username || 'Unknown')}</div>
             <div class="product-meta">Price: ${item.estimatedValue ? '$' + escapeHtml(item.estimatedValue) : 'N/A'}</div>
-            <div style="margin-top:8px;">${item.isSold ? '<span class="badge badge-rejected">Sold</span>' : '<span class="badge badge-verified">Available</span>'}</div>
+            <div class="product-badges">${availabilityBadge}${ownedBadge}</div>
             <div class="product-actions">
               ${viewBtn}
-              ${buyBtn}
             </div>
           </div>
         </div>`;
@@ -126,28 +129,13 @@
       window.location.href = `detail.html?id=${itemId}`;
     }
 
-    function buyProduct(itemId) {
-      if (!canBuyProducts) {
-        showToast('Only collector accounts can buy products.', true);
-        return;
-      }
-      apiRequest(`/items/${itemId}/purchase`, 'POST', null, true)
-        .then(() => {
-          showToast('Purchase completed successfully.');
-          loadApprovedItems();
-        })
-        .catch((error) => {
-          showToast(error.message || 'Unable to complete purchase.', true);
-        });
-    }
-
     async function loadApprovedItems() {
       const root = document.getElementById('products-root');
       root.className = 'products-empty';
       root.textContent = 'Loading approved products...';
 
       try {
-        const response = await apiRequest('/items?verificationStatus=verified&isSold=false&limit=200', 'GET', null, false);
+        const response = await apiRequest('/items?verificationStatus=verified&isSold=false&publicMarketplace=true&limit=200', 'GET', null, false);
         approvedItems = Array.isArray(response?.data) ? response.data : [];
         renderProducts();
       } catch (error) {

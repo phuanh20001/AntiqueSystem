@@ -80,6 +80,11 @@ const itemSchema = new mongoose.Schema(
       type: Number,
       default: null,
     },
+    /** True after owner uses List In Products / Sell Back to marketplace (collector dashboard "My Listing"). */
+    listedInMarketplace: {
+      type: Boolean,
+      default: false,
+    },
     previousOwner: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',

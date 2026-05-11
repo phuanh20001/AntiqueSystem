@@ -31,11 +31,13 @@
     <div class="submit-layout">
 
       <div>
-        <div class="upload-zone" onclick="showToast('File upload will be connected later.')">
+        <div class="upload-zone" id="uploadZone" role="button" tabindex="0">
           <div class="upload-icon">📷</div>
           <div class="upload-title">Upload Item Photographs</div>
           <div class="upload-hint">Drag & drop or click to browse · JPG, PNG, TIFF · Max 20MB each · Up to 10 photos</div>
         </div>
+        <input type="file" id="itemImagesInput" accept="image/jpeg,image/png,image/tiff,image/webp" multiple hidden>
+        <div class="upload-preview-grid" id="uploadPreviewGrid"></div>
 
         <form id="antiqueForm" autocomplete="off">
           <div class="form-grid">
@@ -79,13 +81,6 @@
             <div class="form-group">
               <label class="form-label">Dimensions</label>
               <input class="form-input" type="text" name="dimensions" placeholder="e.g. 32cm H × 18cm W">
-            </div>
-
-            <div class="form-group">
-              <label class="form-label">Estimated Price (AUD)</label>
-              <input class="form-input" type="number" name="estimatedValue" min="0" step="0.01" placeholder="e.g. 4500">
-              <div class="form-hint">Leave blank if unsure — owners can set this later.</div>
-              <div class="error-message"></div>
             </div>
 
             <div class="form-group full">
@@ -178,6 +173,9 @@
     const currentSession = requirePageSession('submit.html');
     const currentRole = String(currentSession?.role || '').toLowerCase();
     const isCollector = currentRole === 'user' || currentRole === 'collector';
+    const MAX_IMAGE_COUNT = 10;
+    const MAX_IMAGE_SIZE_BYTES = 20 * 1024 * 1024;
+    let selectedImages = [];
 
     if (!isCollector) {
       window.location.replace('dashboard.html');
@@ -192,6 +190,63 @@
       form.querySelectorAll('.form-input, .form-select, .form-textarea').forEach(input => {
         input.classList.remove('error');
       });
+    }
+    function fileToDataUrl(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(new Error('Unable to read image file.'));
+        reader.readAsDataURL(file);
+      });
+    }
+    function renderImagePreviews() {
+      const grid = document.getElementById('uploadPreviewGrid');
+      if (!grid) return;
+      if (!selectedImages.length) {
+        grid.innerHTML = '';
+        return;
+      }
+      grid.innerHTML = selectedImages.map((image, index) => `
+        <div class="upload-preview-item">
+          <img src="${image.url}" alt="Selected item image ${index + 1}">
+          <button type="button" class="upload-preview-remove" onclick="removeSelectedImage(${index})">Remove</button>
+        </div>
+      `).join('');
+    }
+    function removeSelectedImage(index) {
+      selectedImages = selectedImages.filter((_, idx) => idx !== index);
+      renderImagePreviews();
+    }
+    window.removeSelectedImage = removeSelectedImage;
+    async function handleImageSelection(fileList) {
+      if (!fileList || !fileList.length) return;
+      const files = Array.from(fileList);
+      if (selectedImages.length + files.length > MAX_IMAGE_COUNT) {
+        showToast(`You can upload up to ${MAX_IMAGE_COUNT} images only.`, true);
+        return;
+      }
+      const acceptedFiles = [];
+      for (const file of files) {
+        if (!file.type.startsWith('image/')) {
+          showToast(`"${file.name}" is not a supported image file.`, true);
+          continue;
+        }
+        if (file.size > MAX_IMAGE_SIZE_BYTES) {
+          showToast(`"${file.name}" is larger than 20MB.`, true);
+          continue;
+        }
+        acceptedFiles.push(file);
+      }
+      if (!acceptedFiles.length) return;
+      try {
+        const converted = await Promise.all(
+          acceptedFiles.map(async (file) => ({ url: await fileToDataUrl(file), filename: file.name }))
+        );
+        selectedImages = [...selectedImages, ...converted];
+        renderImagePreviews();
+      } catch (error) {
+        showToast(error.message || 'Unable to process selected images.', true);
+      }
     }
 
     function validateRequiredFields(form) {
@@ -217,41 +272,21 @@
         }
       });
 
-      // Optional but, if provided, must be a non-negative finite number.
-      const priceEl = form.querySelector('[name="estimatedValue"]');
-      const priceError = priceEl.parentElement.querySelector('.error-message');
-      const rawPrice = priceEl.value.trim();
-      if (rawPrice !== '') {
-        const parsed = Number(rawPrice);
-        if (!Number.isFinite(parsed) || parsed < 0) {
-          priceError.textContent = 'Enter a non-negative price, or leave blank.';
-          priceError.classList.add('show');
-          priceEl.classList.add('error');
-          valid = false;
-        }
-      }
-
       return valid;
     }
 
     function getFormPayload(form) {
-      // Convert price to a Number when provided; an empty input becomes null
-      // so the backend leaves estimatedValue at its default and the products
-      // page renders "N/A" instead of "$NaN".
-      const rawPrice = form.estimatedValue.value.trim();
-      const estimatedValue = rawPrice === '' ? null : Number(rawPrice);
-
       return {
         title: form.title.value.trim(),
         category: form.category.value.trim(),
         estimatedYear: form.year.value.trim(),
         country: form.country.value.trim(),
         dimensions: form.dimensions.value.trim(),
-        estimatedValue,
         description: form.description.value.trim(),
         provenance: form.provenance.value.trim(),
         condition: form.condition.value.trim(),
         material: 'Not Specified',
+        images: selectedImages,
         verificationStatus: 'pending'
       };
     }
@@ -259,8 +294,35 @@
     document.addEventListener('DOMContentLoaded', function () {
       const form = document.getElementById('antiqueForm');
       const submitButton = document.getElementById('submitItemBtn');
+      const uploadZone = document.getElementById('uploadZone');
+      const imageInput = document.getElementById('itemImagesInput');
 
       if (!form) return;
+      if (uploadZone && imageInput) {
+        uploadZone.addEventListener('click', () => imageInput.click());
+        uploadZone.addEventListener('keydown', (event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            imageInput.click();
+          }
+        });
+        uploadZone.addEventListener('dragover', (event) => {
+          event.preventDefault();
+          uploadZone.classList.add('dragging');
+        });
+        uploadZone.addEventListener('dragleave', () => {
+          uploadZone.classList.remove('dragging');
+        });
+        uploadZone.addEventListener('drop', async (event) => {
+          event.preventDefault();
+          uploadZone.classList.remove('dragging');
+          await handleImageSelection(event.dataTransfer.files);
+        });
+        imageInput.addEventListener('change', async (event) => {
+          await handleImageSelection(event.target.files);
+          imageInput.value = '';
+        });
+      }
 
       form.addEventListener('submit', async function (e) {
         e.preventDefault();
@@ -287,6 +349,9 @@
           await apiRequest('/items', 'POST', payload, true);
 
           showToast('Item submitted successfully for verification.');
+          selectedImages = [];
+          renderImagePreviews();
+          form.reset();
 
           setTimeout(() => {
             window.location.href = 'dashboard.html';
