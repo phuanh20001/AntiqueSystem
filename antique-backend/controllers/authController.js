@@ -291,6 +291,7 @@ const approveUser = async (req, res) => {
     user.role = ['user', 'verifier', 'admin'].includes(nextRole) ? nextRole : 'user';
     user.status = 'approved';
     user.requestedRole = null;
+
     await user.save();
 
     res.status(200).json({ success: true, message: 'User approved successfully' });

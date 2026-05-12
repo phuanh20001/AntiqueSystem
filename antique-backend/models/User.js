@@ -44,6 +44,17 @@ const userSchema = new mongoose.Schema({
     type: String,
     enum: ['user', 'verifier', 'admin'],
     default: null
+  },
+  blockchainWallet: {
+    type: String,
+    default: null,
+    unique: true,
+    sparse: true
+  },
+  blockchainPrivateKey: {
+    type: String,
+    default: null,
+    select: false
   }
 }, { timestamps: true });
 

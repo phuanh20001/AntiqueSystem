@@ -9,7 +9,8 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "deploy:antique": "npm run compile && node scripts/deploy.js",
     "test:db": "node test-db-connection.js",
-    "seed:products": "node scripts/seed-example-products.js"
+    "seed:products": "node scripts/seed-example-products.js",
+    "seed:twenty": "node scripts/reset-and-seed-twenty-items.js"
   },
   "keywords": [],
   "author": "",
