@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Ming Dynasty Porcelain Vase — AntiqChain</title>
+  <title>Item Detail — AntiqChain</title>
   <link rel="stylesheet" href="../css/global.css">
   <link rel="stylesheet" href="../css/detail.css">
 </head>
@@ -23,9 +23,9 @@
   </nav>
 
   <div class="page-header">
-    <div class="page-header-eyebrow">Item Record · CERT-2025-00142</div>
-    <h1>Ming Dynasty Blue & White Porcelain Vase</h1>
-    <p>Verified · Submitted by: J. Morrison · Verified by: Dr. A. Chen, PhD</p>
+    <div class="page-header-eyebrow" id="detailEyebrow">Loading item…</div>
+    <h1 id="detailHeaderTitle">Loading…</h1>
+    <p id="detailHeaderSub">&nbsp;</p>
   </div>
 
   <div class="page-content">
@@ -34,66 +34,24 @@
       <span class="sep">›</span>
       <a href="products.html">Browse Items</a>
       <span class="sep">›</span>
-      <span>Ming Dynasty Porcelain Vase</span>
+      <span id="breadcrumbTitle">Loading…</span>
     </div>
 
     <div class="detail-grid">
       <div>
-        <div class="detail-image">🏺</div>
-        <div class="detail-thumbs">
-          <div class="detail-thumb active">🏺</div>
-          <div class="detail-thumb">🔍</div>
-          <div class="detail-thumb">📐</div>
-          <div class="detail-thumb">⚪</div>
-        </div>
+        <div class="detail-image" id="detailMainImage">🏺</div>
+        <div class="detail-thumbs" id="detailThumbs"></div>
 
-        <div class="detail-category">Ceramics & Pottery · China</div>
-        <div class="detail-title">Ming Dynasty Blue & White Porcelain Vase</div>
-        <div class="detail-status">
-          <span class="badge badge-verified">✓ Verified Authentic</span>
-        </div>
-        <div class="detail-desc">
-          A magnificent example of Ming Dynasty blue-and-white porcelain, produced at the imperial kilns of Jingdezhen during the Xuande period. The vase features a classic meiping form with cobalt blue underglaze decoration depicting dragons chasing a flaming pearl among scrolling clouds. The base bears a six-character Xuande reign mark in underglaze blue.
-        </div>
+        <div class="detail-category" id="detailCategory">Loading…</div>
+        <div class="detail-title" id="detailTitle">Loading…</div>
+        <div class="detail-status" id="detailStatus"></div>
+        <div class="detail-desc" id="detailDesc">Loading item details…</div>
 
-        <div class="detail-specs">
-          <div class="spec-item">
-            <div class="spec-label">Period</div>
-            <div class="spec-value">1368–1644 AD</div>
-          </div>
-          <div class="spec-item">
-            <div class="spec-label">Origin</div>
-            <div class="spec-value">Jingdezhen, China</div>
-          </div>
-          <div class="spec-item">
-            <div class="spec-label">Dimensions</div>
-            <div class="spec-value">38cm H × 22cm W</div>
-          </div>
-          <div class="spec-item">
-            <div class="spec-label">Material</div>
-            <div class="spec-value">Porcelain, Cobalt Blue</div>
-          </div>
-          <div class="spec-item">
-            <div class="spec-label">Authenticity Score</div>
-            <div class="spec-value">94 / 100</div>
-          </div>
-          <div class="spec-item">
-            <div class="spec-label">Verified By</div>
-            <div class="spec-value">Dr. A. Chen, PhD</div>
-          </div>
-        </div>
+        <div class="detail-specs" id="detailSpecs"></div>
 
-        <div style="margin-bottom:16px;">
-          <span class="tag">Ming Dynasty</span>
-          <span class="tag">Blue & White</span>
-          <span class="tag">Imperial Kilns</span>
-          <span class="tag">Meiping Form</span>
-        </div>
+        <div id="detailTags" style="margin-bottom:16px;"></div>
 
-        <div class="expert-note">
-          <strong>Expert Assessment — Dr. A. Chen, PhD</strong>
-          The item exhibits all hallmarks of authentic Xuande-period production: characteristic orange-peel texture of the glaze, heaped and piled effect in cobalt decoration, and precisely proportioned form consistent with imperial ware. Thermoluminescence dating confirms manufacture between 1400–1500 CE. No evidence of restoration or later reworking detected.
-        </div>
+        <div class="expert-note" id="detailExpertNote" style="display:none;"></div>
       </div>
 
       <div>
@@ -270,9 +228,9 @@
     <div>
       <div class="footer-col-title">Trust & Security</div>
       <ul class="footer-links">
-        <li><a href="#">Blockchain Registry</a></li>
-        <li><a href="#">Verification Process</a></li>
-        <li><a href="#">Privacy Policy</a></li>
+        <li><a href="about.html#blockchain-registry">Blockchain Registry</a></li>
+        <li><a href="about.html#verification-process">Verification Process</a></li>
+        <li><a href="mailto:support@antiqchain.com?subject=Privacy%20Policy%20Request">Privacy Policy</a></li>
       </ul>
     </div>
   </footer>
@@ -793,12 +751,58 @@
       try {
         const response = await apiRequest(`/items/${itemId}`, 'GET', null, false);
         const item = response.data || response;
-        document.querySelector('.page-header-eyebrow').textContent = `Item Record · ${item._id || 'N/A'}`;
-        document.querySelector('.page-header h1').textContent = item.title || 'Untitled Item';
-        document.querySelector('.page-header p').textContent = `${item.verificationStatus || 'Pending'} · Submitted by: ${item.owner?.username || 'Unknown'} · Category: ${item.category || 'Unknown'}`;
-        document.querySelector('.breadcrumb span:nth-of-type(3)').textContent = item.title || 'Item';
-        document.querySelector('.detail-category').textContent = `${item.category || 'Item'} · ${item.estimatedPeriod || 'Period unknown'}`;
-        document.querySelector('.detail-title').textContent = item.title || 'Untitled Item';
+
+        // ── Page title & header ───────────────────────────────────
+        document.title = `${item.title || 'Item'} — AntiqChain`;
+        document.getElementById('detailEyebrow').textContent = `Item Record · ${item._id || 'N/A'}`;
+        document.getElementById('detailHeaderTitle').textContent = item.title || 'Untitled Item';
+
+        const vr = item.verificationRecord;
+        const verifierName = vr?.verifier?.username || null;
+        const headerParts = [
+          item.verificationStatus ? item.verificationStatus.charAt(0).toUpperCase() + item.verificationStatus.slice(1) : 'Pending',
+          `Submitted by: ${item.owner?.username || 'Unknown'}`,
+        ];
+        if (verifierName) headerParts.push(`Verified by: ${verifierName}`);
+        document.getElementById('detailHeaderSub').textContent = headerParts.join(' · ');
+
+        // ── Breadcrumb ────────────────────────────────────────────
+        document.getElementById('breadcrumbTitle').textContent = item.title || 'Item';
+
+        // ── Images ────────────────────────────────────────────────
+        const mainImg = document.getElementById('detailMainImage');
+        const thumbsContainer = document.getElementById('detailThumbs');
+        const images = item.images || [];
+
+        function showImage(img) {
+          mainImg.innerHTML = `<img src="${img.url}" alt="${item.title || 'Item image'}" style="width:100%;height:100%;object-fit:contain;border-radius:12px;" />`;
+        }
+
+        if (images.length > 0) {
+          showImage(images[0]);
+          thumbsContainer.innerHTML = images.map((img, i) =>
+            `<div class="detail-thumb${i === 0 ? ' active' : ''}" data-idx="${i}">
+              <img src="${img.url}" alt="Thumbnail ${i + 1}" style="width:100%;height:100%;object-fit:cover;border-radius:8px;" />
+            </div>`
+          ).join('');
+          thumbsContainer.addEventListener('click', (e) => {
+            const thumb = e.target.closest('.detail-thumb');
+            if (!thumb) return;
+            const idx = parseInt(thumb.dataset.idx, 10);
+            if (images[idx]) {
+              showImage(images[idx]);
+              thumbsContainer.querySelectorAll('.detail-thumb').forEach(t => t.classList.remove('active'));
+              thumb.classList.add('active');
+            }
+          });
+        } else {
+          mainImg.textContent = '🏺';
+        }
+
+        // ── Category, title, status, description ─────────────────
+        const categoryLabel = item.category ? item.category.charAt(0).toUpperCase() + item.category.slice(1) : 'Item';
+        document.getElementById('detailCategory').textContent = `${categoryLabel} · ${item.estimatedPeriod || 'Period unknown'}`;
+        document.getElementById('detailTitle').textContent = item.title || 'Untitled Item';
 
         const verificationBadge = item.verificationStatus === 'verified'
           ? '<span class="badge badge-verified">✓ Verified Authentic</span>'
@@ -806,39 +810,57 @@
         const saleBadge = item.isSold
           ? '<span class="badge badge-rejected" style="margin-left:8px;">Sold</span>'
           : '<span class="badge badge-verified" style="margin-left:8px;">Available</span>';
-        document.querySelector('.detail-status').innerHTML = verificationBadge + saleBadge;
+        document.getElementById('detailStatus').innerHTML = verificationBadge + saleBadge;
 
-        document.querySelector('.detail-desc').textContent = item.description || 'No description provided.';
+        document.getElementById('detailDesc').textContent = item.description || 'No description provided.';
 
-        const specs = document.querySelectorAll('.spec-item');
-        const specValues = [
-          item.estimatedPeriod || item.estimatedYear || 'Not specified',
-          item.category || 'Not specified',
-          item.dimensions?.length ? `${item.dimensions.length}×${item.dimensions.width}×${item.dimensions.height}${item.dimensions.unit || 'cm'}` : 'Not specified',
-          item.material || 'Not specified',
-          item.condition || 'Not assessed',
-          item.owner?.username || 'Unknown'
-        ];
+        // ── Specifications (dynamically built from real data) ─────
+        const dim = item.dimensions;
+        const dimStr = dim && (dim.length || dim.width || dim.height)
+          ? [dim.height && `${dim.height}H`, dim.width && `${dim.width}W`, dim.length && `${dim.length}L`]
+              .filter(Boolean).join(' × ') + ` ${dim.unit || 'cm'}`
+          : null;
 
-        specs.forEach((spec, index) => {
-          const valueNode = spec.querySelector('.spec-value');
-          if (valueNode && specValues[index] !== undefined) {
-            valueNode.textContent = specValues[index];
-          }
-        });
+        const specs = [
+          { label: 'Category', value: categoryLabel },
+          { label: 'Period / Era', value: item.estimatedPeriod || (item.estimatedYear ? `c. ${item.estimatedYear}` : null) },
+          { label: 'Estimated Age', value: item.estimatedAge ? `${item.estimatedAge} years` : null },
+          { label: 'Material', value: item.material },
+          { label: 'Dimensions', value: dimStr },
+          { label: 'Condition', value: item.condition ? item.condition.charAt(0).toUpperCase() + item.condition.slice(1) : null },
+          { label: 'Provenance', value: item.provenance },
+          { label: 'Estimated Value', value: item.estimatedValue ? `$${Number(item.estimatedValue).toLocaleString()}` : null },
+          { label: 'Submitted By', value: item.owner?.username },
+          { label: 'Authenticity Score', value: vr?.authenticationScore != null ? `${vr.authenticationScore} / 100` : null },
+          { label: 'Verified By', value: verifierName },
+        ].filter(s => s.value);
 
-        const tagsContainer = document.querySelector('[style*="margin-bottom:16px"]');
-        if (tagsContainer) {
-          tagsContainer.innerHTML = `<span class="tag">${item.category || 'Antique'}</span><span class="tag">${item.material || 'Item'}</span><span class="tag">${item.condition || 'Not assessed'}</span>`;
+        document.getElementById('detailSpecs').innerHTML = specs.map(s =>
+          `<div class="spec-item"><div class="spec-label">${s.label}</div><div class="spec-value">${s.value}</div></div>`
+        ).join('');
+
+        // ── Tags ──────────────────────────────────────────────────
+        const tags = [
+          item.category,
+          item.material,
+          item.estimatedPeriod,
+          item.condition,
+        ].filter(Boolean);
+        document.getElementById('detailTags').innerHTML = tags.map(t =>
+          `<span class="tag">${t.charAt(0).toUpperCase() + t.slice(1)}</span>`
+        ).join('');
+
+        // ── Expert Assessment ─────────────────────────────────────
+        const expertNote = document.getElementById('detailExpertNote');
+        const expertOpinion = vr?.verificationDetails?.expertOpinion
+          || vr?.verificationDetails?.authenticityComments;
+        if (expertOpinion) {
+          expertNote.style.display = '';
+          expertNote.innerHTML = `<strong>Expert Assessment${verifierName ? ` — ${verifierName}` : ''}</strong> ${expertOpinion}`;
         }
 
-        // Fetch real on-chain data + integrity proof in a separate request
-        // so a slow/missing RPC never blocks the rest of the detail page.
-        // Use the URL id so proof always matches routing (handles odd _id serializations).
+        // ── Blockchain, purchase, verifier, certificate cards ─────
         loadBlockchainCard(itemId);
-
-        // Render the contextual purchase CTA last so the rest of the page
-        // never depends on auth/role lookup completing first.
         renderPurchaseCard(item);
         renderVerifierDecisionCard(item);
         renderCertificateCard(item);

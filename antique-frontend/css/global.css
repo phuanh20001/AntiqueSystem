@@ -138,6 +138,12 @@ footer {
   transition: color 0.2s;
 }
 .footer-links a:hover { color: var(--sepia-light); }
+.footer-links a:focus-visible {
+  outline: 2px solid var(--sepia-light);
+  outline-offset: 3px;
+  border-radius: 2px;
+  color: var(--sepia-light);
+}
 .footer-bottom {
   background: rgba(0,0,0,0.3);
   border-top: 1px solid rgba(200,169,74,0.15);
