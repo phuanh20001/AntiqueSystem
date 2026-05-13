@@ -154,3 +154,37 @@
   border-color: #b94a48;
   box-shadow: 0 0 0 2px rgba(185,74,72,0.08);
 }
+
+/* ── DIMENSIONS INPUT GROUP ── */
+.dimensions-input-group {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+}
+
+.dimension-field {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dimension-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.dimension-label {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  color: var(--ink-light);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.dimension-separator {
+  font-family: var(--font-ui);
+  font-size: 16px;
+  color: var(--ink-light);
+  font-weight: 300;
+}

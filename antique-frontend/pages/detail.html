@@ -187,8 +187,23 @@
             <input class="form-input" id="verifierDecisionInput" type="text" autocomplete="off" />
             <label class="bc-modal-label" for="verifierDecisionComment" style="margin-top:12px;">Verification comment</label>
             <textarea class="form-input" id="verifierDecisionComment" rows="4" placeholder="Explain your decision clearly."></textarea>
-            <label class="bc-modal-label" for="verifierDecisionScore" style="margin-top:12px;">Authenticity score (0-100)</label>
-            <input class="form-input" id="verifierDecisionScore" type="number" min="0" max="100" placeholder="Enter a score from 0 to 100" />
+            <label class="bc-modal-label" for="verifierDecisionScore" style="margin-top:12px;">Authenticity score (0–100)</label>
+            <div class="verifier-score-row">
+              <input
+                class="verifier-score-range"
+                id="verifierDecisionScore"
+                type="range"
+                min="0"
+                max="100"
+                step="1"
+                value="50"
+                aria-valuemin="0"
+                aria-valuemax="100"
+                aria-valuenow="50"
+                aria-valuetext="50 out of 100"
+              />
+              <span class="verifier-score-value" id="verifierDecisionScoreValue" aria-hidden="true">50</span>
+            </div>
             <div class="verifier-modal-error" id="verifierDecisionError"></div>
             <div class="bc-modal-actions">
               <button class="bc-modal-btn" type="button" onclick="closeVerifierDecisionModal()">Cancel</button>
@@ -251,6 +266,16 @@
         this.classList.add('active');
       });
     });
+
+    function syncVerifierDecisionScoreLabel() {
+      const scoreInput = document.getElementById('verifierDecisionScore');
+      const valueEl = document.getElementById('verifierDecisionScoreValue');
+      if (!scoreInput || !valueEl) return;
+      const v = scoreInput.value;
+      valueEl.textContent = v;
+      scoreInput.setAttribute('aria-valuenow', v);
+      scoreInput.setAttribute('aria-valuetext', `${v} out of 100`);
+    }
 
     // Truncate long hashes/addresses to "0x1234abcd…ef901234" for compact display.
     function shortenHash(value, head = 10, tail = 8) {
@@ -580,7 +605,8 @@
       instruction.innerHTML = `To continue, type <strong>${expectedWord}</strong> exactly.`;
       input.value = '';
       commentInput.value = '';
-      scoreInput.value = '';
+      scoreInput.value = '50';
+      syncVerifierDecisionScoreLabel();
       input.placeholder = expectedWord;
       input.classList.remove('error');
       commentInput.classList.remove('error');
@@ -612,6 +638,7 @@
       const isCommentValid = comment.length > 0;
       const isValid = isExactMatch && isCommentValid && hasValidScore;
       confirmBtn.disabled = !isValid;
+      syncVerifierDecisionScoreLabel();
 
       if (!isExactMatch && input.value.length > 0) {
         input.classList.add('error');
@@ -623,17 +650,12 @@
       } else {
         commentInput.classList.remove('error');
       }
-      if (!hasValidScore && scoreInput.value.length > 0) {
-        scoreInput.classList.add('error');
-      } else {
-        scoreInput.classList.remove('error');
-      }
       if (!isExactMatch) {
         error.textContent = `You must type ${verifierDecisionState.expectedWord} exactly.`;
       } else if (!isCommentValid) {
         error.textContent = 'A verification comment is required.';
       } else if (!hasValidScore) {
-        error.textContent = 'Authenticity score must be a number between 0 and 100.';
+        error.textContent = 'Authenticity score must be between 0 and 100.';
       } else {
         error.textContent = '';
       }

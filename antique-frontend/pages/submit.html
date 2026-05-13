@@ -81,7 +81,17 @@
 
             <div class="form-group">
               <label class="form-label">Dimensions</label>
-              <input class="form-input" type="text" name="dimensions" placeholder="e.g. 32cm H × 18cm W">
+              <div class="dimensions-input-group">
+                <div class="dimension-field">
+                  <input class="form-input dimension-input" type="number" inputmode="decimal" name="height" placeholder="0" min="0" step="0.1">
+                  <span class="dimension-label">cm H</span>
+                </div>
+                <span class="dimension-separator">×</span>
+                <div class="dimension-field">
+                  <input class="form-input dimension-input" type="number" inputmode="decimal" name="width" placeholder="0" min="0" step="0.1">
+                  <span class="dimension-label">cm W</span>
+                </div>
+              </div>
             </div>
 
             <div class="form-group full">
