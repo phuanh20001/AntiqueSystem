@@ -11,20 +11,22 @@ const TOKEN_EXPIRY = '30d';
 
 // Bcrypt salt rounds
 const SALT_ROUNDS = 10;
-const normalizeRequestedRole = (role) => {
-  const value = String(role || 'user').toLowerCase().trim();
-  return ['user', 'verifier', 'admin'].includes(value) ? value : 'user';
-};
-
-const isAdminRequest = (req) => {
-  return req.user && req.user.role === 'admin';
-};
 
 // Generate JWT token
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET || 'fallback_secret', {
     expiresIn: TOKEN_EXPIRY,
   });
+};
+
+const isAdminRequest = (req) => req.user && req.user.role === 'admin';
+
+const normalizeRequestedRole = (role) => {
+  const rawRole = String(role || '').trim().toLowerCase();
+  if (rawRole === 'collector') return 'user';
+  if (rawRole === 'verifier') return 'verifier';
+  if (rawRole === 'admin') return 'admin';
+  return 'user';
 };
 
 // @desc    Register a new user
@@ -289,6 +291,7 @@ const approveUser = async (req, res) => {
     user.role = ['user', 'verifier', 'admin'].includes(nextRole) ? nextRole : 'user';
     user.status = 'approved';
     user.requestedRole = null;
+
     await user.save();
 
     res.status(200).json({ success: true, message: 'User approved successfully' });

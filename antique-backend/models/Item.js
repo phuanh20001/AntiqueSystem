@@ -7,6 +7,12 @@ const itemSchema = new mongoose.Schema(
       ref: 'User',
       required: [true, 'Please provide an owner'],
     },
+    /** Account that created the listing (submit flow); unchanged when the item is sold. */
+    submittedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+    },
     title: {
       type: String,
       required: [true, 'Please provide item title'],
@@ -171,14 +177,17 @@ const itemSchema = new mongoose.Schema(
 
 // Index for faster queries
 itemSchema.index({ owner: 1, createdAt: -1 });
+itemSchema.index({ submittedBy: 1, createdAt: -1 });
 itemSchema.index({ verificationStatus: 1 });
 
-// Pre-find hook to populate owner details if needed
+// Auto-populate owner details on find queries
 itemSchema.pre(/^find/, function () {
-  if (!this.options._recursed) {
-    this.populate('owner', 'username email');
-    this.options._recursed = true;
+  if (this.options._recursed) {
+    return;
   }
+  this.populate('owner', 'username email');
+  this.populate('submittedBy', 'username email');
+  this.options._recursed = true;
 });
 
 module.exports = mongoose.model('Item', itemSchema);

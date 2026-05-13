@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Support Tickets — AntiqChain</title>
+  <link rel="stylesheet" href="../css/global.css">
+  <link rel="stylesheet" href="../css/tickets.css">
+</head>
+<body>
+
+  <nav>
+    <a class="nav-logo" href="../index.html">AntiqChain <span>— Verified Heritage</span></a>
+    <div class="nav-links">
+      <a href="../index.html">Home</a>
+      <a href="products.html">Products</a>
+      <a href="about.html">About</a>
+      <a href="submit.html">Submit Item</a>
+      <a href="dashboard.html">Dashboard</a>
+      <a href="login.html" class="nav-cta">Sign In</a>
+    </div>
+  </nav>
+
+  <div class="page-header">
+    <div class="page-header-eyebrow">Support Centre</div>
+    <h1>Support Tickets</h1>
+    <p>Submit a ticket to the admin team if you have an issue, question, or need assistance.</p>
+  </div>
+
+  <div class="page-content">
+    <div class="tickets-layout">
+
+      <!-- Left: Ticket form + list -->
+      <div>
+        <!-- Submit ticket form -->
+        <div class="ticket-form-card" id="ticket-form-card">
+          <div class="ticket-form-title">Submit a New Ticket</div>
+          <form id="ticketForm" autocomplete="off">
+            <div class="form-grid">
+              <div class="form-group full">
+                <label class="form-label">Subject *</label>
+                <input class="form-input" type="text" name="subject" placeholder="Brief summary of your issue" maxlength="120">
+                <div class="error-message"></div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Category</label>
+                <select class="form-select" name="category">
+                  <option value="other">Other</option>
+                  <option value="account">Account Issue</option>
+                  <option value="verification">Verification Problem</option>
+                  <option value="marketplace">Marketplace / Purchase</option>
+                  <option value="technical">Technical / Bug</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Priority</label>
+                <select class="form-select" name="priority">
+                  <option value="low">Low</option>
+                  <option value="medium" selected>Medium</option>
+                  <option value="high">High</option>
+                </select>
+              </div>
+
+              <div class="form-group full">
+                <label class="form-label">Description *</label>
+                <textarea class="form-textarea" name="description" placeholder="Describe your issue in detail — the more context, the faster the admin team can help…" maxlength="2000"></textarea>
+                <div class="error-message"></div>
+              </div>
+            </div>
+
+            <div class="ticket-form-actions">
+              <button class="btn-primary" type="submit" id="submitTicketBtn">Submit Ticket</button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Ticket list -->
+        <div class="ticket-list-card">
+          <div class="ticket-list-header">
+            <div class="ticket-form-title">My Tickets</div>
+            <button class="btn-sm btn-review" type="button" onclick="loadMyTickets()">Refresh</button>
+          </div>
+          <div id="ticketListContainer">
+            <div class="ticket-loading">Loading tickets…</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Info sidebar -->
+      <div>
+        <div class="info-card">
+          <div class="info-card-title">Need Help?</div>
+          <ul class="info-list">
+            <li>Include the item title or ID if your issue relates to a specific antique</li>
+            <li>Describe what you expected versus what happened</li>
+            <li>High-priority tickets are reviewed first by the admin team</li>
+            <li>You'll see the admin's response directly on this page</li>
+          </ul>
+        </div>
+
+        <div class="info-card">
+          <div class="info-card-title">Ticket Categories</div>
+          <ul class="info-list">
+            <li><strong>Account</strong> — login, registration, or profile issues</li>
+            <li><strong>Verification</strong> — disputes or questions about item review</li>
+            <li><strong>Marketplace</strong> — purchase, listing, or payment problems</li>
+            <li><strong>Technical</strong> — bugs, errors, or platform issues</li>
+            <li><strong>Other</strong> — anything else</li>
+          </ul>
+        </div>
+
+        <!-- Ticket detail panel (shown when a ticket is clicked) -->
+        <div class="ticket-detail-card" id="ticketDetailCard" style="display:none;">
+          <div class="info-card-title">Ticket Details</div>
+          <div id="ticketDetailContent"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <footer>
+    <div>
+      <div class="footer-brand">AntiqChain</div>
+      <div class="footer-desc">The trusted platform for blockchain-verified antique authentication.</div>
+    </div>
+    <div>
+      <div class="footer-col-title">Platform</div>
+      <ul class="footer-links">
+        <li><a href="../index.html">Browse Items</a></li>
+        <li><a href="submit.html">Submit an Antique</a></li>
+        <li><a href="dashboard.html">Verifier Dashboard</a></li>
+        <li><a href="about.html">About Us</a></li>
+      </ul>
+    </div>
+    <div>
+      <div class="footer-col-title">Trust & Security</div>
+      <ul class="footer-links">
+        <li><a href="about.html#blockchain-registry">Blockchain Registry</a></li>
+        <li><a href="about.html#verification-process">Verification Process</a></li>
+        <li><a href="mailto:support@antiqchain.com?subject=Privacy%20Policy%20Request">Privacy Policy</a></li>
+      </ul>
+    </div>
+  </footer>
+
+  <div class="footer-bottom">©️ 2025 AntiqChain — Blockchain Antique Verification System. All rights reserved.</div>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="../js/api.js"></script>
+  <script src="../js/utils.js"></script>
+
+  <script>
+    const currentSession = requirePageSession('tickets.html');
+    const currentRole = normalizeUserRole(currentSession?.role);
+
+    // Admins manage tickets from the dashboard — redirect them
+    if (currentRole === 'admin') {
+      window.location.replace('dashboard.html');
+    }
+
+    function escapeHtml(value) {
+      return String(value || '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#39;');
+    }
+
+    function getStatusBadgeClass(status) {
+      const s = String(status || '').toLowerCase();
+      if (s === 'resolved' || s === 'closed') return 'badge-verified';
+      if (s === 'in_progress') return 'badge-pending';
+      return 'badge-pending';
+    }
+
+    function formatStatusLabel(status) {
+      const s = String(status || 'open').toLowerCase();
+      if (s === 'in_progress') return 'In Progress';
+      return s.charAt(0).toUpperCase() + s.slice(1);
+    }
+
+    function formatPriorityLabel(priority) {
+      const p = String(priority || 'medium').toLowerCase();
+      return p.charAt(0).toUpperCase() + p.slice(1);
+    }
+
+    function formatCategoryLabel(category) {
+      const labels = {
+        account: 'Account',
+        verification: 'Verification',
+        marketplace: 'Marketplace',
+        technical: 'Technical',
+        other: 'Other',
+      };
+      return labels[category] || 'Other';
+    }
+
+    function clearFormErrors(form) {
+      form.querySelectorAll('.error-message').forEach(error => {
+        error.textContent = '';
+        error.classList.remove('show');
+      });
+      form.querySelectorAll('.form-input, .form-select, .form-textarea').forEach(input => {
+        input.classList.remove('error');
+      });
+    }
+
+    function renderTicketList(tickets) {
+      const container = document.getElementById('ticketListContainer');
+      if (!tickets.length) {
+        container.innerHTML = '<div class="ticket-empty">No tickets submitted yet.</div>';
+        return;
+      }
+
+      container.innerHTML = tickets.map(ticket => {
+        const statusBadge = getStatusBadgeClass(ticket.status);
+        const dateStr = new Date(ticket.createdAt).toLocaleDateString();
+        const hasResponse = !!ticket.adminResponse;
+        return `
+          <div class="ticket-row ${hasResponse ? 'ticket-row-responded' : ''}" onclick="viewTicketDetail('${ticket._id}')">
+            <div class="ticket-row-top">
+              <div class="ticket-row-subject">${escapeHtml(ticket.subject)}</div>
+              <span class="badge ${statusBadge}">${formatStatusLabel(ticket.status)}</span>
+            </div>
+            <div class="ticket-row-meta">
+              <span>${formatCategoryLabel(ticket.category)}</span>
+              <span>·</span>
+              <span>${formatPriorityLabel(ticket.priority)} priority</span>
+              <span>·</span>
+              <span>${dateStr}</span>
+              ${hasResponse ? '<span>· <strong class="ticket-responded-tag">Admin Responded</strong></span>' : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function loadMyTickets() {
+      const container = document.getElementById('ticketListContainer');
+      container.innerHTML = '<div class="ticket-loading">Loading tickets…</div>';
+      try {
+        const response = await apiRequest('/tickets/my-tickets', 'GET', null, true);
+        const tickets = Array.isArray(response.data) ? response.data : [];
+        renderTicketList(tickets);
+      } catch (error) {
+        container.innerHTML = `<div class="ticket-empty">Unable to load tickets: ${escapeHtml(error.message)}</div>`;
+      }
+    }
+
+    async function viewTicketDetail(ticketId) {
+      const card = document.getElementById('ticketDetailCard');
+      const content = document.getElementById('ticketDetailContent');
+      card.style.display = 'block';
+      content.innerHTML = '<div class="ticket-loading">Loading…</div>';
+
+      try {
+        const response = await apiRequest(`/tickets/${ticketId}`, 'GET', null, true);
+        const ticket = response.data;
+
+        const createdDate = new Date(ticket.createdAt).toLocaleString();
+        const respondedDate = ticket.respondedAt ? new Date(ticket.respondedAt).toLocaleString() : null;
+
+        content.innerHTML = `
+          <div class="ticket-detail-field">
+            <div class="ticket-detail-label">Subject</div>
+            <div class="ticket-detail-value">${escapeHtml(ticket.subject)}</div>
+          </div>
+          <div class="ticket-detail-field">
+            <div class="ticket-detail-label">Status</div>
+            <div class="ticket-detail-value"><span class="badge ${getStatusBadgeClass(ticket.status)}">${formatStatusLabel(ticket.status)}</span></div>
+          </div>
+          <div class="ticket-detail-field">
+            <div class="ticket-detail-label">Category / Priority</div>
+            <div class="ticket-detail-value">${formatCategoryLabel(ticket.category)} · ${formatPriorityLabel(ticket.priority)}</div>
+          </div>
+          <div class="ticket-detail-field">
+            <div class="ticket-detail-label">Submitted</div>
+            <div class="ticket-detail-value">${createdDate}</div>
+          </div>
+          <div class="ticket-detail-field">
+            <div class="ticket-detail-label">Description</div>
+            <div class="ticket-detail-value ticket-detail-desc">${escapeHtml(ticket.description)}</div>
+          </div>
+          ${ticket.adminResponse ? `
+            <div class="ticket-detail-response">
+              <div class="ticket-detail-label">Admin Response</div>
+              <div class="ticket-detail-value ticket-detail-desc">${escapeHtml(ticket.adminResponse)}</div>
+              <div class="ticket-detail-response-meta">
+                Responded by ${escapeHtml(ticket.respondedBy?.username || 'Admin')}${respondedDate ? ' · ' + respondedDate : ''}
+              </div>
+            </div>
+          ` : `
+            <div class="ticket-detail-pending-response">Awaiting admin response…</div>
+          `}
+        `;
+
+        // Scroll detail into view on mobile
+        card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      } catch (error) {
+        content.innerHTML = `<div class="ticket-empty">Unable to load ticket: ${escapeHtml(error.message)}</div>`;
+      }
+    }
+
+    // Form submission
+    document.addEventListener('DOMContentLoaded', function () {
+      const form = document.getElementById('ticketForm');
+      const submitBtn = document.getElementById('submitTicketBtn');
+
+      if (!form) return;
+
+      form.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        clearFormErrors(form);
+
+        let valid = true;
+
+        const subjectEl = form.querySelector('[name="subject"]');
+        const descEl = form.querySelector('[name="description"]');
+
+        if (!subjectEl.value.trim()) {
+          const err = subjectEl.parentElement.querySelector('.error-message');
+          err.textContent = 'Subject is required.';
+          err.classList.add('show');
+          subjectEl.classList.add('error');
+          valid = false;
+        }
+
+        if (!descEl.value.trim()) {
+          const err = descEl.parentElement.querySelector('.error-message');
+          err.textContent = 'Description is required.';
+          err.classList.add('show');
+          descEl.classList.add('error');
+          valid = false;
+        }
+
+        if (!valid) {
+          showToast('Please complete all required fields.', true);
+          return;
+        }
+
+        const payload = {
+          subject: subjectEl.value.trim(),
+          description: descEl.value.trim(),
+          category: form.querySelector('[name="category"]').value,
+          priority: form.querySelector('[name="priority"]').value,
+        };
+
+        try {
+          submitBtn.disabled = true;
+          submitBtn.textContent = 'Submitting…';
+
+          await apiRequest('/tickets', 'POST', payload, true);
+          showToast('Ticket submitted successfully.');
+          form.reset();
+          loadMyTickets();
+        } catch (error) {
+          showToast(error.message || 'Unable to submit ticket.', true);
+        } finally {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Submit Ticket';
+        }
+      });
+
+      // Initial load
+      loadMyTickets();
+    });
+  </script>
+
+</body>
+</html>

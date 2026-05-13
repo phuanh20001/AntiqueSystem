@@ -538,3 +538,31 @@
     grid-template-columns: 1fr;
   }
 }
+
+.dash-items-pagination {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.dash-items-pagination-summary {
+  font-size: 13px;
+  color: var(--ink-light);
+}
+.dash-items-pagination-nav {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.dash-items-pagination-meta {
+  font-size: 13px;
+  color: var(--ink-muted);
+}
+.dash-items-pagination-nav button[disabled] {
+  opacity: 0.45;
+  cursor: not-allowed;
+}

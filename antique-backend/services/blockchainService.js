@@ -203,7 +203,7 @@ function buildItemCanonicalData(item) {
 }
 
 /**
- * Submit verification to blockchain
+ * Submit verification to blockchain (deployer / platform wallet — DEPLOYER_PRIVATE_KEY)
  * @param {string} itemId - MongoDB item ID
  * @param {boolean} isAuthentic - Authentication decision
  * @param {string} metadataHash - SHA-256 hash of verification data
@@ -230,7 +230,8 @@ async function submitVerificationToBlockchain(itemId, isAuthentic, metadataHash)
     return {
       txHash,
       receipt,
-      success: true
+      success: true,
+      signerAddress: signer ? signer.address : null,
     };
   } catch (error) {
     console.error('Blockchain submission error:', error);

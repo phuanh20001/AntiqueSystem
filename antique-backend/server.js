@@ -26,11 +26,15 @@ const authRoutes = require('./routes/authRoutes');
 const itemRoutes = require('./routes/itemRoutes');
 const verificationRoutes = require('./routes/verification');
 const verificationRecordRoutes = require('./routes/verificationRecordRoutes');
+const ticketRoutes = require('./routes/ticketRoutes');
+const seedRoutes = require('./routes/seedRoutes');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/items', itemRoutes);
 app.use('/api/verifications', verificationRoutes);
 app.use('/api/verification-records', verificationRecordRoutes);
+app.use('/api/tickets', ticketRoutes);
+app.use('/api/seed', seedRoutes);
 
 // Health check endpoint
 app.get("/", (req, res) => {

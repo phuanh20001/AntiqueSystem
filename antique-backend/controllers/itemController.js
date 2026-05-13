@@ -10,6 +10,217 @@ const isCollectorRole = (role) => ['user', 'collector'].includes(String(role || 
 const buildCertificateNumber = (itemId) => `CERT-${String(itemId || '').slice(-8).toUpperCase()}`;
 const getOwnerIdString = (ownerField) => String(ownerField?._id || ownerField || '');
 
+/** Clamp list page size (dashboard uses 10 per page). */
+function clampListLimit(raw) {
+  const n = parseInt(raw, 10);
+  if (!Number.isFinite(n) || n < 1) return 10;
+  return Math.min(n, 100);
+}
+
+/**
+ * Counts for admin/verifier dashboards (full filter, not limited to current page).
+ * @param {import('mongoose').FilterQuery<unknown>} filter
+ */
+async function buildItemDashboardCountsForFilter(filter) {
+  const total = await Item.countDocuments(filter);
+  const grouped = await Item.aggregate([
+    { $match: filter },
+    { $group: { _id: '$verificationStatus', count: { $sum: 1 } } },
+  ]);
+  const m = {};
+  grouped.forEach((g) => {
+    m[g._id] = g.count;
+  });
+  const pending = (m.pending || 0) + (m.in_progress || 0);
+  const verified = m.verified || 0;
+  const rejected = m.rejected || 0;
+  const other = Math.max(total - pending - verified - rejected, 0);
+  return {
+    total,
+    byStatus: m,
+    itemStatusSeries: [pending, verified, rejected, other],
+  };
+}
+
+/**
+ * Collector my-items: scope (owner OR submittedBy), pool (excl. active marketplace listing slice), listing count, submissions-in-pool.
+ * @param {import('mongoose').Types.ObjectId} userId
+ */
+async function buildCollectorMyItemsDashboardCounts(userId) {
+  const uid = new mongoose.Types.ObjectId(String(userId));
+  const scopeQuery = { $or: [{ owner: uid }, { submittedBy: uid }] };
+  const poolQuery = {
+    $and: [
+      scopeQuery,
+      {
+        $or: [
+          { listedInMarketplace: { $ne: true } },
+          { listedInMarketplace: { $exists: false } },
+          { verificationStatus: { $ne: 'verified' } },
+          { isSold: true },
+        ],
+      },
+    ],
+  };
+  const listingQuery = {
+    $and: [
+      scopeQuery,
+      { listedInMarketplace: true },
+      { verificationStatus: 'verified' },
+      { isSold: { $ne: true } },
+    ],
+  };
+
+  /** Verified inventory: owned by collector but not an active Products listing (listed + available). */
+  const inventoryVerifiedQuery = {
+    $and: [
+      scopeQuery,
+      { verificationStatus: 'verified' },
+      { owner: uid },
+      {
+        $or: [
+          { listedInMarketplace: { $ne: true } },
+          { listedInMarketplace: { $exists: false } },
+          { isSold: true },
+        ],
+      },
+    ],
+  };
+
+  const effectiveSubmitterStages = [
+    {
+      $addFields: {
+        effectiveSubmitter: {
+          $cond: [
+            { $ne: [{ $ifNull: ['$submittedBy', null] }, null] },
+            '$submittedBy',
+            {
+              $cond: [
+                { $gt: [{ $size: { $ifNull: ['$purchaseHistory', []] } }, 0] },
+                { $arrayElemAt: ['$purchaseHistory.seller', 0] },
+                '$owner',
+              ],
+            },
+          ],
+        },
+      },
+    },
+    { $match: { $expr: { $eq: ['$effectiveSubmitter', uid] } } },
+  ];
+
+  const [scopeTotal, listingCount, poolGrouped, submissionsAgg, submissionsTotalAgg, inventoryVerifiedCount] =
+    await Promise.all([
+      Item.countDocuments(scopeQuery),
+      Item.countDocuments(listingQuery),
+      Item.aggregate([
+        { $match: poolQuery },
+        { $group: { _id: '$verificationStatus', count: { $sum: 1 } } },
+      ]),
+      Item.aggregate([{ $match: poolQuery }, ...effectiveSubmitterStages, { $count: 'n' }]),
+      Item.aggregate([{ $match: scopeQuery }, ...effectiveSubmitterStages, { $count: 'n' }]),
+      Item.countDocuments(inventoryVerifiedQuery),
+    ]);
+
+  const m = {};
+  poolGrouped.forEach((g) => {
+    m[g._id] = g.count;
+  });
+  const poolPending = (m.pending || 0) + (m.in_progress || 0);
+  const poolVerified = m.verified || 0;
+  const poolRejected = m.rejected || 0;
+  const poolTotal = Object.values(m).reduce((a, b) => a + b, 0);
+  const submissionsInPool = submissionsAgg[0]?.n ?? 0;
+  const submissionsTotal = submissionsTotalAgg[0]?.n ?? 0;
+
+  return {
+    scopeTotal,
+    poolTotal,
+    listingCount,
+    submissionsInPool,
+    submissionsTotal,
+    inventoryVerifiedCount,
+    poolByStatus: m,
+    poolPending,
+    poolVerified,
+    poolRejected,
+  };
+}
+
+/**
+ * List filter for collector dashboard tabs (pagination matches the active view).
+ * @param {import('mongoose').Types.ObjectId|string} userId
+ * @param {Record<string, unknown>} q
+ */
+function buildCollectorItemListQuery(userId, q) {
+  const uid = new mongoose.Types.ObjectId(String(userId));
+  const base = { $or: [{ owner: uid }, { submittedBy: uid }] };
+  const view = String(q.dashboardView || '').toLowerCase();
+
+  if (view === 'pending' || String(q.inReview || '').toLowerCase() === 'true') {
+    return { $and: [base, { verificationStatus: { $in: ['pending', 'in_progress'] } }] };
+  }
+  if (view === 'verified') {
+    return { $and: [base, { verificationStatus: 'verified' }] };
+  }
+  if (view === 'rejected') {
+    return { $and: [base, { verificationStatus: 'rejected' }] };
+  }
+  if (view === 'listing' || String(q.dashboardListing || '').toLowerCase() === '1') {
+    return {
+      $and: [
+        base,
+        { listedInMarketplace: true },
+        { verificationStatus: 'verified' },
+        { isSold: { $ne: true } },
+      ],
+    };
+  }
+  if (view === 'owned' || String(q.dashboardInventory || '').toLowerCase() === '1') {
+    return {
+      $and: [
+        base,
+        { verificationStatus: 'verified' },
+        { owner: uid },
+        {
+          $or: [
+            { listedInMarketplace: { $ne: true } },
+            { listedInMarketplace: { $exists: false } },
+            { isSold: true },
+          ],
+        },
+      ],
+    };
+  }
+  if (view === 'all' || String(q.submissionsOnly || '').toLowerCase() === '1') {
+    return {
+      $and: [
+        base,
+        {
+          $expr: {
+            $eq: [
+              {
+                $cond: [
+                  { $ne: [{ $ifNull: ['$submittedBy', null] }, null] },
+                  '$submittedBy',
+                  {
+                    $cond: [
+                      { $gt: [{ $size: { $ifNull: ['$purchaseHistory', []] } }, 0] },
+                      { $arrayElemAt: ['$purchaseHistory.seller', 0] },
+                      '$owner',
+                    ],
+                  },
+                ],
+              },
+              uid,
+            ],
+          },
+        },
+      ],
+    };
+  }
+  return base;
+}
+
 /**
  * @desc    Create a new antique item
  * @route   POST /api/items
@@ -25,6 +236,7 @@ const createItem = async (req, res) => {
 
     const item = await Item.create({
       owner: req.user._id,
+      submittedBy: req.user._id,
       title,
       description,
       category,
@@ -66,42 +278,55 @@ const createItem = async (req, res) => {
 const getAllItems = async (req, res) => {
   try {
     const { page = 1, limit = 10, category, verificationStatus, owner, isSold } = req.query;
-
-    const skip = (page - 1) * limit;
+    const limitNum = clampListLimit(limit);
+    const pageNum = Math.max(parseInt(page, 10) || 1, 1);
+    const skip = (pageNum - 1) * limitNum;
     let filter = {};
 
     if (category) filter.category = category;
-    if (verificationStatus) filter.verificationStatus = verificationStatus;
+    if (String(req.query.inReview || '').toLowerCase() === 'true') {
+      filter.verificationStatus = { $in: ['pending', 'in_progress'] };
+    } else if (verificationStatus) {
+      filter.verificationStatus = verificationStatus;
+    }
     if (owner) filter.owner = owner;
     if (isSold !== undefined) {
       filter.isSold = String(isSold).toLowerCase() === 'true';
     }
 
-    // Products browse: hide items explicitly removed from marketplace (listedInMarketplace: false).
-    // Omits only explicit false; missing field still shows for legacy documents.
     if (String(req.query.publicMarketplace || '').toLowerCase() === 'true') {
       filter.$nor = [{ listedInMarketplace: false }];
     }
 
-    const items = await Item.find(filter)
-      .skip(skip)
-      .limit(parseInt(limit))
-      .sort({ createdAt: -1 })
-      .populate('owner', 'username email')
-      .populate('verificationRecord');
+    const includeDashboardCounts =
+      String(req.query.includeDashboardCounts || '').toLowerCase() === 'true' ||
+      req.query.includeDashboardCounts === '1';
 
-    const total = await Item.countDocuments(filter);
+    const [items, dashboardCountsResult, total] = await Promise.all([
+      Item.find(filter)
+        .skip(skip)
+        .limit(limitNum)
+        .sort({ createdAt: -1 })
+        .populate('owner', 'username email')
+        .populate('verificationRecord'),
+      includeDashboardCounts ? buildItemDashboardCountsForFilter({}) : Promise.resolve(null),
+      Item.countDocuments(filter),
+    ]);
 
-    res.status(200).json({
+    const pages = Math.max(Math.ceil(total / limitNum), 1);
+
+    const payload = {
       success: true,
       data: items,
       pagination: {
         total,
-        page: parseInt(page),
-        limit: parseInt(limit),
-        pages: Math.ceil(total / limit),
+        page: pageNum,
+        limit: limitNum,
+        pages,
       },
-    });
+    };
+    if (dashboardCountsResult) payload.dashboardCounts = dashboardCountsResult;
+    res.status(200).json(payload);
   } catch (error) {
     console.error('Get All Items Error:', error);
     res.status(500).json({
@@ -346,6 +571,7 @@ const updateVerificationStatus = async (req, res) => {
           console.log(
             `[itemController] Submitting verification to chain — item=${req.params.id}, decision=${verificationStatus}`
           );
+          // All verifications are signed with the deployer wallet (DEPLOYER_PRIVATE_KEY) so only one account needs gas.
           const submission = await blockchainService.submitVerificationToBlockchain(
             req.params.id,
             isAuthentic,
@@ -363,6 +589,7 @@ const updateVerificationStatus = async (req, res) => {
             etherscanUrl: blockchainService.getEtherscanUrl(submission.txHash),
             contractAddress: process.env.CONTRACT_ADDRESS || null,
             network: 'sepolia',
+            signerAddress: submission.signerAddress || null,
           };
         }
       } catch (err) {
@@ -811,26 +1038,35 @@ const getMyItems = async (req, res) => {
     }
 
     const { page = 1, limit = 10 } = req.query;
-    const skip = (page - 1) * limit;
+    const limitNum = clampListLimit(limit);
+    const pageNum = Math.max(parseInt(page, 10) || 1, 1);
+    const skip = (pageNum - 1) * limitNum;
 
-    const items = await Item.find({ owner: req.user._id })
-      .skip(skip)
-      .limit(parseInt(limit))
-      .sort({ createdAt: -1 })
-      .populate('owner', 'username email')
-      .populate('verificationRecord');
+    const listQuery = buildCollectorItemListQuery(req.user._id, req.query);
 
-    const total = await Item.countDocuments({ owner: req.user._id });
+    const [items, dashboardCounts, total] = await Promise.all([
+      Item.find(listQuery)
+        .skip(skip)
+        .limit(limitNum)
+        .sort({ createdAt: -1 })
+        .populate('owner', 'username email')
+        .populate('verificationRecord'),
+      buildCollectorMyItemsDashboardCounts(req.user._id),
+      Item.countDocuments(listQuery),
+    ]);
+
+    const pages = Math.max(Math.ceil(total / limitNum), 1);
 
     res.status(200).json({
       success: true,
       data: items,
       pagination: {
         total,
-        page: parseInt(page),
-        limit: parseInt(limit),
-        pages: Math.ceil(total / limit),
+        page: pageNum,
+        limit: limitNum,
+        pages,
       },
+      dashboardCounts,
     });
   } catch (error) {
     console.error('Get My Items Error:', error);
@@ -877,20 +1113,42 @@ const purchaseItem = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Item has already been sold' });
     }
 
-    const sellerId = item.owner;
-    item.previousOwner = sellerId;
-    item.owner = req.user._id;
+    // Owner is often a populated User doc (Item pre-hook). Nested subdocs need plain ObjectIds;
+    // passing a full document can leave `seller` unset and fail validation (e.g. purchaseHistory.1.seller required).
+    const sellerIdStr = getOwnerIdString(item.owner);
+    if (!sellerIdStr || !isValidObjectId(sellerIdStr)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Item has no valid owner reference; cannot complete purchase.',
+      });
+    }
+    const sellerObjectId = new mongoose.Types.ObjectId(sellerIdStr);
+    const buyerObjectId = new mongoose.Types.ObjectId(String(req.user._id));
+
+    if (!item.submittedBy) {
+      if (item.purchaseHistory && item.purchaseHistory.length > 0) {
+        const firstSeller = item.purchaseHistory[0].seller;
+        const sid = getOwnerIdString(firstSeller);
+        item.submittedBy = sid && isValidObjectId(sid) ? new mongoose.Types.ObjectId(sid) : sellerObjectId;
+      } else {
+        item.submittedBy = sellerObjectId;
+      }
+    }
+
+    item.previousOwner = sellerObjectId;
+    item.owner = buyerObjectId;
     item.isSold = true;
     item.soldAt = new Date();
     item.listedInMarketplace = false;
     item.purchaseHistory.push({
-      buyer: req.user._id,
-      seller: sellerId,
-      amount: item.estimatedValue || null,
+      buyer: buyerObjectId,
+      seller: sellerObjectId,
+      amount: item.estimatedValue ?? null,
     });
 
     await item.save();
     await item.populate('owner', 'username email');
+    await item.populate('submittedBy', 'username email');
 
     res.status(200).json({
       success: true,
