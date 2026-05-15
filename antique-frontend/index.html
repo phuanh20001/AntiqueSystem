@@ -79,92 +79,12 @@
     <div class="section-eyebrow">Recently Verified</div>
     <div class="section-title">Authenticated <em>Items</em></div>
     <div class="section-subtitle">Browse the latest antiques verified and sealed on our blockchain registry.</div>
-    <div class="antiques-grid">
-
-      <a href="pages/detail.html" class="antique-card">
-        <div class="antique-thumb">🏺
-          <span class="badge badge-verified">Verified</span>
-        </div>
+    <div class="antiques-grid" id="home-authenticated-items">
+      <div class="antique-card">
         <div class="antique-body">
-          <div class="antique-category">Ceramics · China</div>
-          <div class="antique-title">Ming Dynasty Blue & White Porcelain Vase</div>
-          <div class="antique-sub">Est. 1368–1644 AD · Origin: Jingdezhen</div>
-          <div class="antique-meta">
-            <span>Score: 94/100</span><span>·</span><span>Cert #CERT-2025-00142</span>
-          </div>
+          <div class="antique-title">Loading authenticated items...</div>
         </div>
-      </a>
-
-      <a href="pages/detail.html" class="antique-card">
-        <div class="antique-thumb">🕰️
-          <span class="badge badge-verified">Verified</span>
-        </div>
-        <div class="antique-body">
-          <div class="antique-category">Timepieces · France</div>
-          <div class="antique-title">Louis XVI Gilt Bronze Mantel Clock</div>
-          <div class="antique-sub">Est. 1774–1793 · Origin: Paris, France</div>
-          <div class="antique-meta">
-            <span>Score: 89/100</span><span>·</span><span>Cert #CERT-2025-00138</span>
-          </div>
-        </div>
-      </a>
-
-      <a href="pages/detail.html" class="antique-card">
-        <div class="antique-thumb">🗡️
-          <span class="badge badge-pending">Pending</span>
-        </div>
-        <div class="antique-body">
-          <div class="antique-category">Arms & Armour · Japan</div>
-          <div class="antique-title">Edo Period Katana with Lacquered Saya</div>
-          <div class="antique-sub">Est. 1603–1868 · Origin: Kyoto, Japan</div>
-          <div class="antique-meta">
-            <span>Awaiting review</span><span>·</span><span>Submitted 3 days ago</span>
-          </div>
-        </div>
-      </a>
-
-      <a href="pages/detail.html" class="antique-card">
-        <div class="antique-thumb">🪞
-          <span class="badge badge-verified">Verified</span>
-        </div>
-        <div class="antique-body">
-          <div class="antique-category">Furniture · England</div>
-          <div class="antique-title">Georgian Gilt Wood Console Mirror</div>
-          <div class="antique-sub">Est. 1760 · Origin: London, England</div>
-          <div class="antique-meta">
-            <span>Score: 91/100</span><span>·</span><span>Cert #CERT-2025-00130</span>
-          </div>
-        </div>
-      </a>
-
-      <a href="pages/detail.html" class="antique-card">
-        <div class="antique-thumb">💎
-          <span class="badge badge-verified">Verified</span>
-        </div>
-        <div class="antique-body">
-          <div class="antique-category">Jewellery · India</div>
-          <div class="antique-title">Mughal Era Emerald & Diamond Necklace</div>
-          <div class="antique-sub">Est. 1526–1857 · Origin: Agra, India</div>
-          <div class="antique-meta">
-            <span>Score: 97/100</span><span>·</span><span>Cert #CERT-2025-00119</span>
-          </div>
-        </div>
-      </a>
-
-      <a href="pages/detail.html" class="antique-card">
-        <div class="antique-thumb">🖼️
-          <span class="badge badge-rejected">Rejected</span>
-        </div>
-        <div class="antique-body">
-          <div class="antique-category">Fine Art · Italy</div>
-          <div class="antique-title">Alleged Renaissance Oil on Panel</div>
-          <div class="antique-sub">Claimed 16th C · Origin: Florence</div>
-          <div class="antique-meta">
-            <span>Score: 21/100</span><span>·</span><span>Inconsistent pigment analysis</span>
-          </div>
-        </div>
-      </a>
-
+      </div>
     </div>
   </section>
 
@@ -226,5 +146,110 @@
 
   <div class="toast" id="toast"></div>
   <script src="js/utils.js"></script>
+  <script src="js/api.js"></script>
+  <script>
+    function escapeHtml(value) {
+      return String(value || '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+    }
+
+    function titleCase(value) {
+      if (!value) return '';
+      return value.charAt(0).toUpperCase() + value.slice(1);
+    }
+
+    function getCategoryEmoji(category) {
+      const key = String(category || '').toLowerCase();
+      if (key === 'ceramics') return '🏺';
+      if (key === 'timepieces') return '🕰️';
+      if (key === 'metalware') return '🗡️';
+      if (key === 'furniture') return '🪞';
+      if (key === 'jewelry') return '💎';
+      if (key === 'artwork') return '🖼️';
+      if (key === 'books') return '📚';
+      if (key === 'textiles') return '🧵';
+      if (key === 'collectibles') return '🧿';
+      return '🏛️';
+    }
+
+    function buildItemMeta(item) {
+      const score = item?.verificationRecord?.authenticationScore;
+      const certificateNumber = item?.verificationRecord?.authenticityCertificate?.certificateNumber;
+      if (score === 0 || score) {
+        if (certificateNumber) return `Score: ${score}/100 · Cert #${certificateNumber}`;
+        return `Score: ${score}/100`;
+      }
+      if (certificateNumber) return `Cert #${certificateNumber}`;
+      return 'Recently authenticated';
+    }
+
+    function renderHomeItems(items) {
+      const root = document.getElementById('home-authenticated-items');
+      if (!root) return;
+
+      if (!Array.isArray(items) || !items.length) {
+        root.innerHTML = `
+          <div class="antique-card">
+            <div class="antique-body">
+              <div class="antique-title">No authenticated items yet.</div>
+              <div class="antique-sub">Check back soon for newly verified antiques.</div>
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      root.innerHTML = items.map((item) => {
+        const category = titleCase(item.category || 'Uncategorized');
+        const period = item.estimatedPeriod || item.estimatedYear || 'Period unknown';
+        const ownerName = item.owner?.username ? `Owner: ${item.owner.username}` : 'Owner unknown';
+        const imageUrl = Array.isArray(item.images) && item.images.length ? item.images[0]?.url : '';
+        const thumbMarkup = imageUrl
+          ? `<img class="antique-thumb-image" src="${escapeHtml(imageUrl)}" alt="${escapeHtml(item.title || 'Antique item')}" />`
+          : getCategoryEmoji(item.category);
+
+        return `
+          <a href="pages/detail.html?id=${item._id}" class="antique-card">
+            <div class="antique-thumb">${thumbMarkup}
+              <span class="badge badge-verified">Verified</span>
+            </div>
+            <div class="antique-body">
+              <div class="antique-category">${escapeHtml(category)}</div>
+              <div class="antique-title">${escapeHtml(item.title || 'Untitled Item')}</div>
+              <div class="antique-sub">${escapeHtml(period)} · ${escapeHtml(ownerName)}</div>
+              <div class="antique-meta">
+                <span>${escapeHtml(buildItemMeta(item))}</span>
+              </div>
+            </div>
+          </a>
+        `;
+      }).join('');
+    }
+
+    async function loadHomeAuthenticatedItems() {
+      try {
+        const response = await apiRequest('/items?verificationStatus=verified&isSold=false&publicMarketplace=true&sortBy=updatedAt&sortOrder=desc&limit=6', 'GET', null, false);
+        const items = Array.isArray(response?.data) ? response.data : [];
+        renderHomeItems(items);
+      } catch (error) {
+        const root = document.getElementById('home-authenticated-items');
+        if (!root) return;
+        root.innerHTML = `
+          <div class="antique-card">
+            <div class="antique-body">
+              <div class="antique-title">Unable to load authenticated items.</div>
+              <div class="antique-sub">Please try again later.</div>
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    loadHomeAuthenticatedItems();
+  </script>
 </body>
 </html>

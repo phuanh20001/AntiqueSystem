@@ -603,9 +603,9 @@
     }
 
     function renderAccountRows(accounts, state, allowDelete) {
-      if (!accounts.length) return `<tr><td colspan="6" style="text-align:center; padding:30px; color:var(--ink-light);">No accounts found.</td></tr>`;
+      if (!accounts.length) return `<tr><td colspan="5" style="text-align:center; padding:30px; color:var(--ink-light);">No accounts found.</td></tr>`;
       return accounts.map((a) => `<tr><td>${escapeHtml(a.username || 'Unknown')}</td><td>${escapeHtml(a.email || '')}</td><td>${escapeHtml(formatRoleLabel(a.requestedRole || a.role))}</td>
-        <td>${getStatusBadge(a.status || 'approved')}</td><td>${escapeHtml(formatRoleLabel(a.role))}</td><td>${state === 'pending' ? `<div class="table-actions"><button class="btn-sm btn-approve" onclick="approveAccount('${a._id}')">Approve</button><button class="btn-sm btn-decline" onclick="rejectAccount('${a._id}')">Reject</button></div>` : allowDelete ? `<button class="btn-sm btn-decline" onclick="deleteAccount('${a._id}')">Delete</button>` : `<span style="color:var(--ink-light);font-size:13px;">No action</span>`}</td></tr>`).join('');
+        <td>${getStatusBadge(a.status || 'approved')}</td><td>${state === 'pending' ? `<div class="table-actions"><button class="btn-sm btn-approve" onclick="approveAccount('${a._id}')">Approve</button><button class="btn-sm btn-decline" onclick="rejectAccount('${a._id}')">Reject</button></div>` : allowDelete ? `<button class="btn-sm btn-decline" onclick="deleteAccount('${a._id}')">Delete</button>` : `<span style="color:var(--ink-light);font-size:13px;">No action</span>`}</td></tr>`).join('');
     }
 
     function getItemStatusSeries(items) {
@@ -749,7 +749,7 @@
               </form>
             </div>`
           : '';
-        return `<div class="dash-content dashboard-grid dashboard-grid-single"><section class="dashboard-panel dashboard-panel-wide"><div class="panel-head"><div><h3>${cfg.h}</h3><p>Admin can review and manage user accounts.</p></div><button class="btn-sm btn-review" onclick="loadDashboardData()">Refresh</button></div><div class="panel-body">${createAccountPanel}<table class="review-table"><thead><tr><th>Username</th><th>Email</th><th>Requested Role</th><th>Status</th><th>Current Role</th><th>Action</th></tr></thead><tbody>${renderAccountRows(cfg.data, cfg.s, cfg.del)}</tbody></table></div></section></div>`;
+        return `<div class="dash-content dashboard-grid dashboard-grid-single"><section class="dashboard-panel dashboard-panel-wide"><div class="panel-head"><div><h3>${cfg.h}</h3><p>Admin can review and manage user accounts.</p></div><button class="btn-sm btn-review" onclick="loadDashboardData()">Refresh</button></div><div class="panel-body">${createAccountPanel}<table class="review-table"><thead><tr><th>Username</th><th>Email</th><th>Role</th><th>Status</th><th>Action</th></tr></thead><tbody>${renderAccountRows(cfg.data, cfg.s, cfg.del)}</tbody></table></div></section></div>`;
       }
       const filteredItems = getFilteredItems(role, items);
       const title =
