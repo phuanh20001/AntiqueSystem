@@ -109,9 +109,13 @@
         const ownedBadge = isOwnItem
           ? '<span class="badge badge-owned">Owned by you</span>'
           : '';
+        const thumbSrc = item.images?.[0]?.url;
+        const thumbHtml = thumbSrc
+          ? `<img src="${thumbSrc}" alt="${escapeHtml(item.title || 'Item')}" style="width:100%;height:100%;object-fit:cover;border-radius:inherit;">`
+          : `🏺`;
         return `
         <div class="product-card">
-          <div class="product-thumb">🏺</div>
+          <div class="product-thumb">${thumbHtml}</div>
           <div class="product-body">
             <a class="product-title" href="detail.html?id=${item._id}">${escapeHtml(item.title || 'Untitled Item')}</a>
             <div class="product-meta">${escapeHtml(item.category || 'Uncategorized')} · ${escapeHtml(item.estimatedPeriod || item.estimatedYear || 'Period not specified')}</div>

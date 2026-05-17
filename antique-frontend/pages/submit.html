@@ -40,6 +40,14 @@
         <input type="file" id="itemImagesInput" accept="image/jpeg,image/png,image/tiff,image/webp" multiple hidden>
         <div class="upload-preview-grid" id="uploadPreviewGrid"></div>
 
+        <div class="upload-zone" id="docUploadZone" role="button" tabindex="0" style="margin-top:12px;">
+          <div class="upload-icon">📄</div>
+          <div class="upload-title">Upload Supporting Documents <span style="font-weight:400;color:var(--ink-light);font-size:14px;">(optional)</span></div>
+          <div class="upload-hint">Drag & drop or click to browse · PDF, DOC, DOCX · Max 50MB each · Up to 5 files</div>
+        </div>
+        <input type="file" id="itemDocsInput" accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" multiple hidden>
+        <div id="docPreviewList"></div>
+
         <form id="antiqueForm" autocomplete="off">
           <div class="form-grid">
             <div class="form-group full">
@@ -68,14 +76,25 @@
             </div>
 
             <div class="form-group">
-              <label class="form-label">Estimated Year / Period *</label>
-              <input class="form-input" type="text" name="year" placeholder="e.g. 1368–1644 or circa 1750">
+              <label class="form-label">Estimated Year *</label>
+              <input class="form-input" type="text" name="estimatedYear" placeholder="e.g. 1750 or 1456–1540">
               <div class="error-message"></div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Estimated Period <span style="font-weight:400;color:var(--ink-light);">(optional)</span></label>
+              <input class="form-input" type="text" name="estimatedPeriod" placeholder="e.g. Georgian, Ming Dynasty, Victorian">
             </div>
 
             <div class="form-group">
               <label class="form-label">Country of Origin *</label>
               <input class="form-input" type="text" name="country" placeholder="e.g. China, France, England">
+              <div class="error-message"></div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Material *</label>
+              <input class="form-input" type="text" name="material" placeholder="e.g. Porcelain, Bronze, Oak, Silver">
               <div class="error-message"></div>
             </div>
 
@@ -186,7 +205,10 @@
     const isCollector = currentRole === 'user' || currentRole === 'collector';
     const MAX_IMAGE_COUNT = 10;
     const MAX_IMAGE_SIZE_BYTES = 20 * 1024 * 1024;
+    const MAX_DOC_COUNT = 5;
+    const MAX_DOC_SIZE_BYTES = 50 * 1024 * 1024;
     let selectedImages = [];
+    let selectedDocuments = [];
 
     if (!isCollector) {
       window.location.replace('dashboard.html');
@@ -260,14 +282,66 @@
       }
     }
 
+    function renderDocumentPreviews() {
+      const list = document.getElementById('docPreviewList');
+      if (!list) return;
+      if (!selectedDocuments.length) { list.innerHTML = ''; return; }
+      list.innerHTML = `<div style="margin-top:8px;display:flex;flex-direction:column;gap:6px;">` +
+        selectedDocuments.map((doc, index) => `
+          <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border:1px solid var(--line);border-radius:8px;font-size:13px;">
+            <span>📄</span>
+            <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${doc.filename}</span>
+            <button type="button" onclick="removeSelectedDocument(${index})" style="background:none;border:none;cursor:pointer;color:var(--rust);font-size:13px;">Remove</button>
+          </div>`).join('') + `</div>`;
+    }
+    function removeSelectedDocument(index) {
+      selectedDocuments = selectedDocuments.filter((_, idx) => idx !== index);
+      renderDocumentPreviews();
+    }
+    window.removeSelectedDocument = removeSelectedDocument;
+    async function handleDocumentSelection(fileList) {
+      if (!fileList || !fileList.length) return;
+      const files = Array.from(fileList);
+      if (selectedDocuments.length + files.length > MAX_DOC_COUNT) {
+        showToast(`You can upload up to ${MAX_DOC_COUNT} documents only.`, true);
+        return;
+      }
+      const acceptedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+      const acceptedExts = ['.pdf', '.doc', '.docx'];
+      const acceptedFiles = [];
+      for (const file of files) {
+        const ext = '.' + file.name.split('.').pop().toLowerCase();
+        if (!acceptedTypes.includes(file.type) && !acceptedExts.includes(ext)) {
+          showToast(`"${file.name}" is not a supported document type.`, true);
+          continue;
+        }
+        if (file.size > MAX_DOC_SIZE_BYTES) {
+          showToast(`"${file.name}" exceeds the 50MB limit.`, true);
+          continue;
+        }
+        acceptedFiles.push(file);
+      }
+      if (!acceptedFiles.length) return;
+      try {
+        const converted = await Promise.all(
+          acceptedFiles.map(async (file) => ({ url: await fileToDataUrl(file), filename: file.name }))
+        );
+        selectedDocuments = [...selectedDocuments, ...converted];
+        renderDocumentPreviews();
+      } catch (error) {
+        showToast(error.message || 'Unable to process document.', true);
+      }
+    }
+
     function validateRequiredFields(form) {
       let valid = true;
 
       const requiredFields = [
         { name: 'title' },
         { name: 'category' },
-        { name: 'year' },
+        { name: 'estimatedYear' },
         { name: 'country' },
+        { name: 'material' },
         { name: 'description' }
       ];
 
@@ -290,14 +364,20 @@
       return {
         title: form.title.value.trim(),
         category: form.category.value.trim(),
-        estimatedYear: form.year.value.trim(),
+        estimatedYear: form.estimatedYear.value.trim() || null,
+        estimatedPeriod: form.estimatedPeriod.value.trim() || null,
         country: form.country.value.trim(),
-        dimensions: form.dimensions.value.trim(),
+        dimensions: {
+          height: parseFloat(form.height.value) || null,
+          width: parseFloat(form.width.value) || null,
+          unit: 'cm'
+        },
         description: form.description.value.trim(),
         provenance: form.provenance.value.trim(),
         condition: form.condition.value.trim(),
-        material: 'Not Specified',
+        material: form.material.value.trim(),
         images: selectedImages,
+        documents: selectedDocuments,
         verificationStatus: 'pending'
       };
     }
@@ -307,6 +387,8 @@
       const submitButton = document.getElementById('submitItemBtn');
       const uploadZone = document.getElementById('uploadZone');
       const imageInput = document.getElementById('itemImagesInput');
+      const docUploadZone = document.getElementById('docUploadZone');
+      const docInput = document.getElementById('itemDocsInput');
 
       if (!form) return;
       if (uploadZone && imageInput) {
@@ -332,6 +414,31 @@
         imageInput.addEventListener('change', async (event) => {
           await handleImageSelection(event.target.files);
           imageInput.value = '';
+        });
+      }
+      if (docUploadZone && docInput) {
+        docUploadZone.addEventListener('click', () => docInput.click());
+        docUploadZone.addEventListener('keydown', (event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            docInput.click();
+          }
+        });
+        docUploadZone.addEventListener('dragover', (event) => {
+          event.preventDefault();
+          docUploadZone.classList.add('dragging');
+        });
+        docUploadZone.addEventListener('dragleave', () => {
+          docUploadZone.classList.remove('dragging');
+        });
+        docUploadZone.addEventListener('drop', async (event) => {
+          event.preventDefault();
+          docUploadZone.classList.remove('dragging');
+          await handleDocumentSelection(event.dataTransfer.files);
+        });
+        docInput.addEventListener('change', async (event) => {
+          await handleDocumentSelection(event.target.files);
+          docInput.value = '';
         });
       }
 
@@ -361,7 +468,9 @@
 
           showToast('Item submitted successfully for verification.');
           selectedImages = [];
+          selectedDocuments = [];
           renderImagePreviews();
+          renderDocumentPreviews();
           form.reset();
 
           setTimeout(() => {

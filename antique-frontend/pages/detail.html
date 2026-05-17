@@ -66,6 +66,11 @@
           <a class="verifier-dashboard-link" id="verifierDashboardLink" href="dashboard.html" style="display:none;">Back to Dashboard</a>
         </div>
 
+        <div id="documentsCard" style="display:none;margin-bottom:16px;padding:18px;border:1px solid var(--line);border-radius:12px;background:var(--surface);">
+          <div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-light);margin-bottom:6px;">Supporting Documents</div>
+          <div id="documentsCardBody"></div>
+        </div>
+
         <div class="purchase-card" id="purchaseCard" style="display:none;">
           <div class="purchase-eyebrow">Marketplace</div>
           <div class="purchase-title" id="purchaseTitle">Purchase This Item</div>
@@ -564,6 +569,36 @@
     document.addEventListener('keydown', (event) => {
       if (event.key === 'Escape') closeProofModal();
     });
+    function renderDocumentsCard(item) {
+      const card = document.getElementById('documentsCard');
+      const body = document.getElementById('documentsCardBody');
+      if (!card || !body) return;
+
+      const role = String(session?.role || '').toLowerCase();
+      const normalizedRole = role === 'user' ? 'collector' : role;
+      if (normalizedRole !== 'verifier' && normalizedRole !== 'admin') {
+        card.style.display = 'none';
+        return;
+      }
+
+      const docs = Array.isArray(item.documents) ? item.documents : [];
+      if (!docs.length) {
+        card.style.display = 'block';
+        body.innerHTML = `<p style="font-size:13px;color:var(--ink-light);margin:0;">No supporting documents uploaded.</p>`;
+        return;
+      }
+
+      card.style.display = 'block';
+      body.innerHTML = docs.map((doc) => {
+        const name = escapeHtml(doc.filename || 'Document');
+        const ext = (doc.filename || '').split('.').pop().toLowerCase();
+        const icon = ext === 'pdf' ? '📕' : '📄';
+        return `<a href="${doc.url}" download="${name}" style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;margin-bottom:6px;font-size:13px;color:var(--ink);text-decoration:none;word-break:break-all;">
+          <span>${icon}</span><span style="flex:1;">${name}</span><span style="color:var(--ink-light);font-size:11px;">Download</span>
+        </a>`;
+      }).join('');
+    }
+
     function renderVerifierDecisionCard(item) {
       const card = document.getElementById('verifierDecisionCard');
       const status = document.getElementById('verifierDecisionStatus');
@@ -845,7 +880,8 @@
 
         const specs = [
           { label: 'Category', value: categoryLabel },
-          { label: 'Period / Era', value: item.estimatedPeriod || (item.estimatedYear ? `c. ${item.estimatedYear}` : null) },
+          { label: 'Estimated Year', value: item.estimatedYear ? String(item.estimatedYear) : null },
+          { label: 'Estimated Period', value: item.estimatedPeriod || null },
           { label: 'Estimated Age', value: item.estimatedAge ? `${item.estimatedAge} years` : null },
           { label: 'Material', value: item.material },
           { label: 'Dimensions', value: dimStr },
@@ -885,6 +921,7 @@
         loadBlockchainCard(itemId);
         renderPurchaseCard(item);
         renderVerifierDecisionCard(item);
+        renderDocumentsCard(item);
         renderCertificateCard(item);
       } catch (error) {
         showToast('Unable to load item details: ' + error.message, true);

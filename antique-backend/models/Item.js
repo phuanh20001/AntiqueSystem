@@ -43,7 +43,7 @@ const itemSchema = new mongoose.Schema(
       default: null,
     },
     estimatedYear: {
-      type: Number,
+      type: String,
       default: null,
     },
     estimatedPeriod: {
@@ -127,6 +127,19 @@ const itemSchema = new mongoose.Schema(
       },
     ],
     images: [
+      {
+        url: {
+          type: String,
+          required: true,
+        },
+        filename: String,
+        uploadedAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
+    documents: [
       {
         url: {
           type: String,

@@ -610,7 +610,11 @@
         const descriptionSnippet = String(item.description || 'No description provided.')
           .replace(/\s+/g, ' ')
           .trim();
-        return `<tr><td class="item-row-thumb">🏺</td><td><div class="item-row-title">${escapeHtml(item.title || 'Untitled Item')}</div>
+        const thumbSrc = item.images?.[0]?.url;
+        const thumbHtml = thumbSrc
+          ? `<img src="${thumbSrc}" alt="Item thumbnail" style="width:48px;height:48px;object-fit:cover;border-radius:6px;">`
+          : `🏺`;
+        return `<tr><td class="item-row-thumb">${thumbHtml}</td><td><div class="item-row-title">${escapeHtml(item.title || 'Untitled Item')}</div>
           <div class="item-row-sub">${escapeHtml(item.category || 'Antique Item')} · ${escapeHtml(item.estimatedPeriod || item.year || 'Period not provided')}</div>
           <div class="item-row-sub">Owner: ${escapeHtml(item.owner?.username || item.owner?.email || 'Unknown owner')}</div>
           <div class="item-row-desc">${escapeHtml(descriptionSnippet)}</div></td>
@@ -791,6 +795,7 @@
                 <input id="new-username" placeholder="Username" required style="padding:8px 10px;border:1px solid var(--line);border-radius:8px;min-width:150px;">
                 <input id="new-email" type="email" placeholder="Email" required style="padding:8px 10px;border:1px solid var(--line);border-radius:8px;min-width:220px;">
                 <input id="new-password" type="password" placeholder="Password" required style="padding:8px 10px;border:1px solid var(--line);border-radius:8px;min-width:150px;">
+                <input id="new-password-confirm" type="password" placeholder="Confirm Password" required style="padding:8px 10px;border:1px solid var(--line);border-radius:8px;min-width:150px;">
                 <select id="new-role" style="padding:8px 10px;border:1px solid var(--line);border-radius:8px;">
                   <option value="user">Collector</option>
                   <option value="verifier">Verifier</option>
@@ -1107,10 +1112,20 @@
       const username = document.getElementById('new-username')?.value?.trim();
       const email = document.getElementById('new-email')?.value?.trim();
       const password = document.getElementById('new-password')?.value;
+      const confirmPassword = document.getElementById('new-password-confirm')?.value;
       const role = document.getElementById('new-role')?.value || 'user';
+      if (password !== confirmPassword) {
+        showToast('Passwords do not match.', true);
+        return;
+      }
       try {
         await apiRequest('/auth/users', 'POST', { username, email, password, role }, true);
         showToast(`Account created as ${role}.`);
+        document.getElementById('new-username').value = '';
+        document.getElementById('new-email').value = '';
+        document.getElementById('new-password').value = '';
+        document.getElementById('new-password-confirm').value = '';
+        document.getElementById('new-role').value = 'user';
         loadDashboardData();
       } catch (error) {
         showToast(error.message || 'Unable to create account.', true);
