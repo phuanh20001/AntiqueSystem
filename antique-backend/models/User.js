@@ -47,13 +47,11 @@ const userSchema = new mongoose.Schema({
   },
   blockchainWallet: {
     type: String,
-    default: null,
     unique: true,
     sparse: true
   },
   blockchainPrivateKey: {
     type: String,
-    default: null,
     select: false
   }
 }, { timestamps: true });
