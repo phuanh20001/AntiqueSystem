@@ -68,6 +68,38 @@
     </div>
   </div>
 
+  <div class="modal-overlay" id="edit-user-modal" role="dialog" aria-modal="true" aria-labelledby="edit-user-title">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-title" id="edit-user-title">Edit User</div>
+        <button class="modal-close" type="button" onclick="closeEditUserModal()" aria-label="Close">×</button>
+      </div>
+      <div class="modal-body">
+        <p class="listing-modal-copy" id="edit-user-name" style="font-weight:600;margin-bottom:16px;"></p>
+        <div class="form-group">
+          <label class="form-label" for="edit-user-role">Role</label>
+          <select class="form-input" id="edit-user-role">
+            <option value="user">Collector</option>
+            <option value="verifier">Verifier</option>
+            <option value="admin">Admin</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin-top:12px;">
+          <label class="form-label" for="edit-user-status">Status</label>
+          <select class="form-input" id="edit-user-status">
+            <option value="approved">Approved</option>
+            <option value="pending">Pending</option>
+            <option value="rejected">Rejected</option>
+          </select>
+        </div>
+        <div class="modal-actions" style="margin-top:20px;">
+          <button class="btn-sm btn-review" type="button" onclick="closeEditUserModal()">Cancel</button>
+          <button class="btn-sm btn-approve" type="button" id="edit-user-submit" onclick="saveUserEdit()">Save Changes</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script src="../js/utils.js"></script>
   <script src="../js/api.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -85,6 +117,7 @@
     let dashboardItemPage = 1;
     let dashboardItemsPagination = null;
     let dashboardItemsCounts = null;
+    let editUserId = null;
 
     function escapeHtml(value) {
       return String(value || '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#39;');
@@ -604,8 +637,26 @@
 
     function renderAccountRows(accounts, state, allowDelete) {
       if (!accounts.length) return `<tr><td colspan="5" style="text-align:center; padding:30px; color:var(--ink-light);">No accounts found.</td></tr>`;
-      return accounts.map((a) => `<tr><td>${escapeHtml(a.username || 'Unknown')}</td><td>${escapeHtml(a.email || '')}</td><td>${escapeHtml(formatRoleLabel(a.requestedRole || a.role))}</td>
-        <td>${getStatusBadge(a.status || 'approved')}</td><td>${state === 'pending' ? `<div class="table-actions"><button class="btn-sm btn-approve" onclick="approveAccount('${a._id}')">Approve</button><button class="btn-sm btn-decline" onclick="rejectAccount('${a._id}')">Reject</button></div>` : allowDelete ? `<button class="btn-sm btn-decline" onclick="deleteAccount('${a._id}')">Delete</button>` : `<span style="color:var(--ink-light);font-size:13px;">No action</span>`}</td></tr>`).join('');
+      return accounts.map((a) => {
+        const editBtn = `<button class="btn-sm btn-review"
+          data-uid="${escapeHtml(a._id)}"
+          data-uname="${escapeHtml(a.username || 'Unknown')}"
+          data-urole="${escapeHtml(a.role || 'user')}"
+          data-ustatus="${escapeHtml(a.status || 'approved')}"
+          onclick="openEditUserFromBtn(this)">Edit</button>`;
+        let actions;
+        if (state === 'pending') {
+          actions = `<div class="table-actions">${editBtn}<button class="btn-sm btn-approve" onclick="approveAccount('${a._id}')">Approve</button><button class="btn-sm btn-decline" onclick="rejectAccount('${a._id}')">Reject</button></div>`;
+        } else if (allowDelete) {
+          actions = `<div class="table-actions">${editBtn}<button class="btn-sm btn-decline" onclick="deleteAccount('${a._id}')">Delete</button></div>`;
+        } else {
+          actions = editBtn;
+        }
+        const roleCell = state === 'pending' && a.requestedRole && a.requestedRole !== a.role
+          ? `${escapeHtml(formatRoleLabel(a.role))}<div style="font-size:11px;color:var(--ink-light);margin-top:2px;">Requested: ${escapeHtml(formatRoleLabel(a.requestedRole))}</div>`
+          : escapeHtml(formatRoleLabel(a.role));
+        return `<tr><td>${escapeHtml(a.username || 'Unknown')}</td><td>${escapeHtml(a.email || '')}</td><td>${roleCell}</td><td>${getStatusBadge(a.status || 'approved')}</td><td>${actions}</td></tr>`;
+      }).join('');
     }
 
     function getItemStatusSeries(items) {
@@ -1063,6 +1114,48 @@
         loadDashboardData();
       } catch (error) {
         showToast(error.message || 'Unable to create account.', true);
+      }
+    }
+
+    function openEditUserFromBtn(btn) {
+      openEditUser(btn.dataset.uid, btn.dataset.uname, btn.dataset.urole, btn.dataset.ustatus);
+    }
+
+    function openEditUser(userId, username, currentRole, currentStatus) {
+      editUserId = userId;
+      const nameEl = document.getElementById('edit-user-name');
+      if (nameEl) nameEl.textContent = username;
+      const roleEl = document.getElementById('edit-user-role');
+      if (roleEl) roleEl.value = currentRole || 'user';
+      const statusEl = document.getElementById('edit-user-status');
+      if (statusEl) statusEl.value = currentStatus || 'approved';
+      const modal = document.getElementById('edit-user-modal');
+      if (modal) { modal.classList.add('open'); document.body.style.overflow = 'hidden'; }
+    }
+
+    function closeEditUserModal() {
+      editUserId = null;
+      const modal = document.getElementById('edit-user-modal');
+      if (modal) modal.classList.remove('open');
+      document.body.style.overflow = '';
+    }
+
+    async function saveUserEdit() {
+      const id = editUserId;
+      if (!id) return;
+      const role = document.getElementById('edit-user-role')?.value;
+      const status = document.getElementById('edit-user-status')?.value;
+      const btn = document.getElementById('edit-user-submit');
+      if (btn) btn.disabled = true;
+      try {
+        await apiRequest(`/auth/users/${id}`, 'PUT', { role, status }, true);
+        closeEditUserModal();
+        showToast('User updated successfully.');
+        loadDashboardData();
+      } catch (error) {
+        showToast(error.message || 'Unable to update user.', true);
+      } finally {
+        if (btn) btn.disabled = false;
       }
     }
 

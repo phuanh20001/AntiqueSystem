@@ -323,6 +323,62 @@ const rejectUser = async (req, res) => {
   }
 };
 
+// @desc    Update a user's role and/or status
+// @route   PUT /api/auth/users/:id
+// @access  Private (Admin only)
+const updateUser = async (req, res) => {
+  try {
+    if (!isAdminRequest(req)) {
+      return res.status(403).json({ message: 'Admin access required' });
+    }
+
+    const { role, status } = req.body;
+    const allowedRoles = ['user', 'verifier', 'admin'];
+    const allowedStatuses = ['pending', 'approved', 'rejected'];
+
+    if (role && !allowedRoles.includes(role)) {
+      return res.status(400).json({ message: 'Invalid role' });
+    }
+    if (status && !allowedStatuses.includes(status)) {
+      return res.status(400).json({ message: 'Invalid status' });
+    }
+
+    const user = await User.findById(req.params.id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    if (String(req.user._id) === String(req.params.id) && role && role !== 'admin') {
+      return res.status(400).json({ message: 'Admin cannot change their own role' });
+    }
+
+    if (role) user.role = role;
+    if (status) {
+      user.status = status;
+      if (status === 'approved' && user.requestedRole) {
+        user.role = ['user', 'verifier', 'admin'].includes(user.requestedRole) ? user.requestedRole : user.role;
+        user.requestedRole = null;
+      }
+    }
+
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'User updated successfully',
+      data: {
+        _id: user._id,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+        status: user.status,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Server Error', error: error.message });
+  }
+};
+
 // @desc    Delete any user account
 // @route   DELETE /api/auth/users/:id
 // @access  Private (Admin only)
@@ -359,5 +415,6 @@ module.exports = {
   createUserByAdmin,
   approveUser,
   rejectUser,
+  updateUser,
   deleteUser,
 };
