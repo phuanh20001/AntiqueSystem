@@ -10,7 +10,7 @@ Thumbs.db
 .env
 .env.*
 !.env.example
-!antique-backend/.env
+!antique-backend/.env.example
 
 ############################
 # Node / JavaScript
@@ -47,3 +47,7 @@ logs/
 ############################
 .vscode/
 .idea/
+
+# local dev artifacts
+.DS_Store
+tmp_reg.json
